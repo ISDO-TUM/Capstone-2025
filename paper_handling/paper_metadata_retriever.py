@@ -4,7 +4,7 @@ def get_works(query, count=5):
     works = Works().search(query).filter(is_oa=True).sort(cited_by_count="desc")
     return [work for i, work in enumerate(works.get()) if i < count]
 
-def get_multiple_topic_works(queries, count = 5):
+def get_multiple_topic_works(queries, count = 30):
     """
     query: expects an array of query strings
     """
