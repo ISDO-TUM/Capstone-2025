@@ -15,7 +15,7 @@ def get_multiple_topic_works(queries, count = 5):
 
 def get_works_titles(works):
     """
-    works: array of Work objects. The objects correspond to a single topic
+    works: array of Work objects. The Work objects correspond to a single topic
     """
     titles = []
     for work in works:
@@ -24,7 +24,7 @@ def get_works_titles(works):
 
 def get_mulitple_topic_works_titles(works):
     """
-    works: array of Work arrays, each work corresponds to a different topic
+    works: array of Work objects arrays, each Work sub array corresponds to a different topic
     """
     titles= []
     for topic_work in works:
