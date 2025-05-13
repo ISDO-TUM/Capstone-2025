@@ -1,4 +1,9 @@
 import llm
+from langchain.prompts import ChatPromptTemplate
+from langchain_core.messages import SystemMessage
+from langchain_core.prompts import HumanMessagePromptTemplate
+from langchain_core.messages import HumanMessage
+
 TriggerS = """
 You are an expert assistant helping scientific researchers stay up-to-date with the latest literature.
 Your task is to analyze the user's research interests and generate a concise list of relevant search keywords.
@@ -32,4 +37,10 @@ Select the 5 most relevant papers for the user's interest. Return them in a JSON
 Only include papers that are highly relevant. Be concise in the reasoning.
 """
 
-
+system_prompt = SystemMessage(content = """
+  You are an expert assistant helping scientific researchers stay up-to-date with the latest literature.
+  Your task is to analyze the user's research interests and use your available tools to query papers titles 
+  and then select the most relevant ones. You have a variety of tools that let you query papers in relation to the user interests and to organize them to rank them.
+  Do not make up paper names that are not returned by tool calls. In that case say that you could not find any papers.
+  """)
+   
