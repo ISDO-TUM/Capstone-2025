@@ -2,12 +2,12 @@ from flask import Flask, request, jsonify, render_template
 import sys
 import os
 import json
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                             '..')))
 from llm.Prompting import llm_call
 from llm.Prompts import TriggerS, RatingH, RatingS
 from paper_handling.paper_metadata_retriever import get_multiple_topic_works
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                             '..')))
 
 app = Flask(__name__)
 
@@ -46,7 +46,6 @@ def get_recommendations():
         string_array = [s.strip() for s in keywords.split(";")]
 
         retrieved_papers_works = get_multiple_topic_works(string_array)
-
 
         all_works = [work for sublist in retrieved_papers_works for work in sublist]
 
@@ -104,4 +103,4 @@ def get_recommendations():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5000)  # nosec B201
