@@ -1,0 +1,26 @@
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+    -   id: check-yaml
+    -   id: end-of-file-fixer
+    -   id: trailing-whitespace
+    -   id: check-added-large-files
+
+-   repo: https://github.com/hhatto/autopep8
+    rev: v2.3.0
+    hooks:
+    -   id: autopep8
+        args: [--in-place]
+
+-   repo: https://github.com/pycqa/flake8
+    rev: 7.2.0
+    hooks:
+    -   id: flake8
+        args: []
+
+-   repo: https://github.com/PyCQA/bandit
+    rev: 1.8.3
+    hooks:
+    -   id: bandit
+        args: ["-x", "./venv"]
