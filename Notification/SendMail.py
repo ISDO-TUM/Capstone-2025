@@ -1,14 +1,12 @@
-import pandas as pd
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr
-from pathlib import Path
 
 smtp_server = ""
 smtp_port = 587
 username = ""
-password = ""
+password = ""  # nosec B105
 NAME = "AI AGENT"
 
 

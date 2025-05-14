@@ -1,4 +1,3 @@
-import llm
 TriggerS = """
 You are an expert assistant helping scientific researchers stay up-to-date with the latest literature.
 Your task is to analyze the user's research interests and generate a concise list of relevant search keywords.
@@ -14,7 +13,7 @@ Your job is to analyze a list of scientific paper topics and select the 5 that b
 You must reason about relevance based on the title and description of each paper.
 """
 
-RatingH ="""
+RatingH = """
 The user is interested in the following research topic:
 
 \"\"\"{user_description}\"\"\"
@@ -31,5 +30,3 @@ Select the 5 most relevant papers for the user's interest. Return them in a JSON
 ]
 Only include papers that are highly relevant. Be concise in the reasoning.
 """
-
-
