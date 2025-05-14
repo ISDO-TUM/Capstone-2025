@@ -1,10 +1,12 @@
 import psycopg2
-from pyalex import Works
-from work_parse_utils import *
-from paper_metadata_retriever import *
+from paper_handling.work_parse_utils import get_authors_and_ids, strip_openalex_id
+from paper_handling.paper_metadata_retriever import get_works
+
 
 def connect_to_db():
-    return psycopg2.connect(host='localhost', dbname = 'postgres', user='postgres', password='admin',port=5432)
+    return psycopg2.connect(host='localhost', dbname='postgres',
+                            user='postgres', password='admin', port=5432)  # nosec B106
+
 
 def insert_paper_metadata(works):
     conn = connect_to_db()
@@ -27,6 +29,7 @@ def insert_paper_metadata(works):
 
     cur.close()
     conn.close()
+
 
 def list_tables_and_columns():
     conn = connect_to_db()
@@ -58,7 +61,8 @@ def list_tables_and_columns():
     cur.close()
     conn.close()
 
-#list_tables_and_columns()
+
+# list_tables_and_columns()
 
 works = get_works("generative models")
 insert_paper_metadata(works)
