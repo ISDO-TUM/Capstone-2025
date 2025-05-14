@@ -1,8 +1,15 @@
+import os
 from langchain_openai import ChatOpenAI
+from dotenv import load_dotenv
 
-API_KEY = ""
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+if not OPENAI_API_KEY:
+    raise ValueError("OpenAI API key not found. Please set the OPENAI_API_KEY environment variable.")
+# API_KEY = "" Use this in case you weren't able to set the api key as an environment variable
 llm_41 = ChatOpenAI(
-    api_key=API_KEY,
+    api_key=OPENAI_API_KEY,
     model="gpt-4.1",
     temperature=0,
 )
