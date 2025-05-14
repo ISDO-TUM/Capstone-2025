@@ -43,7 +43,9 @@ def get_recommendations():
         if not isinstance(keywords, str):
             return jsonify({"error": "Keywords format from LLM is invalid"}), 500
 
-        string_array = [s.strip() for s in keywords.split(";")]
+        string_array = [s.strip() for s in keywords.split(";") if s.strip()]
+        if not string_array:
+            return jsonify({"error": "No keywords were generated or extracted"}), 500
 
         retrieved_papers_works = get_multiple_topic_works(string_array)
 
@@ -53,10 +55,20 @@ def get_recommendations():
             return jsonify([]), 200
 
         papers_details_for_prompt = []
+
+        work_map_by_id = {work.get('id'): work for work in all_works if work.get('id')}
+
         for work in all_works:
             title = work.get('title', 'N/A')
-            abstract = work.get('abstract', 'No abstract available.')
-            papers_details_for_prompt.append(f"Title: {title}\nAbstract: {abstract}\n")
+            open_alex_id = work.get('id', 'N/A')
+            if open_alex_id == 'N/A':
+                continue
+
+            # abstract = work.get('abstract', 'No abstract available.')
+            papers_details_for_prompt.append(f"ID: {open_alex_id}\nTitle: {title}\n")
+
+        if not papers_details_for_prompt:
+            return jsonify({"error": "No papers with IDs available to send for rating"}), 500
 
         retrieved_papers_string_representation = "\n---\n".join(papers_details_for_prompt)
 
@@ -74,13 +86,23 @@ def get_recommendations():
             recommendations = json.loads(llm_response_content)
             final_recommendations = []
             for rec in recommendations:
-                original_work = next((w for w in all_works if
-                                      w.get('id', '').endswith(rec.get('id')) or w.get(
-                                          'title') == rec.get('title')), None)
+                rec_id = rec.get('id')
+                original_work = work_map_by_id.get(rec_id)
+
+                if not original_work:
+                    original_work = next(
+                        (w for w in all_works if w.get('title') == rec.get('title')), None)
+
                 link = "#"
                 if original_work:
-                    link = original_work.get('doi') or original_work.get('open_access', {}).get(
-                        'oa_url', '#')
+                    link = original_work.get('doi')
+                    if not link:
+                        link = original_work.get('open_access', {}).get('oa_url')
+                    if not link:
+                        if original_work.get('id') and original_work.get('id').startswith('http'):
+                            link = original_work.get('id')
+                        else:
+                            link = "#"
 
                 final_recommendations.append({
                     "title": rec.get("title", "N/A"),
