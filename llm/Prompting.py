@@ -1,6 +1,6 @@
 import base64
-from langchain_core.messages import HumanMessage, SystemMessage
-import llm
+from langchain.schema import SystemMessage, HumanMessage
+from llm.LLMDefinition import LLM
 
 
 #for Multimodal ai usage
@@ -9,24 +9,18 @@ def encode_image(image_path):
         return base64.b64encode(image_file.read()).decode("utf-8")
 
 
-def multimodal_call(ai_input, image_path):
-    image = encode_image(image_path)
+def llm_call(systemMessage,humanMessage ):
+    #image = encode_image(image_path)
     # Getting the Base64 string
-    message = [
+    messages = [
         SystemMessage(
-            content="You are a helpful assistant!"
-        ),
-
+            content = systemMessage),
         HumanMessage(
-            content=[
-                {"type": "text", "text": ai_input},
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image}"}},
-            ],
-        )
+            content = humanMessage)
     ]
 
     try:
-        response = llm.LLMDefinition.LLM.invoke([message])
+        response = LLM.invoke(messages)
 
     except Exception as e:
         print(f"Error during model invocation: {e}")

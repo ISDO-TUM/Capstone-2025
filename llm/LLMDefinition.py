@@ -1,10 +1,9 @@
-from langchain_openai import AzureChatOpenAI
+from langchain_openai import ChatOpenAI
 
-llm_4o_mini = AzureChatOpenAI(
-    api_key="TO DO",
-    openai_api_version="TO DO",
-    azure_deployment="TO DO",
-    azure_endpoint="TO DO",
+API_KEY = ""
+llm_41 = ChatOpenAI(
+    api_key = API_KEY,
+    model="gpt-4.1",
     temperature=0,
 )
-LLM = llm_4o_mini
+LLM = llm_41
