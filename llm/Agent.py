@@ -23,6 +23,7 @@ def agent_start():
     )
     result = llm_call(RatingS,human_message)
     print(result)
+
     return 0
 
 if __name__ == '__main__':
