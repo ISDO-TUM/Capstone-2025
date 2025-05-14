@@ -15,3 +15,6 @@ def fullpaper_get(url):
     for page in pdf_file:
         full_text += page.get_text()
     return full_text
+
+
+
