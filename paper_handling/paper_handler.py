@@ -1,5 +1,6 @@
 from pyalex import Works
 
+
 def _fetch_works_single_query(query):
     """
     Fetch works from OpenAlex matching a query.
