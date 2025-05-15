@@ -1,7 +1,7 @@
 import json
 from langchain_core.tools import tool
 
-@tool
+#@tool
 def select_relevant_titles(input: str) -> str:
     """
     Input str should be a JSON string with:
@@ -25,7 +25,6 @@ def select_relevant_titles(input: str) -> str:
         if not titles or not query:
             return "Missing 'titles' or 'query' in input."
 
-        print(f"Ranking papers: {title} for query{query}")
         return f"Filter these titles: {titles} based on this query: '{query}', select the 5-10 most relevant ones"
 
     except Exception as e:
