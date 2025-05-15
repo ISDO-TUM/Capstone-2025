@@ -1,5 +1,10 @@
 langchain_openai
 langchain_core
 pandas
+flask
+pyalex
+langchain
+psycopg2-binary
 python-dotenv
 pre-commit
+
