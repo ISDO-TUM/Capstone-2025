@@ -26,24 +26,35 @@ def get_works_titles(query, count=5):
         titles.append(work['title'])
     return titles
 
+def extract_titles(works):
+    titles = []
+    for work in works:
+        titles.append(work['title'])
+    return titles
+
+
 @tool
 def get_multiple_topic_works_titles(queries : list[str], count = 10) -> list[str]:
     """
     Gets a series of paper titles corresponding to a user's insterests. 
 
     Args:
-        queries: must be a string array where each string corresponds to a topic of interest in form of one or a few keywords. Like: ['generative models', 'renewable energies', ...]
-        count: int that corresponds to the number of paper titles returned per topic
+        queries: A list of research topic strings. Like: ['generative models', 'renewable energies', ...]
+        count: optional int that corresponds to the number of paper titles returned per topic
     
+    Example input:
+    {
+      "queries": ["transformers", "biomed NLP"],
+      "count": 5
+    }
+
     Return:
         The function returns a string array containing all the titles of all the found papers of all topics
     """
-    print(f"Getting works with queries: {queries}")
     works = get_multiple_topic_works(queries, count)
     titles= []
     for topic_work in works:
-        titles.extend(get_works_titles(topic_work))
-    print(f"Found titles: {titles}")
+        titles.extend(extract_titles(topic_work))
     return titles
 
 #works = get_multiple_topic_works(['generative AI', 'computer vision'])

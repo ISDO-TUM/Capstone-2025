@@ -1,3 +1,4 @@
+######-----DEPRECATED-----######
 import base64
 from langchain.schema import SystemMessage, HumanMessage
 from llm.LLMDefinition import LLM
