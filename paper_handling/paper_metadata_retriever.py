@@ -30,7 +30,7 @@ def get_mulitple_topic_works_titles(works):
     """
     works: array of Work objects arrays, each Work sub array corresponds to a different topic
     """
-    titles = []  # bad inline comment
+    titles = []
     for topic_work in works:
         titles.extend(get_works_titles(topic_work))
 

@@ -19,7 +19,7 @@
 
 3.  **Install dependencies:**
     ```bash
-    pip install -r requirements.txt
+    pip install -r requirements.txt -r requirements-dev.txt
     ```
 
 4.  **Set up Environment Variables:**
@@ -52,7 +52,27 @@
         $Env:OPENAI_API_KEY="your_actual_openai_api_key_here"
         ```
         (For permanent storage on Windows, search for "environment variables" in the Start Menu).
+### Local Development
+* Before creating a PR, make sure that your local commits go through pre-commit hooks, which check
+for formatting, linting and security issues. They also update the needed modules in
+**requirements.txt**. First you have to set this up:
+1. Make sure you install `pre-commit` and `pigar` modules with:
+```
+pip install -r requirements-dev.txt
+```
 
+2. Issue the following command in your virtual environment:
+```
+pre-commit install
+```
+
+3. Pre-commit hooks are triggered on commits and they can also make changes to the files
+   (formatting and updating **requirements.txt**). In this case, if the pre-commit hook has run and
+made changes to your files, you have to stage your changes again and commit them again:
+```
+git add .
+git commit -m "Your commit message"
+```
 ### Running the Project
 ```bash
 python app.py
