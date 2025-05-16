@@ -24,3 +24,12 @@ repos:
     hooks:
     -   id: bandit
         args: ["-x", "./venv"]
+
+-   repo: local
+    hooks:
+    -   id: pigar-requirements
+        name: pigar - Generate requirements.txt
+        entry: bash -c 'pigar generate'
+        language: system
+        types: [python]
+        pass_filenames: false

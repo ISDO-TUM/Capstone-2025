@@ -22,10 +22,12 @@ Here is a list of papers retrieved from a research API. Each entry has a title a
 
 \"\"\"{retrieved_papers}\"\"\"
 
-Select the 5 most relevant papers for the user's interest. Return them in a JSON list with the following format:
+Select the 5 most relevant papers for the user's interest. For each selected paper provide its
+title and a brief (1-2 sentences) reasoning for why it is relevant to the user's research topic.
+Return them in a JSON list with the following format:
 
 [
-  {{ "id": "...", "title": "..." }},
+  {{ "id": "...", "title": "...", "reasoning": "..." }},
   ...
 ]
 Only include papers that are highly relevant. Be concise in the reasoning.
