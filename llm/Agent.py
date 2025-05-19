@@ -1,8 +1,7 @@
 import llm.Prompts as prompts
 from langchain_openai import ChatOpenAI
-from langchain.agents import initialize_agent, AgentType
 from config.settings import Config
-from llm.tools.Tools import get_tools
+from llm.tools.Tools_aggregator import get_tools
 from langgraph.prebuilt import create_react_agent
 
 from langchain_core.messages import HumanMessage
@@ -15,7 +14,7 @@ agent = create_react_agent(model=llm, tools=tools)
 
 
 def trigger_agent(user_message : str):
-    return agent_executor.invoke({'messages': [system_prompt, HumanMessage(content=user_message)]})
+    return agent.invoke({'messages': [system_prompt, HumanMessage(content=user_message)]})
 
 if __name__ == '__main__':
     for step in agent.stream(
