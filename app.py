@@ -1,10 +1,12 @@
-from flask import Flask, request, jsonify, render_template
-import sys
-import os
 import json
+import os
+import sys
+
+from flask import Flask, request, jsonify, render_template
+
 from llm.Prompting import llm_call
 from llm.Prompts import TriggerS, RatingH, RatingS
-from paper_handling.paper_metadata_retriever import get_multiple_topic_works
+from paper_handling.paper_handler import fetch_works_multiple_queries
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
                                              '..')))
@@ -47,18 +49,13 @@ def get_recommendations():
         if not string_array:
             return jsonify({"error": "No keywords were generated or extracted"}), 500
 
-        retrieved_papers_works = get_multiple_topic_works(string_array)
-
-        all_works = [work for sublist in retrieved_papers_works for work in sublist]
-
-        if not all_works:
-            return jsonify([]), 200
+        retrieved_papers_works = fetch_works_multiple_queries(string_array)
 
         papers_details_for_prompt = []
 
-        work_map_by_id = {work.get('id'): work for work in all_works if work.get('id')}
+        work_map_by_id = {work.get('id'): work for work in retrieved_papers_works if work.get('id')}
 
-        for work in all_works:
+        for work in retrieved_papers_works:
             title = work.get('title', 'N/A')
             open_alex_id = work.get('id', 'N/A')
             if open_alex_id == 'N/A':
@@ -91,7 +88,7 @@ def get_recommendations():
 
                 if not original_work:
                     original_work = next(
-                        (w for w in all_works if w.get('title') == rec.get('title')), None)
+                        (w for w in retrieved_papers_works if w.get('title') == rec.get('title')), None)
 
                 link = "#"
                 if original_work:
