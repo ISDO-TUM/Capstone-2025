@@ -1,8 +1,10 @@
 import chromadb
+
+from chromadb import Client
 from chromadb.config import Settings
 
-chroma_client = chromadb.Client()
-collection = chroma_client.create_collection(name="my_collection")
+client = chromadb.PersistentClient(path="./chroma_storage")
+collection = client.get_or_create_collection(name="research-papers")
 
 collection.add(
     documents=[
@@ -13,7 +15,7 @@ collection.add(
 )
 
 results = collection.query(
-    query_texts=["This is a query document about munich"], # Chroma will embed this for you
+    query_texts=["This is a query document about munich"], # Chroma will embed this
     n_results=2 # how many results to return
 )
 print(results)
