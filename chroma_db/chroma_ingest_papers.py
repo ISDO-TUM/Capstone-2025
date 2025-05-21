@@ -1,13 +1,10 @@
+from paper_handling.paper_handler import fetch_works_multiple_queries
+import chromadb
 import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-import chromadb
 
-
-from chromadb import Client
-from chromadb.config import Settings
-from paper_handling.paper_handler import fetch_works_multiple_queries
 
 # Setup Chroma client and collection
 client = chromadb.PersistentClient(path="./chroma_storage")
@@ -15,8 +12,8 @@ client = chromadb.PersistentClient(path="./chroma_storage")
 # Delete collection if it already exists, to start fresh
 try:
     client.delete_collection("research-papers")
-except:
-    pass
+except Exception as e:
+    print(f"Collection deletion failed: {e}")
 
 # Now create collection again
 collection = client.get_or_create_collection("research-papers")
