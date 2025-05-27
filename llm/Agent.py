@@ -1,30 +1,27 @@
-from llm.Prompting import llm_call
-from llm.Prompts import TriggerS,RatingH, RatingS
-from paper_handling.paper_metadata_retriever import get_works_titles, get_multiple_topic_works, \
-    get_mulitple_topic_works_titles
+import llm.Prompts as prompts
+from llm.tools.Tools_aggregator import get_tools
+from langgraph.prebuilt import create_react_agent
+from llm.LLMDefinition import LLM
+from langchain_core.messages import HumanMessage
 
-user_description = """
-I'm researching the application of transformer-based language models in biomedical text mining. 
-Specifically, I'm interested in methods for extracting relationships between genes, diseases, and drugs from scientific publications, 
-as well as improvements in named entity recognition and domain-specific fine-tuning strategies in the biomedical domain.
-"""
+RECURSION_LIMIT = 2 * 4 + 1
+user_message = prompts.user_message
+tools = get_tools()
+llm = LLM
+system_prompt = prompts.system_prompt
+agent = create_react_agent(model=llm, tools=tools)
 
-def agent_start():
-    keywords = llm_call(TriggerS, user_description)
-    if keywords == -1:
-        return -1
-    string_array = [s.strip() for s in keywords.split(",")]
 
-    retrieved_papers = get_mulitple_topic_works_titles(get_multiple_topic_works(string_array))
+def trigger_agent(user_message: str):
+    return agent.invoke({'messages': [system_prompt, HumanMessage(content=user_message)]})
 
-    human_message = RatingH.format(
-        user_description=user_description,
-        retrieved_papers=retrieved_papers
-    )
-    result = llm_call(RatingS,human_message)
-    print(result)
 
-    return 0
-
+# Left here to test the agent alone
 if __name__ == '__main__':
-    agent_start()
+    # for step in agent.stream(
+    #     {"messages": [system_prompt, HumanMessage(content=user_message)]},
+    #     {"recursion_limit": RECURSION_LIMIT},
+    #     stream_mode="values",
+    # ):
+    #     step["messages"][-1].pretty_print()
+    print(trigger_agent(user_message)['messages'][-1].content)

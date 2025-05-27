@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New Project</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Create New Project</h1>
+        <form id="createProjectForm">
+            <div class="form-group">
+                <label for="projectTitle">Project Title</label>
+                <input type="text" id="projectTitle" name="projectTitle" required>
+            </div>
+            <div class="form-group">
+                <label for="projectDescription">Project Prompt</label>
+                <textarea id="projectDescription" name="projectDescription" rows="4" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Create Project</button>
+        </form>
+    </div>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
