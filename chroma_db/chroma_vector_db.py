@@ -1,16 +1,18 @@
 import sys
 import os
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import logging
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import chromadb
 from chromadb.api.models.Collection import Collection
 
-from llm.Embeddings import embed_string  
+from llm.Embeddings import embed_string
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
 
 class ChromaVectorDB:
     def __init__(self, collection_name: str = "research-papers") -> None:
@@ -47,6 +49,31 @@ class ChromaVectorDB:
                 errors += 1
 
         return 1 if errors else 0
+
+    def perform_similarity_search(self, k: int, user_profile_embedding: List[float]) -> Optional[List[str]]:
+        """
+        Perform similarity search on ChromaDB.
+
+        Args:
+            k (int): No. of top similar results to return
+            user_profile_embedding (List[float]): Embedding vector of the user profile
+
+        Returns:
+            List[str]: List of top-k hashes (ids) of similar items
+            or None if error occurs
+        """
+        try:
+            results = self.collection.query(
+                query_embeddings=[user_profile_embedding],
+                n_results=k,
+                include=["ids"]
+            )
+
+            return results.get("ids", [[]])[0]
+
+        except Exception as e:
+            logger.error(f"Error performing similarity search: {e}")
+            return None
 
     def count_documents(self) -> int:
         return self.collection.count()
