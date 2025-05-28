@@ -3,8 +3,9 @@
 * Python 3.13+
 * Pip
 * An active OpenAI API Key
+* Docker Desktop (or docker + docker-compose)
 
-### Installation
+### Local Development
 
 1.  **Clone the repository:**
     ```bash
@@ -17,7 +18,7 @@
     source .venv/bin/activate  # On Windows: venv\Scripts\activate
     ```
 
-3.  **Install dependencies:**
+3.  **Install dependencies:  (good to be done after every fetch and pull from the repository)**
     ```bash
     pip install -r requirements.txt -r requirements-dev.txt
     ```
@@ -52,7 +53,18 @@
         $Env:OPENAI_API_KEY="your_actual_openai_api_key_here"
         ```
         (For permanent storage on Windows, search for "environment variables" in the Start Menu).
-### Local Development
+
+5. **Set up Database Environment Variables:**
+    This project uses also a **PostgreSQL** database, and you must connect to a local copy of it.
+    You need to set also the environment variables for the connection to it (used for **Docker**):
+    ```
+   DB_HOST="your_remote_postgresql_server_ip_or_hostname" Used only when connecting to the remote
+    DB_PORT="5432"
+    DB_NAME="papers"
+    DB_USER="your_username_for_postgresql"
+    DB_PASSWORD="your_password_for_postgresql"
+   ```
+### Contribution workflow
 * Before creating a PR, make sure that your local commits go through pre-commit hooks, which check
 for formatting, linting and security issues. They also update the needed modules in
 **requirements.txt**. First you have to set this up:
@@ -61,7 +73,7 @@ for formatting, linting and security issues. They also update the needed modules
 pip install -r requirements-dev.txt
 ```
 
-2. Issue the following command in your virtual environment:
+2. Issue the following command in your virtual environment (needed only after initial setup):
 ```
 pre-commit install
 ```
@@ -73,6 +85,12 @@ made changes to your files, you have to stage your changes again and commit them
 git add .
 git commit -m "Your commit message"
 ```
+
+4. If **pigar** has made undesirable changes to the **requirements.txt** file, you can commit with:
+
+```
+git commit -m "Your commit message" --no-verify
+```
 ### Running the Project
 ```bash
-python app.py
+docker compose up -d
