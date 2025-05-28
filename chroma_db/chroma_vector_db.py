@@ -1,14 +1,13 @@
+from llm.Embeddings import embed_string
+from chromadb.api.models.Collection import Collection
+import chromadb
+from typing import List, Dict, Optional
+import logging
 import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-import logging
-from typing import List, Dict, Optional
 
-import chromadb
-from chromadb.api.models.Collection import Collection
-
-from llm.Embeddings import embed_string
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
