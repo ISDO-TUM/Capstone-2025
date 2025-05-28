@@ -1,29 +1,39 @@
 import psycopg2
-from paper_handling.work_parse_utils import get_authors_and_ids, strip_openalex_id
-from paper_handling.paper_metadata_retriever import get_works
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def connect_to_db():
-    return psycopg2.connect(host='localhost', dbname='postgres',
-                            user='postgres', password='admin', port=5432)  # nosec B106
+    db_host = os.getenv("DB_HOST")
+    db_name = os.getenv("DB_NAME", "papers")
+    db_user = os.getenv("DB_USER")
+    db_password = os.getenv("DB_PASSWORD")
+    db_port = os.getenv("DB_PORT", "5432")
+
+    return psycopg2.connect(host=db_host, dbname=db_name,
+                            user=db_user, password=db_password, port=db_port)
 
 
-def insert_paper_metadata(works):
+def insert_works_data(works):
     conn = connect_to_db()
     cur = conn.cursor()
 
     for work in works:
-        openalex_id = strip_openalex_id(work["id"])
-        title = work['title']
-        authors = get_authors_and_ids(work)
-        year = work['publication_year']
-        pdf_link = work.get('open_access', {}).get('oa_url')
-        abstract = work['abstract']
-
         cur.execute("""
-            INSERT INTO "Paper-Metadata" (OpenAlexID, Title, Authors, Year, PDFLink, Abstract)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (openalex_id, title, authors, year, pdf_link, abstract))
+                    INSERT INTO "Paper-Metadata" (OpenAlexID, Title, Abstract, Authors, PublicationDate, LandingPageURL,
+                                                  PdfURL)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (work["id"],
+                          work["title"],
+                          work["abstract"],
+                          work["authors"],
+                          work["publication_date"],
+                          work["landing_page_url"],
+                          work["pdf_url"]
+                          )
+                    )
 
     conn.commit()
 
@@ -37,10 +47,10 @@ def list_tables_and_columns():
 
     # List all tables in the current schema (usually 'public')
     cur.execute("""
-        SELECT table_name
-        FROM information_schema.tables
-        WHERE table_schema = 'public'
-    """)
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                """)
 
     tables = cur.fetchall()
     print("Tables:")
@@ -49,10 +59,10 @@ def list_tables_and_columns():
 
         # Get columns for each table
         cur.execute("""
-            SELECT column_name, data_type
-            FROM information_schema.columns
-            WHERE table_name = %s
-        """, (table[0],))
+                    SELECT column_name, data_type
+                    FROM information_schema.columns
+                    WHERE table_name = %s
+                    """, (table[0],))
 
         columns = cur.fetchall()
         for column in columns:
@@ -60,9 +70,3 @@ def list_tables_and_columns():
 
     cur.close()
     conn.close()
-
-
-# list_tables_and_columns()
-
-works = get_works("generative models")
-insert_paper_metadata(works)
