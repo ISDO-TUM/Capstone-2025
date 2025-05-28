@@ -1,13 +1,14 @@
-from paper_handling.paper_handler import fetch_works_multiple_queries
-import chromadb
 import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from paper_handling.paper_handler import fetch_works_multiple_queries
+import chromadb
+
 
 # Setup Chroma client and collection
-client = chromadb.PersistentClient(path="./chroma_storage")
+client = chromadb.HttpClient(host="localhost", port=8000)
 
 # Delete collection if it already exists, to start fresh
 try:
