@@ -16,6 +16,17 @@ services:
     networks:
       - capstone_network
 
+  chromadb:
+    image: chromadb/chroma
+    container_name: chroma_container
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/.chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+    restart: unless-stopped
+
   web:
     build: .
     container_name: capstone_web
@@ -41,6 +52,7 @@ services:
 
 volumes:
   postgres_data:
+  chroma_data:
 
 networks:
   capstone_network:
