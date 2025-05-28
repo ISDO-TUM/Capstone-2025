@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  chromadb:
+    image: chromadb/chroma
+    container_name: chroma_container
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/.chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+    restart: unless-stopped
+
+volumes:
+  chroma_data:
