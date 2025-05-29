@@ -235,7 +235,6 @@ def get_papers_by_hash(paper_hashes_to_find):
 
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     sql = "SELECT paper_hash, id, title, abstract, authors, publication_date, landing_page_url, pdf_url FROM papers_table WHERE paper_hash = ANY(%s);"
-    
     try:
         cur.execute(sql, (paper_hashes_to_find,))
         papers = [dict(row) for row in cur.fetchall()]
