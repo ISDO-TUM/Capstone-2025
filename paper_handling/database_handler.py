@@ -218,6 +218,7 @@ def get_paper_by_hash(paper_hash_to_find):
         cur.close()
         conn.close()
 
+
 def get_papers_by_hash(paper_hashes_to_find):
     """
     Retrieves multiple paper versions from the papers_table by their unique hashes.
@@ -245,6 +246,7 @@ def get_papers_by_hash(paper_hashes_to_find):
     finally:
         cur.close()
         conn.close()
+
 
 def update_paper(old_paper_hash, update_data):
     """
