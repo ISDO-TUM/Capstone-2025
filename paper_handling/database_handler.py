@@ -218,6 +218,33 @@ def get_paper_by_hash(paper_hash_to_find):
         cur.close()
         conn.close()
 
+def get_papers_by_hash(paper_hashes_to_find):
+    """
+    Retrieves multiple paper versions from the papers_table by their unique hashes.
+    'paper_hashes_to_find' should be a list of hashes.
+    Returns a list of dictionaries representing the papers, or an empty list if none found.
+    """
+    if not isinstance(paper_hashes_to_find, list) or not paper_hashes_to_find:
+        print("Error: Input must be a non-empty list of paper hashes.")
+        return []
+
+    conn = connect_to_db()
+    if not conn:
+        return []
+
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    sql = "SELECT paper_hash, id, title, abstract, authors, publication_date, landing_page_url, pdf_url FROM papers_table WHERE paper_hash = ANY(%s);"
+    
+    try:
+        cur.execute(sql, (paper_hashes_to_find,))
+        papers = [dict(row) for row in cur.fetchall()]
+        return papers
+    except psycopg2.Error as e:
+        print(f"Error fetching papers by hashes {paper_hashes_to_find}: {e}")
+        return []
+    finally:
+        cur.close()
+        conn.close()
 
 def update_paper(old_paper_hash, update_data):
     """
@@ -608,5 +635,29 @@ if __name__ == '__main__':
     update_paper_field(non_existent_hash, "title", "New Title")
     print(f"Attempting to delete paper by non-existent hash: {non_existent_hash}")
     delete_paper_by_hash(non_existent_hash)
+
+    print("\nTesting batch retrieval using get_papers_by_hash():")
+    if paper_1_hash and paper_2_hash:
+        print(f"  Fetching papers by existing hashes: {paper_1_hash}, {paper_2_hash}")
+        found_papers = get_papers_by_hash([paper_1_hash, paper_2_hash])
+        if found_papers:
+            print(f"  Found {len(found_papers)} paper(s):")
+            for paper in found_papers:
+                print(f"    - Hash: {paper['paper_hash']}, Title: {paper['title']}")
+        else:
+            print("  No papers were found (unexpected).")
+    else:
+        print("  Skipping existing hash test due to missing hash values.")
+
+    print("\n  Fetching papers by non-existent hashes:")
+    fake_hashes = ["not_a_real_hash_1", "not_a_real_hash_2"]
+    missing_papers = get_papers_by_hash(fake_hashes)
+    if not missing_papers:
+        print("  Correctly found no matching papers.")
+    else:
+        print(f"  Unexpectedly found {len(missing_papers)} paper(s):")
+        for paper in missing_papers:
+            print(f"    - Hash: {paper['paper_hash']}, Title: {paper['title']}")
+
     print("-" * 40)
     print("Test script finished.")
