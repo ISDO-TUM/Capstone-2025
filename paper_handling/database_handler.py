@@ -1,72 +1,664 @@
 import psycopg2
+import psycopg2.extras
 import os
 from dotenv import load_dotenv
+import hashlib
 
 load_dotenv()
 
 
+def _generate_paper_hash(paper_data_dict):
+    """
+    Generates a SHA256 hash from specific fields of a paper data dictionary.
+    Ensures consistent ordering and handling of None values for hashing.
+    All relevant fields: id, title, abstract, authors, publication_date, landing_page_url, pdf_url
+    """
+
+    def s(value):
+        if value is None:
+            return ""
+        return str(value)
+
+    fields_to_hash = [
+        s(paper_data_dict.get("id")),
+        s(paper_data_dict.get("title")),
+        s(paper_data_dict.get("abstract")),
+        s(paper_data_dict.get("authors")),
+        s(paper_data_dict.get("publication_date")),
+        s(paper_data_dict.get("landing_page_url")),
+        s(paper_data_dict.get("pdf_url"))
+    ]
+
+    data_string = "||".join(fields_to_hash)
+    return hashlib.sha256(data_string.encode('utf-8')).hexdigest()
+
+
 def connect_to_db():
+    """
+    Establishes a connection to the PostgreSQL database.
+    Reads connection parameters from environment variables.
+    """
     db_host = os.getenv("DB_HOST")
     db_name = os.getenv("DB_NAME", "papers")
     db_user = os.getenv("DB_USER")
     db_password = os.getenv("DB_PASSWORD")
     db_port = os.getenv("DB_PORT", "5432")
 
-    return psycopg2.connect(host=db_host, dbname=db_name,
-                            user=db_user, password=db_password, port=db_port)
+    try:
+        conn = psycopg2.connect(host=db_host, dbname=db_name,
+                                user=db_user, password=db_password, port=db_port)
+        return conn
+    except psycopg2.Error as e:
+        print(f"Error connecting to the database: {e}")
+        return None
 
 
-def insert_works_data(works):
+def insert_papers(papers_data_list):
+    """
+    Inserts one or more new papers into the papers_table.
+    'papers_data_list' should be a list of dictionaries. Each dictionary requires:
+    'id' (string, original identifier), 'title' (string). Optional fields:
+    'abstract', 'authors', 'publication_date' ('YYYY-MM-DD'), 'landing_page_url', 'pdf_url'.
+
+    A hash is generated from all paper fields and used as the primary key.
+    If a paper with the exact same content (and thus same hash) already exists,
+    it's skipped due to ON CONFLICT (paper_hash) DO NOTHING.
+
+    Returns a tuple: (status_code, list_of_inserted_paper_info).
+    status_code: 1 if at least one paper was successfully inserted, 0 otherwise (or on error).
+    list_of_inserted_paper_info: List of dicts [{"title": str, "abstract": str, "hash": str}]
+                                 for each newly inserted paper.
+    """
+    if not isinstance(papers_data_list, list):
+        print("Error: Input must be a list of paper dictionaries.")
+        return (0, [])
+    if not papers_data_list:
+        print("No papers provided for insertion.")
+        return (0, [])
+
     conn = connect_to_db()
+    if not conn:
+        return 0, []
+
+    inserted_papers_details = []
     cur = conn.cursor()
+    sql_insert = """
+        INSERT INTO papers_table (paper_hash, id, title, abstract, authors, publication_date, landing_page_url, pdf_url)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (paper_hash) DO NOTHING;
+    """
 
-    for work in works:
-        cur.execute("""
-                    INSERT INTO "Paper-Metadata" (OpenAlexID, Title, Abstract, Authors, PublicationDate, LandingPageURL,
-                                                  PdfURL)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    """, (work["id"],
-                          work["title"],
-                          work["abstract"],
-                          work["authors"],
-                          work["publication_date"],
-                          work["landing_page_url"],
-                          work["pdf_url"]
-                          )
-                    )
+    for paper_data in papers_data_list:
+        if not paper_data or not isinstance(paper_data, dict) or \
+                paper_data.get("id") is None or paper_data.get("title") is None:
+            print(
+                f"Error: Missing required fields (id, title) or invalid data for a paper. Skipping: {str(paper_data)[:100]}")
+            continue
 
-    conn.commit()
+        try:
+            current_hash = _generate_paper_hash(paper_data)
+
+            abstract = paper_data.get("abstract")
+            authors = paper_data.get("authors")
+            publication_date_str = paper_data.get("publication_date")
+            publication_date = publication_date_str if publication_date_str and str(
+                publication_date_str).strip() else None
+            landing_page_url = paper_data.get("landing_page_url")
+            pdf_url = paper_data.get("pdf_url")
+
+            cur.execute(sql_insert, (
+                current_hash,
+                paper_data["id"],
+                paper_data["title"],
+                abstract,
+                authors,
+                publication_date,
+                landing_page_url,
+                pdf_url
+            ))
+
+            if cur.rowcount > 0:
+                inserted_papers_details.append({
+                    "title": paper_data["title"],
+                    "abstract": str(abstract) if abstract is not None else "",
+                    "hash": current_hash
+                })
+        except psycopg2.Error as e:
+            print(
+                f"Database error inserting paper with original ID {paper_data.get('id', 'N/A')}: {e}")
+            conn.rollback()
+            cur.close()
+            conn.close()
+            return (0, [])
+        except Exception as ex:
+            print(
+                f"An unexpected error occurred processing paper ID {paper_data.get('id', 'N/A')}: {ex}")
+            conn.rollback()
+            cur.close()
+            conn.close()
+            return (0, [])
+
+    if not inserted_papers_details:
+        conn.commit()
+        status_code = 0
+    else:
+        conn.commit()
+        status_code = 1
 
     cur.close()
     conn.close()
+    return (status_code, inserted_papers_details)
+
+
+def get_all_papers():
+    """
+    Retrieves all papers (all versions) from the papers_table.
+    Returns a list of dictionaries, where each dictionary represents a paper version.
+    """
+    conn = connect_to_db()
+    if not conn:
+        return []
+
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    sql = "SELECT paper_hash, id, title, abstract, authors, publication_date, landing_page_url, pdf_url FROM papers_table;"
+    try:
+        cur.execute(sql)
+        papers = [dict(row) for row in cur.fetchall()]
+        return papers
+    except psycopg2.Error as e:
+        print(f"Error fetching all papers: {e}")
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+
+def get_papers_by_original_id(original_id):
+    """
+    Retrieves all versions of a paper from the papers_table by its original ID.
+    Returns a list of dictionaries representing paper versions, or an empty list if not found.
+    """
+    conn = connect_to_db()
+    if not conn:
+        return []
+
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    sql = "SELECT paper_hash, id, title, abstract, authors, publication_date, landing_page_url, pdf_url FROM papers_table WHERE id = %s;"
+    try:
+        cur.execute(sql, (original_id,))
+        papers = [dict(row) for row in cur.fetchall()]
+        return papers
+    except psycopg2.Error as e:
+        print(f"Error fetching papers by original ID {original_id}: {e}")
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+
+def get_paper_by_hash(paper_hash_to_find):
+    """
+    Retrieves a specific paper version from the papers_table by its unique hash.
+    Returns a dictionary representing the paper, or None if not found.
+    """
+    conn = connect_to_db()
+    if not conn:
+        return None
+
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    sql = "SELECT paper_hash, id, title, abstract, authors, publication_date, landing_page_url, pdf_url FROM papers_table WHERE paper_hash = %s;"
+    try:
+        cur.execute(sql, (paper_hash_to_find,))
+        paper = cur.fetchone()
+        return dict(paper) if paper else None
+    except psycopg2.Error as e:
+        print(f"Error fetching paper by hash {paper_hash_to_find}: {e}")
+        return None
+    finally:
+        cur.close()
+        conn.close()
+
+
+def get_papers_by_hash(paper_hashes_to_find):
+    """
+    Retrieves multiple paper versions from the papers_table by their unique hashes.
+    'paper_hashes_to_find' should be a list of hashes.
+    Returns a list of dictionaries representing the papers, or an empty list if none found.
+    """
+    if not isinstance(paper_hashes_to_find, list) or not paper_hashes_to_find:
+        print("Error: Input must be a non-empty list of paper hashes.")
+        return []
+
+    conn = connect_to_db()
+    if not conn:
+        return []
+
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    sql = "SELECT paper_hash, id, title, abstract, authors, publication_date, landing_page_url, pdf_url FROM papers_table WHERE paper_hash = ANY(%s);"
+    try:
+        cur.execute(sql, (paper_hashes_to_find,))
+        papers = [dict(row) for row in cur.fetchall()]
+        return papers
+    except psycopg2.Error as e:
+        print(f"Error fetching papers by hashes {paper_hashes_to_find}: {e}")
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+
+def update_paper(old_paper_hash, update_data):
+    """
+    Updates one or more fields of a specific paper version.
+    This operation involves fetching the paper by 'old_paper_hash',
+    applying 'update_data', generating a 'new_paper_hash',
+    inserting the new version, and deleting the old version.
+    'update_data' is a dictionary of fields to change.
+    Returns True if update was successful, False otherwise.
+    """
+    if not update_data:
+        print("No data provided for paper update.")
+        return False
+
+    conn = connect_to_db()
+    if not conn:
+        return False
+
+    cur = conn.cursor()
+
+    try:
+
+        cur.execute(
+            "SELECT id, title, abstract, authors, publication_date, landing_page_url, pdf_url FROM papers_table WHERE paper_hash = %s;",
+            (old_paper_hash,))
+        current_paper_tuple = cur.fetchone()
+
+        if not current_paper_tuple:
+            print(f"No paper found with hash {old_paper_hash} to update.")
+            return False
+
+        current_paper_data = {
+            "id": current_paper_tuple[0], "title": current_paper_tuple[1],
+            "abstract": current_paper_tuple[2], "authors": current_paper_tuple[3],
+            "publication_date": current_paper_tuple[4],
+            "landing_page_url": current_paper_tuple[5], "pdf_url": current_paper_tuple[6]
+        }
+
+        updated_paper_data = current_paper_data.copy()
+
+        allowed_fields = ["id", "title", "abstract", "authors", "publication_date",
+                          "landing_page_url", "pdf_url"]
+
+        valid_update_applied = False
+        for key, value in update_data.items():
+            if key in allowed_fields:
+                if key == "publication_date" and (value == "" or value is None):
+                    updated_paper_data[key] = None
+                else:
+                    updated_paper_data[key] = value
+                valid_update_applied = True
+            else:
+                print(
+                    f"Warning: Field '{key}' is not an allowed paper field for update and will be ignored.")
+
+        if not valid_update_applied:
+            print("No valid fields provided for update.")
+
+            return True
+
+        new_hash = _generate_paper_hash(updated_paper_data)
+
+        if new_hash == old_paper_hash:
+            print(
+                f"Update for paper hash {old_paper_hash} resulted in no change to content hash. No DB modification needed.")
+            return True
+
+        insert_sql = """
+            INSERT INTO papers_table (paper_hash, id, title, abstract, authors, publication_date, landing_page_url, pdf_url)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (paper_hash) DO NOTHING;
+        """
+
+        cur.execute(insert_sql, (
+            new_hash,
+            updated_paper_data["id"], updated_paper_data["title"],
+            updated_paper_data.get("abstract"), updated_paper_data.get("authors"),
+            updated_paper_data.get("publication_date"),
+            updated_paper_data.get("landing_page_url"), updated_paper_data.get("pdf_url")
+        ))
+
+        rows_inserted = cur.rowcount
+        if rows_inserted == 0 and new_hash != old_paper_hash:
+            print(
+                f"Updated state for paper (old hash {old_paper_hash}) results in new hash {new_hash}, which already exists in the DB.")
+
+        delete_sql = "DELETE FROM papers_table WHERE paper_hash = %s;"
+        cur.execute(delete_sql, (old_paper_hash,))
+
+        if cur.rowcount == 0:
+            print(
+                f"Warning: Paper with old hash {old_paper_hash} was not found for deletion after update attempt. This might be okay if the new state's hash ({new_hash}) was identical and already existed.")
+
+        conn.commit()
+        print(
+            f"Paper with old hash {old_paper_hash} processed for update. New effective hash is {new_hash}.")
+        return True
+
+    except psycopg2.Error as e:
+        print(f"Error updating paper with old hash {old_paper_hash}: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    except Exception as ex:
+        print(f"An unexpected error occurred while updating paper {old_paper_hash}: {ex}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
+def update_paper_field(old_paper_hash, field_name, new_value):
+    """
+    Updates a specific field of a paper version identified by 'old_paper_hash'.
+    This is a convenience function that calls 'update_paper'.
+    Returns True if update was successful, False otherwise.
+    """
+
+    allowed_fields = ["id", "title", "abstract", "authors", "publication_date", "landing_page_url",
+                      "pdf_url"]
+    if field_name not in allowed_fields:
+        print(f"Error: '{field_name}' is not an updatable field for a paper.")
+        return False
+    return update_paper(old_paper_hash, {field_name: new_value})
+
+
+def delete_paper_by_hash(paper_hash_to_delete):
+    """
+    Deletes a specific paper version from the papers_table by its unique hash.
+    Returns True if deletion was successful, False otherwise.
+    """
+    conn = connect_to_db()
+    if not conn:
+        return False
+
+    cur = conn.cursor()
+    sql = "DELETE FROM papers_table WHERE paper_hash = %s;"
+    try:
+        cur.execute(sql, (paper_hash_to_delete,))
+        conn.commit()
+        if cur.rowcount == 0:
+            print(f"No paper found with hash {paper_hash_to_delete} to delete.")
+            return False
+        print(f"Paper with hash {paper_hash_to_delete} deleted successfully.")
+        return True
+    except psycopg2.Error as e:
+        print(f"Error deleting paper with hash {paper_hash_to_delete}: {e}")
+        conn.rollback()
+        return False
+    finally:
+        cur.close()
+        conn.close()
 
 
 def list_tables_and_columns():
+    """
+    Lists all tables in the 'public' schema and their columns.
+    """
     conn = connect_to_db()
+    if not conn:
+        return
+
     cur = conn.cursor()
-
-    # List all tables in the current schema (usually 'public')
-    cur.execute("""
-                SELECT table_name
-                FROM information_schema.tables
-                WHERE table_schema = 'public'
-                """)
-
-    tables = cur.fetchall()
-    print("Tables:")
-    for table in tables:
-        print(f"- {table[0]}")
-
-        # Get columns for each table
+    try:
         cur.execute("""
-                    SELECT column_name, data_type
-                    FROM information_schema.columns
-                    WHERE table_name = %s
-                    """, (table[0],))
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'public' AND table_name = 'papers_table' -- Focus on papers_table
+            ORDER BY table_name;
+            """)
+        tables = cur.fetchall()
+        if not tables:
+            print("Table 'papers_table' not found in 'public' schema.")
+            return
 
-        columns = cur.fetchall()
-        for column in columns:
-            print(f"    - {column[0]} ({column[1]})")
+        print("Schema for 'papers_table':")
+        for table in tables:
+            table_name = table[0]
+            cur.execute("""
+                SELECT c.column_name, c.data_type, c.is_nullable, c.column_default,
+                       tc.constraint_name, tc.constraint_type
+                FROM information_schema.columns c
+                LEFT JOIN information_schema.key_column_usage kcu
+                  ON c.table_schema = kcu.table_schema
+                  AND c.table_name = kcu.table_name
+                  AND c.column_name = kcu.column_name
+                LEFT JOIN information_schema.table_constraints tc
+                  ON kcu.constraint_schema = tc.constraint_schema
+                  AND kcu.constraint_name = tc.constraint_name
+                WHERE c.table_name = %s AND c.table_schema = 'public'
+                ORDER BY c.ordinal_position;
+                """, (table_name,))
+            columns = cur.fetchall()
+            for column in columns:
+                constraint_info = ""
+                if column[4] and column[5]:  # constraint_name and constraint_type
+                    constraint_info = f", Constraint: {column[4]} ({column[5]})"
+                print(
+                    f"  - {column[0]} ({column[1]}, Nullable: {column[2]}, Default: {column[3]}{constraint_info})")
+    except psycopg2.Error as e:
+        print(f"Error listing tables and columns: {e}")
+    finally:
+        cur.close()
+        conn.close()
 
-    cur.close()
-    conn.close()
+
+if __name__ == '__main__':
+
+    # 1. Make sure your .env file is set up with DB credentials.
+    # 2. Ensure the 'papers_table' exists with the correct schema.
+    #    You might need to DROP and RECREATE it if the schema changed significantly.
+    #
+    #    Example CREATE TABLE statement:
+    #    DROP TABLE IF EXISTS papers_table; -- If you want to start fresh for testing
+    #    CREATE TABLE papers_table (
+    #        paper_hash TEXT PRIMARY KEY,     -- Hash of content fields
+    #        id TEXT NOT NULL,                -- Original external ID
+    #        title TEXT NOT NULL,
+    #        abstract TEXT,
+    #        authors TEXT,
+    #        publication_date TEXT,
+    #        landing_page_url TEXT,
+    #        pdf_url TEXT
+    #    );
+
+    print("Listing existing table schema (initial check):")
+    list_tables_and_columns()
+    print("-" * 40)
+
+    sample_paper_1_data = {
+        "id": "arxiv_2401.00001_v1",
+        "title": "A Study on Advanced AI Models",
+        "abstract": "This paper explores advanced AI models.",
+        "authors": "Jane Doe, John Smith",
+        "publication_date": "2024-01-15",
+        "landing_page_url": "https://example.com/paper/arxiv_2401.00001",
+        "pdf_url": "https://example.com/pdf/paper/arxiv_2401.00001.pdf"
+    }
+    sample_paper_2_data = {
+        "id": "doi_10.1000_xyz123",
+        "title": "Quantum Entanglement in Nanostructures",
+        "authors": "Alice Wonderland, Bob The Builder",
+        "publication_date": "2023-11-01",
+        "abstract": None,
+        "pdf_url": "https://example.com/pdf/paper/doi_10.1000_xyz123.pdf"
+    }
+    sample_paper_3_data = {
+        "id": "internal_report_007",
+        "title": "Internal Research Findings",
+        "abstract": "Confidential findings.",
+        "authors": "Agent K",
+        "publication_date": "",
+        "landing_page_url": "internal_paper_link",
+    }
+
+    paper_1_hash = None
+    paper_2_hash = None
+    paper_3_hash = None
+
+    print("\nAttempting to insert papers:")
+    papers_to_insert = [sample_paper_1_data, sample_paper_2_data, sample_paper_3_data,
+                        sample_paper_1_data]
+    status_code, inserted_info = insert_papers(papers_to_insert)
+
+    print(f"Insertion Status Code: {status_code}")
+    if status_code == 1:
+        print("Successfully inserted papers:")
+        for info in inserted_info:
+            print(f"  Title: {info['title']}, Abstract: '{info['abstract']}', Hash: {info['hash']}")
+
+            if info['title'] == sample_paper_1_data['title']:
+                paper_1_hash = info['hash']
+            elif info['title'] == sample_paper_2_data['title']:
+                paper_2_hash = info['hash']
+            elif info['title'] == sample_paper_3_data['title']:
+                paper_3_hash = info['hash']
+    elif not inserted_info:
+        print("  No new papers were inserted (possibly all duplicates or all data invalid).")
+    else:
+        print("  Insertion was reported as unsuccessful.")
+        if inserted_info:
+            print(f"  Partial/erroneous info (should be empty on error): {inserted_info}")
+
+    print("-" * 40)
+
+    print("\nFetching all papers:")
+    all_papers = get_all_papers()
+    if all_papers:
+        for paper in all_papers:
+            print(f"  Hash: {paper['paper_hash']}, OrigID: {paper['id']}, Title: {paper['title']}")
+    else:
+        print("  No papers found or error fetching.")
+    print("-" * 40)
+
+    if paper_1_hash:
+        print(f"\nFetching paper by its hash '{paper_1_hash}':")
+        paper = get_paper_by_hash(paper_1_hash)
+        if paper:
+            print(f"  Found: {paper}")
+        else:
+            print(f"  Paper with hash {paper_1_hash} not found (should exist).")
+
+        print(f"\nFetching paper versions by original ID '{sample_paper_1_data['id']}':")
+        paper_versions = get_papers_by_original_id(sample_paper_1_data['id'])
+        if paper_versions:
+            print(f"  Found {len(paper_versions)} version(s):")
+            for p_v in paper_versions:
+                print(f"    Hash: {p_v['paper_hash']}, Title: {p_v['title']}")
+        else:
+            print(f"  Paper with original ID {sample_paper_1_data['id']} not found.")
+        print("-" * 40)
+
+        print(f"\nUpdating abstract for paper hash '{paper_1_hash}':")
+        updated_abstract = "This is an updated abstract for the AI paper, version 2."
+        if update_paper_field(paper_1_hash, "abstract", updated_abstract):
+
+            temp_updated_data = sample_paper_1_data.copy()
+            temp_updated_data["abstract"] = updated_abstract
+            new_paper_1_hash = _generate_paper_hash(temp_updated_data)
+
+            print(
+                f"  Update reported success. Old hash was {paper_1_hash}, new hash should be {new_paper_1_hash}.")
+            paper_after_update = get_paper_by_hash(new_paper_1_hash)
+            if paper_after_update:
+                print(f"  Retrieved updated paper. Abstract: {paper_after_update.get('abstract')}")
+                paper_1_hash = new_paper_1_hash
+            else:
+                print(
+                    f"  Could not retrieve paper by new hash {new_paper_1_hash}. Update might have failed silently or hash mismatch.")
+        else:
+            print("  Update failed.")
+        print("-" * 40)
+
+    if paper_2_hash:
+        print(f"\nUpdating multiple fields for paper hash '{paper_2_hash}':")
+        update_payload = {
+            "title": "Revised: Quantum Entanglement Paper (v2)",
+            "authors": "Alice Wonderland, Bob The Builder, Eve The Reviewer",
+            "landing_page_url": "https://newexample.com/revised_paper_doi"
+        }
+        if update_paper(paper_2_hash, update_payload):
+            temp_updated_data_p2 = sample_paper_2_data.copy()
+            temp_updated_data_p2.update(update_payload)
+            new_paper_2_hash = _generate_paper_hash(temp_updated_data_p2)
+
+            print(
+                f"  Multi-field update reported success. Old hash {paper_2_hash}, new hash {new_paper_2_hash}.")
+            paper_after_multi_update = get_paper_by_hash(new_paper_2_hash)
+            if paper_after_multi_update:
+                print(f"  Updated Paper (retrieved by new hash): {paper_after_multi_update}")
+                paper_2_hash = new_paper_2_hash
+            else:
+                print(f"  Could not retrieve paper by new hash {new_paper_2_hash}.")
+
+        else:
+            print("  Multi-field update failed.")
+        print("-" * 40)
+
+    if paper_3_hash:
+        print(f"\nDeleting paper with hash '{paper_3_hash}':")
+        if delete_paper_by_hash(paper_3_hash):
+            paper_after_delete = get_paper_by_hash(paper_3_hash)
+            if not paper_after_delete:
+                print(f"  Paper with hash {paper_3_hash} successfully deleted.")
+            else:
+                print(
+                    f"  Paper with hash {paper_3_hash} still found after reported deletion. This is an error.")
+        else:
+            print(f"  Deletion of paper with hash {paper_3_hash} failed.")
+    else:
+        print(
+            "\nSkipping delete test for paper 3 as its hash was not captured (insertion might have failed).")
+    print("-" * 40)
+
+    print("\nFinal listing of table schema:")
+    list_tables_and_columns()
+    print("-" * 40)
+
+    print("\nTesting non-existent paper operations:")
+    non_existent_hash = "non_existent_paper_hash_value_12345"
+    print(f"Attempting to get paper by non-existent hash: {non_existent_hash}")
+    get_paper_by_hash(non_existent_hash)
+    print(f"Attempting to update paper by non-existent hash: {non_existent_hash}")
+    update_paper_field(non_existent_hash, "title", "New Title")
+    print(f"Attempting to delete paper by non-existent hash: {non_existent_hash}")
+    delete_paper_by_hash(non_existent_hash)
+
+    print("\nTesting batch retrieval using get_papers_by_hash():")
+    if paper_1_hash and paper_2_hash:
+        print(f"  Fetching papers by existing hashes: {paper_1_hash}, {paper_2_hash}")
+        found_papers = get_papers_by_hash([paper_1_hash, paper_2_hash])
+        if found_papers:
+            print(f"  Found {len(found_papers)} paper(s):")
+            for paper in found_papers:
+                print(f"    - Hash: {paper['paper_hash']}, Title: {paper['title']}")
+        else:
+            print("  No papers were found (unexpected).")
+    else:
+        print("  Skipping existing hash test due to missing hash values.")
+
+    print("\n  Fetching papers by non-existent hashes:")
+    fake_hashes = ["not_a_real_hash_1", "not_a_real_hash_2"]
+    missing_papers = get_papers_by_hash(fake_hashes)
+    if not missing_papers:
+        print("  Correctly found no matching papers.")
+    else:
+        print(f"  Unexpectedly found {len(missing_papers)} paper(s):")
+        for paper in missing_papers:
+            print(f"    - Hash: {paper['paper_hash']}, Title: {paper['title']}")
+
+    print("-" * 40)
+    print("Test script finished.")

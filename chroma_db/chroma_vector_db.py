@@ -50,5 +50,30 @@ class ChromaVectorDB:
 
         return 1 if errors else 0
 
+    def perform_similarity_search(self, k: int, user_profile_embedding: List[float]) -> Optional[List[str]]:
+        """
+        Perform similarity search on ChromaDB.
+
+        Args:
+            k (int): No. of top similar results to return
+            user_profile_embedding (List[float]): Embedding vector of the user profile
+
+        Returns:
+            List[str]: List of top-k hashes (ids) of similar items
+            or None if error occurs
+        """
+        try:
+            results = self.collection.query(
+                query_embeddings=[user_profile_embedding],
+                n_results=k,
+                include=["ids"]
+            )
+
+            return results.get("ids", [[]])[0]
+
+        except Exception as e:
+            logger.error(f"Error performing similarity search: {e}")
+            return None
+
     def count_documents(self) -> int:
         return self.collection.count()
