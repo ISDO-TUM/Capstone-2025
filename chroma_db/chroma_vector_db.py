@@ -12,8 +12,11 @@ from typing import List, Dict, Optional
 
 import chromadb
 from chromadb.api.models.Collection import Collection
-
 from llm.Embeddings import embed_string
+
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 logger = logging.getLogger(__name__)
