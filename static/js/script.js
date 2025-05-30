@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.title && titleDisplay) document.title = `Project: ${projectData.title}`;
 
         if (recommendationsContainer) {
-            fetchRecommendations(projectData.title, projectData.description)
+            fetchRecommendations(projectData.description)
                 .then(recommendations => {
                     renderRecommendations(recommendations, recommendationsContainer);
                 })
