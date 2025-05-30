@@ -1,16 +1,18 @@
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import logging
 from typing import List, Dict
 
 import chromadb
 from chromadb.api.models.Collection import Collection
+from llm.Embeddings import embed_string
 
-from llm.Embeddings import embed_string  
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
 
 class ChromaVectorDB:
     def __init__(self, collection_name: str = "research-papers") -> None:
