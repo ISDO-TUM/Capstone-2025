@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import chromadb
 from chromadb.api.models.Collection import Collection
