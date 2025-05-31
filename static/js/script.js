@@ -123,8 +123,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     handleRouting();
 
-    if (window.location.pathname.startsWith('/project/')) {
-        const projectId = window.location.pathname.split('/').pop();
-        loadProjectOverviewData(projectId);
-    }
 });

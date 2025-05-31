@@ -14,6 +14,8 @@ system_prompt = SystemMessage(content="""
   Do not make up paper names that are not returned by tool calls. In that case say that you could not
   find any papers.
 
+  You do not talk directly to the user, you only send a JSON to the frontend.
+
   Return your recommendations in a JSON with the following fields:
     -message: A message to the user describing how these recommendations may help their research.
     -papers: A list of papers associated with the recommendations. This field has following subfields
@@ -24,7 +26,6 @@ system_prompt = SystemMessage(content="""
 
     Example:
     {
-        "message" : "These papers may help your research in the fields XYZ because ABC",
         "papers" : {
             {
                 "title" : "XYZ",
