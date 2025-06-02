@@ -29,7 +29,7 @@ repos:
     hooks:
     -   id: pigar-requirements
         name: pigar - Generate requirements.txt
-        entry: bash -c 'pigar generate'
+        entry: bash -c 'pigar generate; touch requirements.txt; if ! grep -q "^langgraph[=~<>]" requirements.txt; then echo "langgraph~=0.4.5" >> requirements.txt && sort -o requirements.txt requirements.txt; fi'
         language: system
         types: [python]
         pass_filenames: false
