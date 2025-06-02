@@ -26,7 +26,8 @@ services:
     environment:
       - IS_PERSISTENT=TRUE
     restart: unless-stopped
-
+    networks:
+      - capstone_network
   web:
     build: .
     container_name: capstone_web

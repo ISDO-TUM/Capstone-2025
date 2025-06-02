@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 
 class ChromaVectorDB:
     def __init__(self, collection_name: str = "research-papers") -> None:
-        self.client = chromadb.HttpClient(host="localhost", port=8000)
+        self.client = chromadb.HttpClient(host="chromadb", port=8000)
         self.collection: Collection = self.client.get_or_create_collection(collection_name)
 
     def store_embeddings(self, data: List[Dict[str, str]]) -> int:

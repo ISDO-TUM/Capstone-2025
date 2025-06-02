@@ -7,7 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 # Setup Chroma client and collection
-client = chromadb.HttpClient(host="localhost", port=8000)
+client = chromadb.HttpClient(host="chromadb", port=8000)
 
 # Delete collection if it already exists, to start fresh
 try:

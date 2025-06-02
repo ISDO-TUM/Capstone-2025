@@ -1,6 +1,6 @@
 import chromadb
 
-client = chromadb.HttpClient(host="localhost", port=8000)
+client = chromadb.HttpClient(host="chromadb", port=8000)
 
 collection = client.get_or_create_collection("research-papers")
 
