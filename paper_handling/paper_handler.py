@@ -21,10 +21,8 @@ def _fetch_works_single_query(query, from_publication_date=None):
             .search(query)
             .sort(relevance_score="desc")
         )
-        
         if from_publication_date:
             works_query = works_query.filter(from_publication_date=from_publication_date)
-            
         works = works_query.get(per_page=1)
     except Exception as e:
         print(f"Error fetching works for query '{query}': {e}")
