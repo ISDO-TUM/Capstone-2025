@@ -1,26 +1,29 @@
 from pyalex import Works
 
 
-def _fetch_works_single_query(query):
+def _fetch_works_single_query(query, from_publication_date=None):
     """
     Fetch works from OpenAlex matching a query.
 
     Parameters:
     - query (str): Search keyword or phrase.
+    - from_publication_date (str, optional): Filter works published on or after this date (YYYY-MM-DD format).
 
     Returns:
     - List[dict]: Each dict contains id, title, abstract, authors, publication_date, landing_page_url, pdf_url.
     """
     try:
-        works = (
+        works_query = (
             Works()
             .select(
                 "id,title,abstract_inverted_index,authorships,publication_date,primary_location"
             )
             .search(query)
             .sort(relevance_score="desc")
-            .get(per_page=1)
         )
+        if from_publication_date:
+            works_query = works_query.filter(from_publication_date=from_publication_date)
+        works = works_query.get(per_page=1)
     except Exception as e:
         print(f"Error fetching works for query '{query}': {e}")
         return []
@@ -68,7 +71,7 @@ def _fetch_works_single_query(query):
     return results
 
 
-def fetch_works_multiple_queries(queries):
+def fetch_works_multiple_queries(queries, from_publication_date=None):
     """
     This function takes a list of search queries and retrieves scientific papers from the OpenAlex API
     for each query. It returns a single flattened list of dictionaries, each representing one paper.
@@ -84,6 +87,7 @@ def fetch_works_multiple_queries(queries):
 
     Parameters:
     - queries (List[str]): List of search keywords or phrases to query in OpenAlex.
+    - from_publication_date (str, optional): Filter works published on or after this date (YYYY-MM-DD format).
 
     Returns:
     - List[dict]: A single, combined list of work metadata dictionaries from all queries.
@@ -91,7 +95,7 @@ def fetch_works_multiple_queries(queries):
     all_results = []
     for query in queries:
         try:
-            works = _fetch_works_single_query(query)
+            works = _fetch_works_single_query(query, from_publication_date)
             all_results.extend(works)
         except Exception as e:
             print(f"Error fetching works for query '{query}': {e}")
@@ -99,4 +103,4 @@ def fetch_works_multiple_queries(queries):
 
 
 if __name__ == "__main__":
-    print(fetch_works_multiple_queries(["biomedical", "LLMs"]))
+    print(fetch_works_multiple_queries(["biomedical", "LLMs"], "2025-06-01"))
