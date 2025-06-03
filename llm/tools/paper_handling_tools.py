@@ -1,4 +1,7 @@
 from typing import Any
+import json
+from llm.LLMDefinition import LLM 
+from llm.Prompts import user_message
 
 from paper_handling.paper_handler import fetch_works_multiple_queries
 
@@ -62,24 +65,33 @@ def check_relevance_threshold(papers_with_relevance_scores: list[dict], threshol
     return all(paper.get("similarity_score", 0.0) >= threshold for paper in top_papers)
 
 
-def decide_next_action(papers_with_metadata: list[dict]) -> str:
+def decide_next_action(papers_with_metadata: list[dict], user_query: str) -> str:
     """
     Step 6: Agent logic to decide what to do next if results are not satisfactory.
     Returns one of: "retry_broaden", "reformulate_query", "lower_threshold", or "accept".
     """
 
     formatted_metadata = "\n\n".join(
-        f"""Paper {i+1}:
-            - Title: {paper.get("title", "N/A")}
-            - Similarity Score: {paper.get("similarity_score", "N/A")}
-            - Citation Count: {paper.get("cited_by_count", "N/A")}
-            - FWCI: {paper.get("fwci", "N/A")}
-            - Abstract: {paper.get("abstract", "N/A")}"""
-        for i, paper in enumerate(papers_with_metadata)
+    f"""Paper {i+1}:
+        - Title: {paper.get("title", "N/A")}
+        - Similarity Score: {paper.get("similarity_score", "N/A")}
+        - Citation Count: {paper.get("cited_by_count", "N/A")}
+        - FWCI: {paper.get("fwci", "N/A")}
+        - Citation Percentile: {paper.get("citation_normalized_percentile", "N/A")}
+        - Publication Date: {paper.get("publication_date", "N/A")}
+        - Abstract: {paper.get("abstract", "N/A")}
+        - Topics: {", ".join(t.get("topic", "N/A") for t in paper.get("topics", []))}
+        - Subfields: {", ".join(sf for t in paper.get("topics", []) for sf in t.get("subfields", []))}
+        - Fields: {", ".join(f for t in paper.get("topics", []) for f in t.get("fields", []))}
+        - Domains: {", ".join(d for t in paper.get("topics", []) for d in t.get("domains", []))}
+    """
+    for i, paper in enumerate(papers_with_metadata)
     )
 
     prompt = f"""
     You are an intelligent research assistant responsible for evaluating a set of research papers returned from a query.
+
+    This is the user initial query: "{user_query}"
 
     For each paper, you have access to metadata such as:
     - similarity score (relevance to the original query),
@@ -105,9 +117,9 @@ def decide_next_action(papers_with_metadata: list[dict]) -> str:
 
     {formatted_metadata}
     """
-
-    # You would then feed `prompt` into your LLM to get the agent’s decision
-    return prompt  # Replace this line with LLM completion call if integrating with an agent
+    llm = LLM
+    response = llm.invoke(prompt)
+    return response.content.strip().lower()
 
 
 
@@ -118,31 +130,121 @@ def retry_with_modified_parameters(action: str, current_query: str, attempt: int
     """
 
     if action == "accept":
-        return current_query  # No change needed, accept the current query
+        print(f"Action: {action} on attempt {attempt}. Found papers satisfactory.")
+        # return current_query  # No change needed, accept the current query
 
     elif action == "retry_broaden":
+        print(f"Action: {action} on attempt {attempt}. Retrying with a broader query.")
         # Broaden the query by adding more general terms or synonyms
-        broadened_query = f"{current_query} broadening search terms"
-        return broadened_query
+        # broadened_query = f"{current_query} broadening search terms"
+        # return broadened_query
 
     elif action == "reformulate_query":
+        print(f"Action: {action} on attempt {attempt}. Reformulating the query.")
         # Reformulate the query to better capture user intent
-        reformulated_query = f"Reformulated: {current_query} with better keywords"
-        return reformulated_query
-
-    elif action == "lower_threshold":
-        # Lower the threshold for relevance scores
-        new_threshold = 0.5  # Example of lowering the threshold
-        return f"{current_query} with threshold {new_threshold}"
+        # reformulated_query = f"Reformulated: {current_query} with better keywords"
+        # return reformulated_query
 
     else:
         raise ValueError(f"Unknown action: {action}")
     
 
-def quality_control_loop(paper_candidates: list[dict], current_query: str, attempt: int = 0) -> list[dict]:
+def quality_control_loop(retrieved_papers: list[dict], current_query: str, attempt: int = 0) -> list[dict]:
     """
     Wraps steps 5–7 together.
     - Calls `check_relevance_threshold`
     - If False, calls `decide_next_action`
     - Then `retry_with_modified_parameters` and loops if necessary
     """
+    threshold = 0.7  # Example threshold for relevance
+    is_satisfactory = check_relevance_threshold(retrieved_papers, threshold)
+
+    if is_satisfactory:
+        print(f"Attempt {attempt}: Papers are satisfactory.")
+        return retrieved_papers 
+
+    action = decide_next_action(retrieved_papers, current_query)
+    print(f"Attempt {attempt}: Decided action - {action}")
+
+    next_query = retry_with_modified_parameters(action, current_query, attempt)
+    
+    if next_query == current_query:  # If no change needed, return the papers
+        return retrieved_papers
+
+    # TODO: REFETCH PAPERS WITH THE NEW QUERY
+    new_retrieved_papers = []
+    # new_retrieved_papers = get_paper_basic_data([next_query])  # Simulate fetching with the new query
+
+    return quality_control_loop(new_retrieved_papers, next_query, attempt + 1)
+
+
+if __name__ == "__main__":
+
+    papers_with_metadata = json.loads("""
+    [
+        {
+        "id": "https://openalex.org/W4410932904",
+        "title": "Promising biomedical applications using superparamagnetic nanoparticles",
+        "abstract": "No abstract available",
+        "authors": "Yosri A. Fahim, Ibrahim W. Hasani, Waleed Mahmoud Ragab",
+        "publication_date": "2025-06-02",
+        "fwci": null,
+        "citation_normalized_percentile": null,
+        "cited_by_count": 0,
+        "counts_by_year": [],
+        "similarity_score": 0.72, 
+        "topics": [
+        {
+            "topic": "Nanoparticle-Based Drug Delivery",
+            "score": 1.0,
+            "subfields": ["Biomaterials"],
+            "fields": ["Materials Science"],
+            "domains": ["Physical Sciences"]
+        },
+        {
+            "topic": "Characterization and Applications of Magnetic Nanoparticles",
+            "score": 0.9999,
+            "subfields": ["Biomedical Engineering"],
+            "fields": ["Engineering"],
+            "domains": ["Physical Sciences"]
+        },
+        {
+            "topic": "Gold and Silver Nanoparticles Synthesis and Applications",
+            "score": 0.9973,
+            "subfields": ["Electronic, Optical and Magnetic Materials"],
+            "fields": ["Materials Science"],
+            "domains": ["Physical Sciences"]
+        }
+        ],
+        "landing_page_url": "https://doi.org/10.1186/s40001-025-02696-z",
+        "pdf_url": null
+    },
+    {
+        "id": "https://openalex.org/W4410933080",
+        "title": "Enabling Doctor-Centric Medical AI with LLMs through Workflow-Aligned Tasks and Benchmarks",
+        "abstract": "<title>Abstract</title> The rise of large language models (LLMs) has profoundly influenced health-care by offering medical advice, diagnostic suggestions, and more. However, their deployment directly toward patients poses substantial risks, as limited domain knowledge may result in misleading or erroneous outputs. To address this challenge , we propose repositioning LLMs as clinical assistants that collaborate with experienced physicians rather than interacting with patients directly. We begin with a two-stage inspiration–feedback survey to identify real-world needs in clinical workflows. Guided by this, we construct DoctorFLAN, a large-scale Chi-nese medical dataset comprising 92,000 Q&A instances across 22 clinical tasks and 27 specialties. To evaluate model performance in doctor-facing applications, 1 we introduce DoctorFLAN-test (550 single-turn Q&A items) and DotaBench (74 multi-turn conversations mimicking realistic scenarios). Experimental results with over ten popular LLMs demonstrate that DoctorFLAN notably improves the performance of open-source LLMs in medical contexts, facilitating their alignment with physician workflows and complementing existing patient-oriented models. This work contributes a valuable resource and framework for advancing doctor-centered medical LLM development.",
+        "authors": "Wenya Xie, Qingying Xiao, Yu‐Jun Zheng, Xidong Wang, Junying Chen, Ke Ji, Anningzhe Gao, Prayag Tiwari, Xiang Wan, Feng Jiang, Benyou Wang",
+        "publication_date": "2025-06-02",
+        "fwci": null,
+        "citation_normalized_percentile": null,
+        "cited_by_count": 0,
+        "counts_by_year": [],
+        "similarity_score": 0.87,
+        "topics": [
+        {
+            "topic": "Scientific Computing and Data Management",
+            "score": 0.9139,
+            "subfields": ["Information Systems and Management"],
+            "fields": ["Decision Sciences"],
+            "domains": ["Social Sciences"]
+        }
+        ],
+        "landing_page_url": "https://doi.org/10.21203/rs.3.rs-6763537/v1",
+        "pdf_url": null
+        }
+    ]
+    """
+    )
+
+    action = decide_next_action(papers_with_metadata, user_message)
+    print("Agent decision:", action)

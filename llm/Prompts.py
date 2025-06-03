@@ -6,6 +6,29 @@ Specifically, I'm interested in enhancing exploration-exploitation trade-offs an
 efficiency through GPU acceleration for large-scale experiments.
 """
 
+user_message_two = """
+I’m studying the integration of wearable biosensors with real-time health monitoring systems. I’m especially 
+interested in energy-efficient data transmission techniques and how machine learning can be used to predict 
+cardiovascular anomalies from sensor streams.
+"""
+
+user_message_three = """
+I’m exploring the role of ocean-atmosphere coupling in long-term climate variability. Specifically, I want to 
+understand how El Niño patterns interact with polar jet streams and what models are most accurate for decadal-scale 
+prediction.
+"""
+
+user_message_four = """
+I’m researching how natural language processing can support legal compliance monitoring in multinational corporations. 
+My focus is on multilingual document classification and extracting obligations from contracts across EU jurisdictions.
+"""
+
+# This is supposed to be a poor query to test the agents ability to reformulate queries
+user_message_five = """
+I want to learn about technology and how it’s changing stuff in the world. Maybe also with AI. What are the big things 
+people are talking about?”
+"""
+
 system_prompt = SystemMessage(content="""
   You are an expert assistant helping scientific researchers stay up-to-date with the latest literature.
   Your task is to analyze the user's research interests and use your available tools to query papers titles
