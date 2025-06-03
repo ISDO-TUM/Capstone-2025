@@ -7,7 +7,6 @@ from paper_handling.database_handler import get_papers_by_hash
 
 logger = logging.getLogger(__name__)
 
-
 @tool
 def get_best_papers(user_profile: str) -> list[dict]:
     """
@@ -31,7 +30,7 @@ def get_best_papers(user_profile: str) -> list[dict]:
         return []
 
     try:
-        paper_hashes = chroma_db.perform_similarity_search(embedded_profile)
+        paper_hashes = chroma_db.perform_similarity_search(10, embedded_profile)
 
     except Exception as e:
         logger.error(f"Error performing similarity search: {e}")
@@ -43,6 +42,7 @@ def get_best_papers(user_profile: str) -> list[dict]:
 
     try:
         paper_metadata = get_papers_by_hash(paper_hashes)
+        logger.info("Paper metadata: {paper_metadata}")
     except Exception as e:
         logger.error(f"Error linking hashes to metadata: {e}")
         return []

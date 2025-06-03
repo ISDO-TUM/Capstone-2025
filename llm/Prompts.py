@@ -18,13 +18,11 @@ system_prompt = SystemMessage(content="""
   As we are now in development always run the 2 tools. First update_papers, then get_best_papers.
   Use the result of get_best_papers to build you response.
 
-  Do not make up paper names that are not returned by tool calls. In that case say that you could not
-  find any papers.
+  Do not make up paper names that are not returned by get_best_papers. If get_best_papers does not return any papers return an empty JSON.
 
   You do not talk directly to the user, you only send a JSON to the frontend.
 
   Return your recommendations in a JSON with the following fields:
-    -message: A message to the user describing how these recommendations may help their research.
     -papers: A list of papers associated with the recommendations. This field has following subfields
         -Title: The paper's title.
         -Link: The paper's URL.

@@ -1,9 +1,12 @@
 import json
+import logging
 import os
 import sys
 
 from flask import Flask, request, jsonify, render_template
 from llm.Agent import trigger_agent
+
+logger = logging.getLogger(__name__)
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
                                              '..')))
@@ -62,7 +65,12 @@ def get_recommendations():
 
 
 def get_agent_response(user_description):
-    return trigger_agent(user_description)['messages'][-1].content
+    messages = trigger_agent(user_description)['messages']
+
+    for message in messages:
+        logger.info(f"Messages: {message}")
+
+    return messages[-1].content
 
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 from langchain_core.tools import tool
@@ -8,6 +9,7 @@ from llm.Embeddings import embed_papers
 from paper_handling.database_handler import insert_papers
 from paper_handling.paper_handler import fetch_works_multiple_queries
 
+logger = logging.getLogger(__name__)
 
 @tool
 def update_papers(queries: list[str]) -> str:
@@ -36,6 +38,7 @@ def update_papers(queries: list[str]) -> str:
 
         # Step 2: Store works in Postgres
         status_db, deduplicated_papers = insert_papers(downloaded_papers)
+        logger.info(f"Found {len(deduplicated_papers)} new papers.\nPapers:\n{deduplicated_papers}")
 
         embedding_dicts = []
         # Step 3.1: Embed papers
@@ -53,14 +56,16 @@ def update_papers(queries: list[str]) -> str:
 
         # Check if all status codes are 0
         if status_download == 0 and status_db == 0 and status_chroma == 0:
+            logger.info("Updating paper database successfully.")
             return ("Paper database has been updated with the latest papers & embeddings. There were no errors. "
                     "Now you can rank the papers.")
         else:
+            logger.error("Updating paper database failed.")
             return ("Paper database has been updated with the latest papers & embeddings. There were some errors. "
                     "Ignore the errors and proceed with ranking the papers.")
 
     except Exception as e:
-        print(f"An error occurred in update_papers: {e}")
+        logger.error(f"Updating paper database failed: {e}")
         return ("Paper database has been updated with the latest papers & embeddings. There were some errors. "
                 "Ignore the errors and proceed with ranking the papers.")
 

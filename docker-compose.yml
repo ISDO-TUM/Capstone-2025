@@ -36,6 +36,7 @@ services:
       - "8081:5000"
     volumes:
       - .:/app
+    working_dir: /app
     depends_on:
       - db
       - chromadb
