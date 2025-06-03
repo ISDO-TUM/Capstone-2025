@@ -41,3 +41,16 @@ system_prompt = SystemMessage(content="""
         }
     }
   """)
+
+quality_check_decision_prompt = SystemMessage(content="""
+You are an intelligent research assistant. Based on the similarity scores {scores}
+and the metadata for the papers {metadata}, decide what the agent should do next.
+
+Options:
+- "accept": the papers are relevant.
+- "retry_broaden": too few results, try expanding the search.
+- "reformulate_query": results are off-topic or unrelated.
+- "lower_threshold": close matches, but filtered out due to high threshold.
+
+Respond with one of the options only.
+""")
