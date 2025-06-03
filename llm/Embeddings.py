@@ -14,5 +14,5 @@ def embed_user_profile(text):
     return embed_string(text)
 
 
-def embed_papers(title, abstract, hash):
-    return embed_string(title + abstract), hash
+def embed_papers(title, abstract):
+    return embed_string(title + abstract)

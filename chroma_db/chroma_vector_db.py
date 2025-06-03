@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, TypedDict
 
 import chromadb
 from chromadb.api.models.Collection import Collection
@@ -13,17 +13,22 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
+class PaperData(TypedDict):
+    embedding: List[float]
+    hash: str
+
+
 class ChromaVectorDB:
     def __init__(self, collection_name: str = "research-papers") -> None:
         self.client = chromadb.HttpClient(host="chromadb", port=8000)
         self.collection: Collection = self.client.get_or_create_collection(collection_name)
 
-    def store_embeddings(self, data: List[Dict[str, str]]) -> int:
+    def store_embeddings(self, data: List[PaperData]) -> int:
         """
         Store text embeddings in Chroma using OpenAI API.
 
         Args:
-            data: list of dicts like {"hash": str, "text": str}
+            data: list of dicts like {"hash": str, "embedding": List[float]}
 
         Returns:
             status_code: 0 if all succeeded, 1 if any failed
@@ -33,14 +38,11 @@ class ChromaVectorDB:
         for item in data:
             try:
                 hash_id = item["hash"]
-                text = item["text"]
-
-                embedding = embed_string(text)
+                embedding = item["embedding"]
 
                 self.collection.upsert(
                     ids=[hash_id],
                     embeddings=[embedding],
-                    documents=[text]
                 )
 
             except Exception as e:
@@ -76,3 +78,8 @@ class ChromaVectorDB:
 
     def count_documents(self) -> int:
         return self.collection.count()
+
+
+# Instantiate singleton
+# todo find a better approach for this
+chroma_db = ChromaVectorDB()

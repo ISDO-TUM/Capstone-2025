@@ -1,9 +1,9 @@
-from llm.tools.paper_handling_tools import get_paper_basic_data
-from paper_ranking.paper_ranker import select_relevant_titles
+from llm.tools.paper_handling_tools import update_papers
+from paper_ranking.paper_ranker import get_best_papers
 
 tools = [
-    get_paper_basic_data,
-    select_relevant_titles
+    update_papers,
+    get_best_papers
 ]
 
 
