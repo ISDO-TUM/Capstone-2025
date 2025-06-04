@@ -3,7 +3,6 @@ import psycopg2.extras
 import os
 from dotenv import load_dotenv
 import hashlib
-from datetime import datetime
 from utils.status import Status
 
 load_dotenv()

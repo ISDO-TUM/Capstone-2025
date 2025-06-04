@@ -97,7 +97,6 @@ def fetch_works_multiple_queries(queries, from_publication_date=None):
     """
     all_works = []
     any_failure = False
-    
     for query in queries:
         try:
             works, status = _fetch_works_single_query(query, from_publication_date)
@@ -107,7 +106,6 @@ def fetch_works_multiple_queries(queries, from_publication_date=None):
         except Exception as e:
             print(f"Error fetching works for query '{query}': {e}")
             any_failure = True
-            
     return all_works, Status.FAILURE if any_failure else Status.SUCCESS
 
 

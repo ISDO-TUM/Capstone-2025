@@ -7,6 +7,7 @@ from paper_handling.database_handler import get_papers_by_hash
 
 logger = logging.getLogger(__name__)
 
+
 @tool
 def get_best_papers(user_profile: str) -> list[dict]:
     """

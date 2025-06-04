@@ -11,6 +11,7 @@ from paper_handling.paper_handler import fetch_works_multiple_queries
 
 logger = logging.getLogger(__name__)
 
+
 @tool
 def update_papers(queries: list[str]) -> str:
     """
