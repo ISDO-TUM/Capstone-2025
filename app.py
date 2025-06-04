@@ -4,7 +4,7 @@ import os
 import sys
 
 from flask import Flask, request, jsonify, render_template
-from llm.Agent import trigger_agent
+from llm.Agent import trigger_agent, trigger_agent_show_thoughts
 
 logger = logging.getLogger(__name__)
 
@@ -65,10 +65,7 @@ def get_recommendations():
 
 
 def get_agent_response(user_description):
-    messages = trigger_agent(user_description)['messages']
-
-    for message in messages:
-        logger.info(f"Messages: {message}")
+    messages = trigger_agent_show_thoughts(user_description)['messages']
 
     return messages[-1].content
 

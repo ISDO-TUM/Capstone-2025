@@ -12,7 +12,7 @@ services:
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - capstone_postgres_data:/var/lib/postgresql/data
     networks:
       - capstone_network
 
@@ -22,7 +22,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - chroma_data:/chroma/.chroma
+      - capstone_chroma_data:/chroma/.chroma
     environment:
       - IS_PERSISTENT=TRUE
     restart: unless-stopped
@@ -54,8 +54,8 @@ services:
       - capstone_network
 
 volumes:
-  postgres_data:
-  chroma_data:
+  capstone_postgres_data:
+  capstone_chroma_data:
 
 networks:
   capstone_network:

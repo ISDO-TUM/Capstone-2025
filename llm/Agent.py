@@ -15,6 +15,18 @@ agent = create_react_agent(model=llm, tools=tools)
 def trigger_agent(user_message: str):
     return agent.invoke({'messages': [system_prompt, HumanMessage(content=user_message)]})
 
+def trigger_agent_show_thoughts(user_message: str):
+    messages = {}
+
+    for step in agent.stream(
+        {"messages": [system_prompt, HumanMessage(content=user_message)]},
+        {"recursion_limit": RECURSION_LIMIT},
+        stream_mode="values",
+    ):
+        step["messages"][-1].pretty_print()
+        messages = step
+    return messages
+
 
 # Left here to test the agent alone
 if __name__ == '__main__':
