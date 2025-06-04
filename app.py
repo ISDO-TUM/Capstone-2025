@@ -81,7 +81,8 @@ def upload_paper():
         
     pdf_file = request.files['pdf']
     paper_context = request.form['paperContext']
-
+    project_description = request.form['projectDescription']
+    
     if not pdf_file.filename.endswith('.pdf'):
         return jsonify({"error": "File must be a PDF"}), 400
         
@@ -89,7 +90,7 @@ def upload_paper():
         pdf_content = pdf_file.read()
         logger.info(f"Processing PDF upload: {pdf_file.filename}")
         
-        enhanced_profile = process_user_paper(pdf_content, paper_context)
+        enhanced_profile = process_user_paper(pdf_content, paper_context, project_description)
         
         if not enhanced_profile:
             logger.error("Failed to process PDF and create enhanced profile")

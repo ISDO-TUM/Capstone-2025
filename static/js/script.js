@@ -78,11 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Load enhanced description if it exists
         const enhancedProfile = localStorage.getItem(`${projectId}_enhancedProfile`);
         if (enhancedProfile && enhancedDescriptionDisplay) {
-            // Replace newlines with <br> tags and preserve whitespace
-            const formattedText = enhancedProfile
-                .replace(/\n/g, '<br>')
-                .replace(/\s{2,}/g, match => '&nbsp;'.repeat(match.length));
-            enhancedDescriptionDisplay.innerHTML = `<p style="white-space: pre-wrap;">${formattedText}</p>`;
+            enhancedDescriptionDisplay.innerHTML = `<p>${enhancedProfile}</p>`;
         }
 
         if (recommendationsContainer) {
