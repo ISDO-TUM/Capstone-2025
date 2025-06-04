@@ -22,13 +22,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 event.preventDefault();
                 const title = document.getElementById('projectTitle').value;
                 const description = document.getElementById('projectDescription').value;
+                const pdfFile = document.getElementById('pdfFile').files[0];
+                const paperContext = document.getElementById('paperContext').value;
 
                 // TODO: For now in local storage, in the future will be sent to Flask backend
                 const projectId = `project_${Date.now()}`;
                 const projectData = { id: projectId, title, description };
                 localStorage.setItem(projectId, JSON.stringify(projectData));
 
-                // TODO: For now simulate this, in the future redirect and URL by backend
+
+                // If a PDF was uploaded, store the enhanced profile
+                if (pdfFile && paperContext) {
+                    const formData = new FormData();
+                    formData.append('pdf', pdfFile);
+                    formData.append('paperContext', paperContext);
+                    formData.append('projectDescription', description);
+                    const response = await fetch('/api/upload-paper', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (response.ok) {
+                        const enhancedProfile = await response.text();
+                        localStorage.setItem(`${projectId}_enhancedProfile`, enhancedProfile);
+                    }
+                }
+
                 window.location.href = `/project/${projectId}`;
             });
         }
@@ -50,14 +68,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const titleDisplay = document.getElementById('projectTitleDisplay');
         const descriptionDisplay = document.getElementById('projectDescriptionDisplay');
+        const enhancedDescriptionDisplay = document.getElementById('enhancedDescriptionDisplay');
         const recommendationsContainer = document.getElementById('recommendationsContainer');
 
         if (titleDisplay) titleDisplay.textContent = projectData.title;
         if (descriptionDisplay) descriptionDisplay.textContent = projectData.description;
         if (document.title && titleDisplay) document.title = `Project: ${projectData.title}`;
 
+        // Load enhanced description if it exists
+        const enhancedProfile = localStorage.getItem(`${projectId}_enhancedProfile`);
+        if (enhancedProfile && enhancedDescriptionDisplay) {
+            enhancedDescriptionDisplay.innerHTML = `<p>${enhancedProfile}</p>`;
+        }
+
         if (recommendationsContainer) {
-            fetchRecommendations(projectData.description)
+            fetchRecommendations(projectData.description, enhancedProfile)
                 .then(recommendations => {
                     renderRecommendations(recommendations, recommendationsContainer);
                 })
@@ -66,9 +91,52 @@ document.addEventListener('DOMContentLoaded', () => {
                     recommendationsContainer.innerHTML = '<p>Could not load recommendations at this time.</p>';
                 });
         }
+
+        // Add PDF upload form handler
+        const paperUploadForm = document.getElementById('paperUploadForm');
+        if (paperUploadForm) {
+            paperUploadForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                
+                const pdfFile = document.getElementById('pdfFile').files[0];
+                const paperContext = document.getElementById('paperContext').value;
+                
+                if (!pdfFile || !paperContext) {
+                    alert('Please provide both a PDF file and context about the paper.');
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('pdf', pdfFile);
+                formData.append('paperContext', paperContext);
+                formData.append('projectDescription', projectData.description);
+                
+                try {
+                    const response = await fetch('/api/upload-paper', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Failed to upload paper');
+                    }
+                    
+                    const recommendations = await response.json();
+                    renderRecommendations(recommendations, recommendationsContainer);
+                    
+                    // Clear the form
+                    paperUploadForm.reset();
+                    
+                } catch (error) {
+                    console.error('Error uploading paper:', error);
+                    alert('Failed to upload paper: ' + error.message);
+                }
+            });
+        }
     };
 
-    async function fetchRecommendations(projectDescription) {
+    async function fetchRecommendations(projectDescription, enhancedProfile) {
         console.log(`Waiting on recommendations based on project description...`);
         try {
             const response = await fetch('/api/recommendations', {
@@ -76,7 +144,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ projectDescription: projectDescription }),
+                body: JSON.stringify({ 
+                    projectDescription: projectDescription,
+                    enhancedProfile: enhancedProfile || ''
+                }),
             });
 
             if (!response.ok) {
@@ -120,6 +191,19 @@ document.addEventListener('DOMContentLoaded', () => {
             container.appendChild(card);
         });
     }
+
+    // Add toggle function for enhanced description
+    window.toggleEnhancedDescription = function() {
+        const content = document.getElementById('enhancedDescriptionDisplay');
+        const button = document.querySelector('.btn-toggle');
+        if (content.classList.contains('hidden')) {
+            content.classList.remove('hidden');
+            button.textContent = 'Hide Enhanced Description';
+        } else {
+            content.classList.add('hidden');
+            button.textContent = 'Show Enhanced Description';
+        }
+    };
 
     handleRouting();
 

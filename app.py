@@ -5,6 +5,7 @@ import sys
 
 from flask import Flask, request, jsonify, render_template
 from llm.Agent import trigger_agent
+from utils.user_profile import process_user_paper
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,8 @@ def get_recommendations():
     if not data or 'projectDescription' not in data:
         return jsonify({"error": "Missing projectDescription"}), 400
 
-    user_description = data['projectDescription']
+    enhanced_profile = data.get('enhancedProfile', '')
+    user_description = f"{data['projectDescription']}\n\n{enhanced_profile}"
 
     try:
         llm_response_content = get_agent_response(user_description)
@@ -43,7 +45,6 @@ def get_recommendations():
             recommendations = json.loads(llm_response_content).get('papers')
             final_recommendations = []
             for rec in recommendations:
-
                 final_recommendations.append({
                     "title": rec.get("title", "N/A"),
                     "link": rec.get("link", "N/A"),
@@ -62,6 +63,46 @@ def get_recommendations():
     except Exception as e:
         print(f"An error occurred in /api/recommendations: {e}")
         return jsonify({"error": f"An internal error occurred: {str(e)}"}), 500
+
+
+@app.route('/api/upload-paper', methods=['POST'])
+def upload_paper():
+    """
+    Handle PDF paper upload and enhance user profile.
+    """
+    if 'pdf' not in request.files:
+        return jsonify({"error": "No PDF file provided"}), 400
+        
+    if 'paperContext' not in request.form:
+        return jsonify({"error": "No paper context provided"}), 400
+        
+    if 'projectDescription' not in request.form:
+        return jsonify({"error": "No project description provided"}), 400
+        
+    pdf_file = request.files['pdf']
+    paper_context = request.form['paperContext']
+    project_description = request.form['projectDescription']
+    
+    if not pdf_file.filename.endswith('.pdf'):
+        return jsonify({"error": "File must be a PDF"}), 400
+        
+    try:
+        pdf_content = pdf_file.read()
+        logger.info(f"Processing PDF upload: {pdf_file.filename}")
+        
+        enhanced_profile = process_user_paper(pdf_content, paper_context, project_description)
+        
+        if not enhanced_profile:
+            logger.error("Failed to process PDF and create enhanced profile")
+            return jsonify({"error": "Failed to process PDF"}), 500
+            
+        logger.info("Successfully created enhanced profile with uploaded paper")
+        logger.debug(f"Enhanced profile length: {len(enhanced_profile)} characters")
+
+        return jsonify(enhanced_profile)
+    except Exception as e:
+        logger.error(f"Error processing PDF upload: {e}")
+        return jsonify({"error": f"An error occurred while processing the PDF: {str(e)}"}), 500
 
 
 def get_agent_response(user_description):

@@ -145,3 +145,82 @@ h1 {
     flex-grow: 1;
     margin-bottom: 0;
 }
+
+.paper-upload-section {
+    margin: 30px 0;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.paper-upload-section h2 {
+    font-size: 22px;
+    color: #343a40;
+    margin-bottom: 10px;
+}
+
+.paper-upload-section p {
+    color: #6c757d;
+    margin-bottom: 20px;
+}
+
+.upload-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.upload-form .form-group {
+    margin-bottom: 0;
+}
+
+.upload-form input[type="file"] {
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    background-color: white;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.upload-form textarea {
+    min-height: 100px;
+}
+
+.upload-form .btn-primary {
+    align-self: flex-start;
+    margin-top: 10px;
+}
+
+.enhanced-description {
+    margin-top: 20px;
+    border-top: 1px solid #e9ecef;
+    padding-top: 20px;
+}
+
+.btn-toggle {
+    background: none;
+    border: none;
+    color: #007bff;
+    cursor: pointer;
+    padding: 0;
+    font-size: 14px;
+    text-decoration: underline;
+}
+
+.btn-toggle:hover {
+    color: #0056b3;
+}
+
+.enhanced-content {
+    margin-top: 10px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.enhanced-content.hidden {
+    display: none;
+}

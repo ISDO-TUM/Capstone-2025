@@ -10,3 +10,4 @@ psycopg2-binary==2.9.10
 pyalex==0.18
 python-dotenv==1.1.0
 langgraph~=0.4.5
+PyPDF2==3.0.1
