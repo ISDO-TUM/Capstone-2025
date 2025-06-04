@@ -6,19 +6,32 @@ Specifically, I'm interested in enhancing exploration-exploitation trade-offs an
 efficiency through GPU acceleration for large-scale experiments.
 """
 
+#user_message_two = """
+#I’m studying the integration of wearable biosensors with real-time health monitoring systems. I’m especially 
+#interested in energy-efficient data transmission techniques and how machine learning can be used to predict 
+#cardiovascular anomalies from sensor streams.
+#"""
+
+#user_message_two_keywords = [
+#    "Wearable Biosensors",
+#    "Real-Time Health Monitoring",
+#    "Energy-Efficient Data Transmission",
+#    "Cardiovascular Diseases",
+#    "Machine Learning"
+#]
+
 user_message_two = """
-I’m studying the integration of wearable biosensors with real-time health monitoring systems. I’m especially 
-interested in energy-efficient data transmission techniques and how machine learning can be used to predict 
-cardiovascular anomalies from sensor streams.
+I’m investigating scalable machine learning methods for real-time decision-making in high-dimensional environments. 
+I’m particularly interested in how approximate Bayesian optimization techniques and GPU acceleration can enhance 
+performance in classification and control tasks.
 """
 
 user_message_two_keywords = [
-    "Wearable Biosensors",
-    "Real-Time Health Monitoring",
-    "Energy-Efficient Data Transmission",
-    "Cardiovascular Diseases",
-    "Machine Learning"
+    "Bayesian optimization",
+    "Machine learning",
+    "GPU computing"
 ]
+
 
 user_message_three = """
 I’m exploring the role of ocean-atmosphere coupling in long-term climate variability. Specifically, I want to 

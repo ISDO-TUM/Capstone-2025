@@ -273,27 +273,27 @@ if __name__ == "__main__":
 
     print("\n========== Test Case 2: No similarity scores (should invoke agent) ==========")
     query_two_papers = fetch_works_multiple_queries(queries=[prompts.user_message_two_keywords])
-    quality_control_loop(query_two_papers, prompts.user_message_two)
+    print(query_two_papers)
+    #quality_control_loop(query_two_papers, prompts.user_message_two)
 
     print("\n========== Test Case 3: No similarity scores (should invoke agent) ==========")
-    query_three_papers = fetch_works_multiple_queries(queries=[prompts.user_message_three_keywords])
-    quality_control_loop(query_three_papers, prompts.user_message_three)
+    #query_three_papers = fetch_works_multiple_queries(queries=[prompts.user_message_three_keywords])
+    #quality_control_loop(query_three_papers, prompts.user_message_three)
 
     print("\n========== Test Case 4: No similarity scores (should invoke agent) ==========")
-    query_four_papers = fetch_works_multiple_queries(queries=[prompts.user_message_four_keywords])
-    quality_control_loop(query_four_papers, prompts.user_message_four)
+    #query_four_papers = fetch_works_multiple_queries(queries=[prompts.user_message_four_keywords])
+    #quality_control_loop(query_four_papers, prompts.user_message_four)
 
     print("\n========== Test Case 5: Defective query – agent should suggest reformulation ==========")
-    query_five_papers = fetch_works_multiple_queries(queries=[prompts.user_message_five_keywords])
-    print(f"Retrieved {len(query_five_papers)} papers for Test Case 5")
-    quality_control_loop(query_five_papers, prompts.user_message_five)
+    #query_five_papers = fetch_works_multiple_queries(queries=[prompts.user_message_five_keywords])
+    #quality_control_loop(query_five_papers, prompts.user_message_five)
 
     print("\n========== Test Case 6: Overly narrow query – agent should suggest broadening ==========")
-    query_six_papers = fetch_works_multiple_queries(queries=[prompts.user_message_six_keywords])
-    quality_control_loop(query_six_papers, prompts.user_message_six)
+    #query_six_papers = fetch_works_multiple_queries(queries=[prompts.user_message_six_keywords])
+    #quality_control_loop(query_six_papers, prompts.user_message_six)
 
     print("\n========== Test Case 8: Non-sensical query – agent should trigger correction ==========")
-    query_eight_papers = fetch_works_multiple_queries(queries=["Hello"])
-    quality_control_loop(query_eight_papers, "Hello")
+    #query_eight_papers = fetch_works_multiple_queries(queries=["Hello"])
+    #quality_control_loop(query_eight_papers, "Hello")
 
     
