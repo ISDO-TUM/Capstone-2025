@@ -1,7 +1,7 @@
 from typing import Any
 import json
 from llm.LLMDefinition import LLM 
-from llm.Prompts import user_message, user_message_two, user_message_four, user_message_three, user_message_five
+from llm.Prompts import user_message, user_message_two, user_message_four, user_message_three, user_message_five, user_message_six
 
 from paper_handling.paper_handler import fetch_works_multiple_queries
 
@@ -49,19 +49,23 @@ def _get_link(work):
     return link
 
 
-def check_relevance_threshold(papers_with_relevance_scores: list[dict], threshold: float) -> bool:
+def check_relevance_threshold(papers_with_relevance_scores: list[dict], threshold: float, min_papers: int = 3) -> bool:
     """
-    Step 5: Checks if the similarity scores in the list of papers meet the specified threshold.
-    Returns True if results are satisfactory, False otherwise.
+    Checks if the similarity scores in the list of papers meet the specified threshold.
+    Only considers the top N papers (default 3) and requires at least that many to proceed.
 
     Args:
-        papers_with_relevance_scores: A list of dictionaries where each dict represents a paper and includes a 'similarity_score' key.
-        threshold: The minimum similarity score required for a paper to be considered relevant.
+        papers_with_relevance_scores: List of paper dictionaries including 'similarity_score'.
+        threshold: Minimum similarity score to consider a paper relevant.
+        min_papers: Minimum number of papers required to evaluate satisfaction.
 
     Returns:
-        True if all relevant papers meet the threshold (uses top 3 if available), otherwise False.
+        True if the top N papers meet the threshold; otherwise False.
     """
-    top_papers = papers_with_relevance_scores[:3] if len(papers_with_relevance_scores) > 3 else papers_with_relevance_scores
+    if len(papers_with_relevance_scores) < min_papers:
+        return False
+
+    top_papers = papers_with_relevance_scores[:min_papers]
     return all(paper.get("similarity_score", 0.0) >= threshold for paper in top_papers)
 
 
@@ -102,16 +106,14 @@ def decide_next_action(papers_with_metadata: list[dict], user_query: str) -> str
 
     Your goal is to assess whether the current set of results is satisfactory, or whether another action should be taken.
 
-    Please choose **one** of the following actions based on the quality and relevance of the papers:
-    - "accept": The papers are relevant and high-quality.
-    - "retry_broaden": The papers are too narrow or too few, try a broader version of the current query.
-    - "reformulate_query": The current query is off, and should be reformulated to better capture the user intent.
-    - "lower_threshold": The threshold for similarity or quality might be too high, and lowering it could yield more useful results.
+    Please respond strictly in JSON format with two keys:
+    - "action": one of ["accept", "retry_broaden", "reformulate_query", "lower_threshold"]
+    - "reason": a brief explanation (2 sentences max) why this action was selected
 
-    You may consider papers satisfactory if:
-    - Most have high similarity scores (e.g. > 0.7),
-    - They include recent and well-cited research,
-    - They align well with the query topic as indicated by abstract and title.
+    Guidance for choosing:
+    - Choose "accept" if the majority of papers are relevant, well-cited, and recent.
+    - Choose "retry_broaden" if the results are too narrow or too few.
+    - Choose "reformulate_query" if the query seems to miss the intent or is too vague or off-topic.
 
     Now decide based on the following paper metadata:
 
@@ -119,7 +121,19 @@ def decide_next_action(papers_with_metadata: list[dict], user_query: str) -> str
     """
     llm = LLM
     response = llm.invoke(prompt)
-    return response.content.strip().lower()
+
+    import json
+
+    try:
+        parsed = json.loads(response.content)
+        action = parsed["action"]
+        reason = parsed["reason"]
+    except json.JSONDecodeError:
+        raise ValueError("Agent response could not be parsed. Check format and content.")
+
+    return action, reason
+
+    #return response.content.strip().lower()
 
 
 
@@ -163,19 +177,17 @@ def quality_control_loop(retrieved_papers: list[dict], current_query: str, attem
         print(f"Attempt {attempt}: Papers are satisfactory.")
         return None
 
-    action = decide_next_action(retrieved_papers, current_query)
+    action, reason = decide_next_action(retrieved_papers, current_query)
     print(f"Attempt {attempt}: Decided action - {action}")
+    print(f"Reason for action: {reason}")
 
-    next_query = retry_with_modified_parameters(action, current_query, attempt)
-    
-    if next_query == current_query:  # If no change needed, return the papers
-        return None
+    # In the future add methods so the agent can modify the query based on the action (either broaden, or reformulate)
 
-    # TODO: REFETCH PAPERS WITH THE NEW QUERY
+    # After query is reformulated or broadened, we want to fetch new papers
     new_retrieved_papers = []
-    # new_retrieved_papers = get_paper_basic_data([next_query])  # Simulate fetching with the new query
+    # new_retrieved_papers = get_paper_basic_data([next_query])
 
-    return quality_control_loop(new_retrieved_papers, next_query, attempt + 1)
+    return None
 
 
 if __name__ == "__main__":
@@ -250,20 +262,33 @@ if __name__ == "__main__":
 
     # Test case 2: For now there is no similarity score, so the first method will not be triggered
 
-    query_two_papers = fetch_works_multiple_queries(queries=[user_message_two])
-    quality_control_loop(query_two_papers, user_message_two)
+    #query_two_papers = fetch_works_multiple_queries(queries=[user_message_two])
+    #quality_control_loop(query_two_papers, user_message_two)
 
     # Test case 3: For now there is no similarity score, so the first method will not be triggered
 
-    query_three_papers = fetch_works_multiple_queries(queries=[user_message_three])
-    quality_control_loop(query_three_papers, user_message_three)
+    #query_three_papers = fetch_works_multiple_queries(queries=[user_message_three])
+    #quality_control_loop(query_three_papers, user_message_three)
     
     # Test case 4: For now there is no similarity score, so the first method will not be triggered
 
-    query_four_papers = fetch_works_multiple_queries(queries=[user_message_four])
-    quality_control_loop(query_four_papers, user_message_four)
+    #query_four_papers = fetch_works_multiple_queries(queries=[user_message_four])
+    #quality_control_loop(query_four_papers, user_message_four)
 
     # Test case 5: This tests a defect query that should be reformulated
 
     query_five_papers = fetch_works_multiple_queries(queries=[user_message_five])
+    print("Query five papers:", query_five_papers)
     quality_control_loop(query_five_papers, user_message_five)
+
+    # Test case 6: This is a query that is too narrow and should therefore be made more general
+
+    #query_six_papers = fetch_works_multiple_queries(queries=[user_message_six])
+    #quality_control_loop(query_six_papers, user_message_six)
+
+    # Test case 8: 
+
+    #query_eight_papers = fetch_works_multiple_queries(queries=["Hello"])
+    #quality_control_loop(query_eight_papers, "Hello")
+
+    

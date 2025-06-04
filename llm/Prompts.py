@@ -29,6 +29,12 @@ I want to learn about technology and how it’s changing stuff in the world. May
 people are talking about?”
 """
 
+user_message_six = """
+I’m looking for papers that compare the performance of the Sparse Spectrum Gaussian Process Bandit algorithm against 
+the Thompson Sampling baseline using CUDA-accelerated simulations on the MNIST dataset, specifically for the 7 vs. 9 
+digit classification task.
+"""
+
 system_prompt = SystemMessage(content="""
   You are an expert assistant helping scientific researchers stay up-to-date with the latest literature.
   Your task is to analyze the user's research interests and use your available tools to query papers titles
