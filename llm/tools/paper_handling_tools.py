@@ -1,7 +1,7 @@
 from typing import Any
 import json
 from llm.LLMDefinition import LLM 
-from llm.Prompts import user_message, user_message_two, user_message_four, user_message_three, user_message_five, user_message_six
+import llm.Prompts as prompts
 
 from paper_handling.paper_handler import fetch_works_multiple_queries
 
@@ -106,9 +106,12 @@ def decide_next_action(papers_with_metadata: list[dict], user_query: str) -> str
 
     Your goal is to assess whether the current set of results is satisfactory, or whether another action should be taken.
 
-    Please respond strictly in JSON format with two keys:
-    - "action": one of ["accept", "retry_broaden", "reformulate_query", "lower_threshold"]
-    - "reason": a brief explanation (2 sentences max) why this action was selected
+    Respond with a JSON object with the following structure:
+    {{
+    "action": "...",  // one of: accept, retry_broaden, reformulate_query, lower_threshold
+    "reason": "..."   // brief explanation why the action was chosen (max 2 sentences)
+    }}
+    Only output the JSON object. Do not include any other text or formatting.
 
     Guidance for choosing:
     - Choose "accept" if the majority of papers are relevant, well-cited, and recent.
@@ -118,17 +121,23 @@ def decide_next_action(papers_with_metadata: list[dict], user_query: str) -> str
     Now decide based on the following paper metadata:
 
     {formatted_metadata}
+
+    Respond with a JSON object with the following structure:
+    {{
+    "action": "...",  // one of: accept, retry_broaden, reformulate_query, lower_threshold
+    "reason": "..."   // brief explanation why the action was chosen (max 2 sentences)
+    }}
+    Only output the JSON object. Do not include any other text or formatting.
     """
     llm = LLM
     response = llm.invoke(prompt)
-
-    import json
 
     try:
         parsed = json.loads(response.content)
         action = parsed["action"]
         reason = parsed["reason"]
     except json.JSONDecodeError:
+        print(response.content.strip().lower())
         raise ValueError("Agent response could not be parsed. Check format and content.")
 
     return action, reason
@@ -171,12 +180,13 @@ def quality_control_loop(retrieved_papers: list[dict], current_query: str, attem
     - Then `retry_with_modified_parameters` and loops if necessary
     """
     threshold = 0.7  # Example threshold for relevance
-    is_satisfactory = check_relevance_threshold(retrieved_papers, threshold)
+    is_satisfactory = check_relevance_threshold(retrieved_papers, threshold, min_papers=3)
 
     if is_satisfactory:
         print(f"Attempt {attempt}: Papers are satisfactory.")
         return None
 
+    print(f"Number of retrieved papers: {len(retrieved_papers)}")
     action, reason = decide_next_action(retrieved_papers, current_query)
     print(f"Attempt {attempt}: Decided action - {action}")
     print(f"Reason for action: {reason}")
@@ -258,37 +268,32 @@ if __name__ == "__main__":
     """
     )
 
-    quality_control_loop(papers_with_metadata, user_message)
+    #print("\n========== Test Case 1: Query with precomputed similarity scores ==========")
+    #quality_control_loop(papers_with_metadata, user_message)
 
-    # Test case 2: For now there is no similarity score, so the first method will not be triggered
+    print("\n========== Test Case 2: No similarity scores (should invoke agent) ==========")
+    query_two_papers = fetch_works_multiple_queries(queries=[prompts.user_message_two_keywords])
+    quality_control_loop(query_two_papers, prompts.user_message_two)
 
-    #query_two_papers = fetch_works_multiple_queries(queries=[user_message_two])
-    #quality_control_loop(query_two_papers, user_message_two)
+    print("\n========== Test Case 3: No similarity scores (should invoke agent) ==========")
+    query_three_papers = fetch_works_multiple_queries(queries=[prompts.user_message_three_keywords])
+    quality_control_loop(query_three_papers, prompts.user_message_three)
 
-    # Test case 3: For now there is no similarity score, so the first method will not be triggered
+    print("\n========== Test Case 4: No similarity scores (should invoke agent) ==========")
+    query_four_papers = fetch_works_multiple_queries(queries=[prompts.user_message_four_keywords])
+    quality_control_loop(query_four_papers, prompts.user_message_four)
 
-    #query_three_papers = fetch_works_multiple_queries(queries=[user_message_three])
-    #quality_control_loop(query_three_papers, user_message_three)
-    
-    # Test case 4: For now there is no similarity score, so the first method will not be triggered
+    print("\n========== Test Case 5: Defective query – agent should suggest reformulation ==========")
+    query_five_papers = fetch_works_multiple_queries(queries=[prompts.user_message_five_keywords])
+    print(f"Retrieved {len(query_five_papers)} papers for Test Case 5")
+    quality_control_loop(query_five_papers, prompts.user_message_five)
 
-    #query_four_papers = fetch_works_multiple_queries(queries=[user_message_four])
-    #quality_control_loop(query_four_papers, user_message_four)
+    print("\n========== Test Case 6: Overly narrow query – agent should suggest broadening ==========")
+    query_six_papers = fetch_works_multiple_queries(queries=[prompts.user_message_six_keywords])
+    quality_control_loop(query_six_papers, prompts.user_message_six)
 
-    # Test case 5: This tests a defect query that should be reformulated
-
-    query_five_papers = fetch_works_multiple_queries(queries=[user_message_five])
-    print("Query five papers:", query_five_papers)
-    quality_control_loop(query_five_papers, user_message_five)
-
-    # Test case 6: This is a query that is too narrow and should therefore be made more general
-
-    #query_six_papers = fetch_works_multiple_queries(queries=[user_message_six])
-    #quality_control_loop(query_six_papers, user_message_six)
-
-    # Test case 8: 
-
-    #query_eight_papers = fetch_works_multiple_queries(queries=["Hello"])
-    #quality_control_loop(query_eight_papers, "Hello")
+    print("\n========== Test Case 8: Non-sensical query – agent should trigger correction ==========")
+    query_eight_papers = fetch_works_multiple_queries(queries=["Hello"])
+    quality_control_loop(query_eight_papers, "Hello")
 
     

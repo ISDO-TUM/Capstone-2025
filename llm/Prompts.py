@@ -12,16 +12,40 @@ interested in energy-efficient data transmission techniques and how machine lear
 cardiovascular anomalies from sensor streams.
 """
 
+user_message_two_keywords = [
+    "Wearable Biosensors",
+    "Real-Time Health Monitoring",
+    "Energy-Efficient Data Transmission",
+    "Cardiovascular Diseases",
+    "Machine Learning"
+]
+
 user_message_three = """
 I’m exploring the role of ocean-atmosphere coupling in long-term climate variability. Specifically, I want to 
 understand how El Niño patterns interact with polar jet streams and what models are most accurate for decadal-scale 
 prediction.
 """
 
+user_message_three_keywords = [
+    "Ocean-Atmosphere Interaction",
+    "El Niño-Southern Oscillation",
+    "Jet Streams",
+    "Climate Models",
+    "Decadal Climate Variability"
+]
+
 user_message_four = """
 I’m researching how natural language processing can support legal compliance monitoring in multinational corporations. 
 My focus is on multilingual document classification and extracting obligations from contracts across EU jurisdictions.
 """
+
+user_message_four_keywords = [
+    "Natural Language Processing",
+    "Legal Compliance",
+    "Multilingual Text Classification",
+    "Contract Analysis",
+    "European Union Law"
+]
 
 # This is supposed to be a poor query to test the agents ability to reformulate queries
 user_message_five = """
@@ -29,11 +53,27 @@ I want to learn about technology and how it’s changing stuff in the world. May
 people are talking about?”
 """
 
+user_message_five_keywords = [
+    "Technology",
+    "AI stuff",
+    "Cool inventions",
+    "Future trends",
+    "World changes"
+]
+
 user_message_six = """
 I’m looking for papers that compare the performance of the Sparse Spectrum Gaussian Process Bandit algorithm against 
 the Thompson Sampling baseline using CUDA-accelerated simulations on the MNIST dataset, specifically for the 7 vs. 9 
 digit classification task.
 """
+
+user_message_six_keywords = [
+    "Gaussian processes",
+    "Thompson sampling",
+    "Bayesian optimization",
+    "CUDA",
+    "Digit classification"
+]
 
 system_prompt = SystemMessage(content="""
   You are an expert assistant helping scientific researchers stay up-to-date with the latest literature.
