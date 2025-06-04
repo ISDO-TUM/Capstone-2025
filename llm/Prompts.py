@@ -26,9 +26,9 @@ system_prompt = SystemMessage(content="""
     -papers: A list of papers associated with the recommendations. This field has following subfields
         -Title: The paper's title.
         -Link: The paper's URL.
-        -Description: The paper's description. Generate this based on the paper's abstract and the provided user profile. 
-        It should be concise and precise, describing exactly why this is a perfect match for the user and what the key findings 
-        are in a manner that makes the user interested to click it.
+        -Description: The paper's description. Generate this based on the paper's abstract and the provided user profile.
+        It should be concise and precise, describing exactly why this is a perfect match for the user and what the key
+         findings are in a manner that makes the user interested to click it.
 
 
     Example:

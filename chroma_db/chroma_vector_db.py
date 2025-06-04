@@ -1,9 +1,8 @@
 import logging
-from typing import List, Dict, Optional, TypedDict
+from typing import List, Optional, TypedDict
 
 import chromadb
 from chromadb.api.models.Collection import Collection
-from llm.Embeddings import embed_string
 from utils.status import Status
 
 import sys
