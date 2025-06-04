@@ -1,7 +1,7 @@
 from typing import Any
 import json
 from llm.LLMDefinition import LLM 
-from llm.Prompts import user_message
+from llm.Prompts import user_message, user_message_two, user_message_four, user_message_three, user_message_five
 
 from paper_handling.paper_handler import fetch_works_multiple_queries
 
@@ -149,7 +149,7 @@ def retry_with_modified_parameters(action: str, current_query: str, attempt: int
         raise ValueError(f"Unknown action: {action}")
     
 
-def quality_control_loop(retrieved_papers: list[dict], current_query: str, attempt: int = 0) -> list[dict]:
+def quality_control_loop(retrieved_papers: list[dict], current_query: str, attempt: int = 0):
     """
     Wraps steps 5–7 together.
     - Calls `check_relevance_threshold`
@@ -161,7 +161,7 @@ def quality_control_loop(retrieved_papers: list[dict], current_query: str, attem
 
     if is_satisfactory:
         print(f"Attempt {attempt}: Papers are satisfactory.")
-        return retrieved_papers 
+        return None
 
     action = decide_next_action(retrieved_papers, current_query)
     print(f"Attempt {attempt}: Decided action - {action}")
@@ -169,7 +169,7 @@ def quality_control_loop(retrieved_papers: list[dict], current_query: str, attem
     next_query = retry_with_modified_parameters(action, current_query, attempt)
     
     if next_query == current_query:  # If no change needed, return the papers
-        return retrieved_papers
+        return None
 
     # TODO: REFETCH PAPERS WITH THE NEW QUERY
     new_retrieved_papers = []
@@ -246,5 +246,24 @@ if __name__ == "__main__":
     """
     )
 
-    action = decide_next_action(papers_with_metadata, user_message)
-    print("Agent decision:", action)
+    quality_control_loop(papers_with_metadata, user_message)
+
+    # Test case 2: For now there is no similarity score, so the first method will not be triggered
+
+    query_two_papers = fetch_works_multiple_queries(queries=[user_message_two])
+    quality_control_loop(query_two_papers, user_message_two)
+
+    # Test case 3: For now there is no similarity score, so the first method will not be triggered
+
+    query_three_papers = fetch_works_multiple_queries(queries=[user_message_three])
+    quality_control_loop(query_three_papers, user_message_three)
+    
+    # Test case 4: For now there is no similarity score, so the first method will not be triggered
+
+    query_four_papers = fetch_works_multiple_queries(queries=[user_message_four])
+    quality_control_loop(query_four_papers, user_message_four)
+
+    # Test case 5: This tests a defect query that should be reformulated
+
+    query_five_papers = fetch_works_multiple_queries(queries=[user_message_five])
+    quality_control_loop(query_five_papers, user_message_five)
