@@ -108,7 +108,7 @@ def decide_next_action(papers_with_metadata: list[dict], user_query: str) -> str
 
     Respond with a JSON object with the following structure:
     {{
-    "action": "...",  // one of: accept, retry_broaden, reformulate_query, lower_threshold
+    "action": "...",  // one of: accept, retry_broaden, reformulate_query
     "reason": "..."   // brief explanation why the action was chosen (max 2 sentences)
     }}
     Only output the JSON object. Do not include any other text or formatting.
@@ -124,7 +124,7 @@ def decide_next_action(papers_with_metadata: list[dict], user_query: str) -> str
 
     Respond with a JSON object with the following structure:
     {{
-    "action": "...",  // one of: accept, retry_broaden, reformulate_query, lower_threshold
+    "action": "...",  // one of: accept, retry_broaden, reformulate_query
     "reason": "..."   // brief explanation why the action was chosen (max 2 sentences)
     }}
     Only output the JSON object. Do not include any other text or formatting.
@@ -183,7 +183,7 @@ def quality_control_loop(retrieved_papers: list[dict], current_query: str, attem
     is_satisfactory = check_relevance_threshold(retrieved_papers, threshold, min_papers=3)
 
     if is_satisfactory:
-        print(f"Attempt {attempt}: Papers are satisfactory.")
+        print(f"Attempt {attempt}: Papers are satisfactory (accepted by similarity score, no agent action).")
         return None
 
     print(f"Number of retrieved papers: {len(retrieved_papers)}")
@@ -263,37 +263,66 @@ if __name__ == "__main__":
         ],
         "landing_page_url": "https://doi.org/10.21203/rs.3.rs-6763537/v1",
         "pdf_url": null
+    },
+    {
+    "id": "https://openalex.org/W1234567890",
+    "title": "Optimizing Clinical Workflow Integration of LLM-Based Decision Support Systems",
+    "abstract": "Recent advances in large language models (LLMs) have opened new frontiers for decision support in clinical environments. This paper presents a framework for aligning LLM capabilities with routine physician tasks by incorporating real-time feedback, structured knowledge grounding, and task-specific fine-tuning. We evaluate our approach on a multi-specialty dataset containing 75,000 structured clinical interactions and introduce MedAlignBench, a benchmark suite simulating realistic use cases across diagnostics, prescription drafting, and medical documentation. Results show significant improvements in clinician satisfaction and response accuracy, especially when models are tailored to workflow-specific prompts.",
+    "authors": "Alicia Zhang, David Patel, Rana Al-Hassan, Thomas L. Lee",
+    "publication_date": "2025-05-18",
+    "fwci": 1.42,
+    "citation_normalized_percentile": 82.3,
+    "cited_by_count": 12,
+    "counts_by_year": [{"year": 2025, "count": 12}],
+    "similarity_score": 0.79,
+    "topics": [
+        {
+            "topic": "Scientific Computing and Data Management",
+            "score": 0.89,
+            "subfields": ["Healthcare Informatics"],
+            "fields": ["Decision Sciences"],
+            "domains": ["Social Sciences"]
+        },
+        {
+            "topic": "Large Language Models in Healthcare",
+            "score": 0.85,
+            "subfields": ["Medical AI"],
+            "fields": ["Computer Science"],
+            "domains": ["Health Sciences"]
         }
+    ],
+    "landing_page_url": "https://doi.org/10.1234/medalign.2025.005",
+    "pdf_url": "https://arxiv.org/pdf/medalign.2025.005.pdf"
+    }
     ]
     """
     )
 
-    #print("\n========== Test Case 1: Query with precomputed similarity scores ==========")
-    #quality_control_loop(papers_with_metadata, user_message)
+    print("\n========== Test Case 1: Query with precomputed similarity scores ==========")
+    quality_control_loop(papers_with_metadata, prompts.user_message)
 
     print("\n========== Test Case 2: No similarity scores (should invoke agent) ==========")
     query_two_papers = fetch_works_multiple_queries(queries=[prompts.user_message_two_keywords])
-    print(query_two_papers)
-    #quality_control_loop(query_two_papers, prompts.user_message_two)
+    quality_control_loop(query_two_papers, prompts.user_message_two)
 
     print("\n========== Test Case 3: No similarity scores (should invoke agent) ==========")
-    #query_three_papers = fetch_works_multiple_queries(queries=[prompts.user_message_three_keywords])
-    #quality_control_loop(query_three_papers, prompts.user_message_three)
+    query_three_papers = fetch_works_multiple_queries(queries=[prompts.user_message_three_keywords])
+    quality_control_loop(query_three_papers, prompts.user_message_three)
 
     print("\n========== Test Case 4: No similarity scores (should invoke agent) ==========")
-    #query_four_papers = fetch_works_multiple_queries(queries=[prompts.user_message_four_keywords])
-    #quality_control_loop(query_four_papers, prompts.user_message_four)
+    query_four_papers = fetch_works_multiple_queries(queries=[prompts.user_message_four_keywords])
+    quality_control_loop(query_four_papers, prompts.user_message_four)
 
     print("\n========== Test Case 5: Defective query – agent should suggest reformulation ==========")
-    #query_five_papers = fetch_works_multiple_queries(queries=[prompts.user_message_five_keywords])
-    #quality_control_loop(query_five_papers, prompts.user_message_five)
+    query_five_papers = fetch_works_multiple_queries(queries=[prompts.user_message_five_keywords])
+    quality_control_loop(query_five_papers, prompts.user_message_five)
 
     print("\n========== Test Case 6: Overly narrow query – agent should suggest broadening ==========")
-    #query_six_papers = fetch_works_multiple_queries(queries=[prompts.user_message_six_keywords])
-    #quality_control_loop(query_six_papers, prompts.user_message_six)
+    query_six_papers = fetch_works_multiple_queries(queries=[prompts.user_message_six_keywords])
+    quality_control_loop(query_six_papers, prompts.user_message_six)
 
     print("\n========== Test Case 8: Non-sensical query – agent should trigger correction ==========")
-    #query_eight_papers = fetch_works_multiple_queries(queries=["Hello"])
-    #quality_control_loop(query_eight_papers, "Hello")
+    query_eight_papers = fetch_works_multiple_queries(queries=["Hello"])
+    quality_control_loop(query_eight_papers, "Hello")
 
     
