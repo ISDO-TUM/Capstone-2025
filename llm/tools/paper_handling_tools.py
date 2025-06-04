@@ -3,8 +3,8 @@ from typing import Any
 
 from langchain_core.tools import tool
 
-from chroma_db import store_embeddings
 from chroma_db.chroma_vector_db import chroma_db
+from utils.status import Status
 from llm.Embeddings import embed_papers
 from paper_handling.database_handler import insert_papers
 from paper_handling.paper_handler import fetch_works_multiple_queries
@@ -33,29 +33,27 @@ def update_papers(queries: list[str]) -> str:
         str: A human-readable summary of the update operation's result.
     """
     try:
-        # Step 1: Fetch works from multiple queries
-        downloaded_papers, status_download = fetch_works_multiple_queries(queries)
+        fetched_papers, status_fetch = fetch_works_multiple_queries(queries)
 
-        # Step 2: Store works in Postgres
-        status_db, deduplicated_papers = insert_papers(downloaded_papers)
-        logger.info(f"Found {len(deduplicated_papers)} new papers.\nPapers:\n{deduplicated_papers}")
+        status_postgres, deduplicated_papers = insert_papers(fetched_papers)
 
-        embedding_dicts = []
-        # Step 3.1: Embed papers
+        embedded_papers = []
         for paper in deduplicated_papers:
-            embedding = embed_papers(deduplicated_papers['title'],
-                                     deduplicated_papers['abstract'])
-            embedding_dict = {
+            embedding = embed_papers(paper['title'],
+                                     paper['abstract'])
+            embedded_paper = {
                 'embedding': embedding,
                 'hash': paper['hash'],
             }
-            embedding_dicts.append(embedding_dict)
+            embedded_papers.append(embedded_paper)
 
-        # Step 3.2: Store papers in chroma
-        status_chroma = chroma_db.store_embeddings(embedding_dicts)
+        status_chroma = chroma_db.store_embeddings(embedded_papers)
 
-        # Check if all status codes are 0
-        if status_download == 0 and status_db == 0 and status_chroma == 0:
+        if all([
+            status_fetch == Status.SUCCESS,
+            status_postgres == Status.SUCCESS,
+            status_chroma == Status.SUCCESS
+        ]):
             logger.info("Updating paper database successfully.")
             return ("Paper database has been updated with the latest papers & embeddings. There were no errors. "
                     "Now you can rank the papers.")

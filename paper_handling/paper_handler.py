@@ -1,4 +1,5 @@
 from pyalex import Works
+from utils.status import Status
 
 
 def _fetch_works_single_query(query, from_publication_date=None):
@@ -26,7 +27,7 @@ def _fetch_works_single_query(query, from_publication_date=None):
         works = works_query.get(per_page=1)
     except Exception as e:
         print(f"Error fetching works for query '{query}': {e}")
-        return []
+        return [], Status.FAILURE
 
     results = []
     for work in works:
@@ -68,7 +69,7 @@ def _fetch_works_single_query(query, from_publication_date=None):
             print(f"Error processing work '{work.get('id', 'unknown')}': {ex}")
             continue
 
-    return results
+    return results, Status.SUCCESS
 
 
 def fetch_works_multiple_queries(queries, from_publication_date=None):
@@ -90,16 +91,24 @@ def fetch_works_multiple_queries(queries, from_publication_date=None):
     - from_publication_date (str, optional): Filter works published on or after this date (YYYY-MM-DD format).
 
     Returns:
-    - List[dict]: A single, combined list of work metadata dictionaries from all queries.
+    - Tuple[List[dict], int]: A tuple containing:
+        - A single, combined list of work metadata dictionaries from all queries
+        - Status code (Status.SUCCESS if all queries succeeded, Status.FAILURE if any query failed)
     """
-    all_results = []
+    all_works = []
+    any_failure = False
+    
     for query in queries:
         try:
-            works = _fetch_works_single_query(query, from_publication_date)
-            all_results.extend(works)
+            works, status = _fetch_works_single_query(query, from_publication_date)
+            all_works.extend(works)
+            if status == Status.FAILURE:
+                any_failure = True
         except Exception as e:
             print(f"Error fetching works for query '{query}': {e}")
-    return all_results
+            any_failure = True
+            
+    return all_works, Status.FAILURE if any_failure else Status.SUCCESS
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ from typing import List, Dict, Optional, TypedDict
 import chromadb
 from chromadb.api.models.Collection import Collection
 from llm.Embeddings import embed_string
+from utils.status import Status
 
 import sys
 import os
@@ -31,9 +32,9 @@ class ChromaVectorDB:
             data: list of dicts like {"hash": str, "embedding": List[float]}
 
         Returns:
-            status_code: 0 if all succeeded, 1 if any failed
+            status_code: Status.SUCCESS if all succeeded, Status.FAILURE if any failed
         """
-        errors = 0
+        any_failure = False
 
         for item in data:
             try:
@@ -47,9 +48,9 @@ class ChromaVectorDB:
 
             except Exception as e:
                 logger.error(f"Failed to store embedding for hash={item.get('hash')}: {e}")
-                errors += 1
+                any_failure = True
 
-        return 1 if errors else 0
+        return Status.FAILURE if any_failure else Status.SUCCESS
 
     def perform_similarity_search(self, k: int, user_profile_embedding: List[float]) -> Optional[List[str]]:
         """
@@ -67,9 +68,10 @@ class ChromaVectorDB:
             results = self.collection.query(
                 query_embeddings=[user_profile_embedding],
                 n_results=k,
-                include=["ids"]
+                include=["metadatas"]
             )
 
+            # The IDs are returned in the results even without specifying them in include
             return results.get("ids", [[]])[0]
 
         except Exception as e:
