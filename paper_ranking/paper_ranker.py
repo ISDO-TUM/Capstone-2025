@@ -1,5 +1,56 @@
 import json
+import logging
+from llm.Embeddings import embed_user_profile
 from langchain_core.tools import tool
+from chroma_db.chroma_vector_db import chroma_db
+from paper_handling.database_handler import get_papers_by_hash
+
+logger = logging.getLogger(__name__)
+
+
+@tool
+def get_best_papers(user_profile: str) -> list[dict]:
+    """
+    Tool Name: get_best_papers
+    Returns a list of recommended papers based on the user profile.
+
+    Args:
+        user_profile (str): The user's input or research interests.
+
+    Returns:
+        List[Dict]: A list of paper metadata dictionaries.
+    """
+    try:
+        embedded_profile = embed_user_profile(user_profile)
+    except Exception as e:
+        logger.error(f"User profile could not be embedded: {e}")
+        return []
+
+    if embedded_profile is None:
+        logger.warning("Embedded profile is None, aborting process.")
+        return []
+
+    try:
+        paper_hashes = chroma_db.perform_similarity_search(10, embedded_profile)
+
+    except Exception as e:
+        logger.error(f"Error performing similarity search: {e}")
+        return []
+
+    if not paper_hashes:
+        logger.info("No similar papers found.")
+        return []
+
+    try:
+        paper_metadata = get_papers_by_hash(paper_hashes)
+        logger.info("Paper metadata: {paper_metadata}")
+    except Exception as e:
+        logger.error(f"Error linking hashes to metadata: {e}")
+        return []
+
+    return paper_metadata if paper_metadata else []
+
+# DEPRECATED
 
 
 @tool
