@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 
 class ChromaVectorDB:
     def __init__(self, collection_name: str = "research-papers") -> None:
-        self.client = chromadb.HttpClient(host="chromadb", port=8000)
+        self.client = chromadb.HttpClient(host="localhost", port=8000)
         self.collection: Collection = self.client.get_or_create_collection(collection_name)
 
     def store_embeddings(self, data: List[Dict[str, str]]) -> int:
@@ -64,15 +64,16 @@ class ChromaVectorDB:
         try:
             results = self.collection.query(
                 query_embeddings=[user_profile_embedding],
-                n_results=k,
-                include=["ids"]
+                n_results=k
             )
 
-            return results.get("ids", [[]])[0]
+            return results["ids"][0]
 
         except Exception as e:
             logger.error(f"Error performing similarity search: {e}")
             return None
 
+
     def count_documents(self) -> int:
         return self.collection.count()
+
