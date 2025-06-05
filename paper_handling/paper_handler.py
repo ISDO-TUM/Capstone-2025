@@ -16,8 +16,7 @@ def _fetch_works_single_query(query, from_publication_date=None):
         works_query = (
             Works()
             .select(
-                "id,title,abstract_inverted_index,authorships,publication_date,primary_location,citation_normalized_percentile, " \
-                "fwci,cited_by_count,counts_by_year,topics"
+                "id,title,abstract_inverted_index,authorships,publication_date,primary_location,citation_normalized_percentile,fwci,cited_by_count,counts_by_year,topics"
             )
             .search(query)
             .sort(relevance_score="desc")

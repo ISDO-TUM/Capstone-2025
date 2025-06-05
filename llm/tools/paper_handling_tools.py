@@ -202,101 +202,101 @@ def quality_control_loop(retrieved_papers: list[dict], current_query: str, attem
 
 if __name__ == "__main__":
 
-    papers_with_metadata = json.loads("""
-    [
+    papers_with_metadata = json.loads
+    ("""
+        [
+            {
+            "id": "https://openalex.org/W4410932904",
+            "title": "Promising biomedical applications using superparamagnetic nanoparticles",
+            "abstract": "No abstract available",
+            "authors": "Yosri A. Fahim, Ibrahim W. Hasani, Waleed Mahmoud Ragab",
+            "publication_date": "2025-06-02",
+            "fwci": null,
+            "citation_normalized_percentile": null,
+            "cited_by_count": 0,
+            "counts_by_year": [],
+            "similarity_score": 0.72,
+            "topics": [
+            {
+                "topic": "Nanoparticle-Based Drug Delivery",
+                "score": 1.0,
+                "subfields": ["Biomaterials"],
+                "fields": ["Materials Science"],
+                "domains": ["Physical Sciences"]
+            },
+            {
+                "topic": "Characterization and Applications of Magnetic Nanoparticles",
+                "score": 0.9999,
+                "subfields": ["Biomedical Engineering"],
+                "fields": ["Engineering"],
+                "domains": ["Physical Sciences"]
+            },
+            {
+                "topic": "Gold and Silver Nanoparticles Synthesis and Applications",
+                "score": 0.9973,
+                "subfields": ["Electronic, Optical and Magnetic Materials"],
+                "fields": ["Materials Science"],
+                "domains": ["Physical Sciences"]
+            }
+            ],
+            "landing_page_url": "https://doi.org/10.1186/s40001-025-02696-z",
+            "pdf_url": null
+        },
         {
-        "id": "https://openalex.org/W4410932904",
-        "title": "Promising biomedical applications using superparamagnetic nanoparticles",
-        "abstract": "No abstract available",
-        "authors": "Yosri A. Fahim, Ibrahim W. Hasani, Waleed Mahmoud Ragab",
-        "publication_date": "2025-06-02",
-        "fwci": null,
-        "citation_normalized_percentile": null,
-        "cited_by_count": 0,
-        "counts_by_year": [],
-        "similarity_score": 0.72, 
+            "id": "https://openalex.org/W4410933080",
+            "title": "Enabling Doctor-Centric Medical AI with LLMs through Workflow-Aligned Tasks and Benchmarks",
+            "abstract": "<title>Abstract</title> The rise of large language models (LLMs) has profoundly influenced health-care by offering medical advice, diagnostic suggestions, and more. However, their deployment directly toward patients poses substantial risks, as limited domain knowledge may result in misleading or erroneous outputs. To address this challenge , we propose repositioning LLMs as clinical assistants that collaborate with experienced physicians rather than interacting with patients directly. We begin with a two-stage inspiration–feedback survey to identify real-world needs in clinical workflows. Guided by this, we construct DoctorFLAN, a large-scale Chi-nese medical dataset comprising 92,000 Q&A instances across 22 clinical tasks and 27 specialties. To evaluate model performance in doctor-facing applications, 1 we introduce DoctorFLAN-test (550 single-turn Q&A items) and DotaBench (74 multi-turn conversations mimicking realistic scenarios). Experimental results with over ten popular LLMs demonstrate that DoctorFLAN notably improves the performance of open-source LLMs in medical contexts, facilitating their alignment with physician workflows and complementing existing patient-oriented models. This work contributes a valuable resource and framework for advancing doctor-centered medical LLM development.",
+            "authors": "Wenya Xie, Qingying Xiao, Yu‐Jun Zheng, Xidong Wang, Junying Chen, Ke Ji, Anningzhe Gao, Prayag Tiwari, Xiang Wan, Feng Jiang, Benyou Wang",
+            "publication_date": "2025-06-02",
+            "fwci": null,
+            "citation_normalized_percentile": null,
+            "cited_by_count": 0,
+            "counts_by_year": [],
+            "similarity_score": 0.87,
+            "topics": [
+            {
+                "topic": "Scientific Computing and Data Management",
+                "score": 0.9139,
+                "subfields": ["Information Systems and Management"],
+                "fields": ["Decision Sciences"],
+                "domains": ["Social Sciences"]
+            }
+            ],
+            "landing_page_url": "https://doi.org/10.21203/rs.3.rs-6763537/v1",
+            "pdf_url": null
+        },
+        {
+        "id": "https://openalex.org/W1234567890",
+        "title": "Optimizing Clinical Workflow Integration of LLM-Based Decision Support Systems",
+        "abstract": "Recent advances in large language models (LLMs) have opened new frontiers for decision support in clinical environments. This paper presents a framework for aligning LLM capabilities with routine physician tasks by incorporating real-time feedback, structured knowledge grounding, and task-specific fine-tuning. We evaluate our approach on a multi-specialty dataset containing 75,000 structured clinical interactions and introduce MedAlignBench, a benchmark suite simulating realistic use cases across diagnostics, prescription drafting, and medical documentation. Results show significant improvements in clinician satisfaction and response accuracy, especially when models are tailored to workflow-specific prompts.",
+        "authors": "Alicia Zhang, David Patel, Rana Al-Hassan, Thomas L. Lee",
+        "publication_date": "2025-05-18",
+        "fwci": 1.42,
+        "citation_normalized_percentile": 82.3,
+        "cited_by_count": 12,
+        "counts_by_year": [{"year": 2025, "count": 12}],
+        "similarity_score": 0.79,
         "topics": [
-        {
-            "topic": "Nanoparticle-Based Drug Delivery",
-            "score": 1.0,
-            "subfields": ["Biomaterials"],
-            "fields": ["Materials Science"],
-            "domains": ["Physical Sciences"]
-        },
-        {
-            "topic": "Characterization and Applications of Magnetic Nanoparticles",
-            "score": 0.9999,
-            "subfields": ["Biomedical Engineering"],
-            "fields": ["Engineering"],
-            "domains": ["Physical Sciences"]
-        },
-        {
-            "topic": "Gold and Silver Nanoparticles Synthesis and Applications",
-            "score": 0.9973,
-            "subfields": ["Electronic, Optical and Magnetic Materials"],
-            "fields": ["Materials Science"],
-            "domains": ["Physical Sciences"]
-        }
+            {
+                "topic": "Scientific Computing and Data Management",
+                "score": 0.89,
+                "subfields": ["Healthcare Informatics"],
+                "fields": ["Decision Sciences"],
+                "domains": ["Social Sciences"]
+            },
+            {
+                "topic": "Large Language Models in Healthcare",
+                "score": 0.85,
+                "subfields": ["Medical AI"],
+                "fields": ["Computer Science"],
+                "domains": ["Health Sciences"]
+            }
         ],
-        "landing_page_url": "https://doi.org/10.1186/s40001-025-02696-z",
-        "pdf_url": null
-    },
-    {
-        "id": "https://openalex.org/W4410933080",
-        "title": "Enabling Doctor-Centric Medical AI with LLMs through Workflow-Aligned Tasks and Benchmarks",
-        "abstract": "<title>Abstract</title> The rise of large language models (LLMs) has profoundly influenced health-care by offering medical advice, diagnostic suggestions, and more. However, their deployment directly toward patients poses substantial risks, as limited domain knowledge may result in misleading or erroneous outputs. To address this challenge , we propose repositioning LLMs as clinical assistants that collaborate with experienced physicians rather than interacting with patients directly. We begin with a two-stage inspiration–feedback survey to identify real-world needs in clinical workflows. Guided by this, we construct DoctorFLAN, a large-scale Chi-nese medical dataset comprising 92,000 Q&A instances across 22 clinical tasks and 27 specialties. To evaluate model performance in doctor-facing applications, 1 we introduce DoctorFLAN-test (550 single-turn Q&A items) and DotaBench (74 multi-turn conversations mimicking realistic scenarios). Experimental results with over ten popular LLMs demonstrate that DoctorFLAN notably improves the performance of open-source LLMs in medical contexts, facilitating their alignment with physician workflows and complementing existing patient-oriented models. This work contributes a valuable resource and framework for advancing doctor-centered medical LLM development.",
-        "authors": "Wenya Xie, Qingying Xiao, Yu‐Jun Zheng, Xidong Wang, Junying Chen, Ke Ji, Anningzhe Gao, Prayag Tiwari, Xiang Wan, Feng Jiang, Benyou Wang",
-        "publication_date": "2025-06-02",
-        "fwci": null,
-        "citation_normalized_percentile": null,
-        "cited_by_count": 0,
-        "counts_by_year": [],
-        "similarity_score": 0.87,
-        "topics": [
-        {
-            "topic": "Scientific Computing and Data Management",
-            "score": 0.9139,
-            "subfields": ["Information Systems and Management"],
-            "fields": ["Decision Sciences"],
-            "domains": ["Social Sciences"]
+        "landing_page_url": "https://doi.org/10.1234/medalign.2025.005",
+        "pdf_url": "https://arxiv.org/pdf/medalign.2025.005.pdf"
         }
-        ],
-        "landing_page_url": "https://doi.org/10.21203/rs.3.rs-6763537/v1",
-        "pdf_url": null
-    },
-    {
-    "id": "https://openalex.org/W1234567890",
-    "title": "Optimizing Clinical Workflow Integration of LLM-Based Decision Support Systems",
-    "abstract": "Recent advances in large language models (LLMs) have opened new frontiers for decision support in clinical environments. This paper presents a framework for aligning LLM capabilities with routine physician tasks by incorporating real-time feedback, structured knowledge grounding, and task-specific fine-tuning. We evaluate our approach on a multi-specialty dataset containing 75,000 structured clinical interactions and introduce MedAlignBench, a benchmark suite simulating realistic use cases across diagnostics, prescription drafting, and medical documentation. Results show significant improvements in clinician satisfaction and response accuracy, especially when models are tailored to workflow-specific prompts.",
-    "authors": "Alicia Zhang, David Patel, Rana Al-Hassan, Thomas L. Lee",
-    "publication_date": "2025-05-18",
-    "fwci": 1.42,
-    "citation_normalized_percentile": 82.3,
-    "cited_by_count": 12,
-    "counts_by_year": [{"year": 2025, "count": 12}],
-    "similarity_score": 0.79,
-    "topics": [
-        {
-            "topic": "Scientific Computing and Data Management",
-            "score": 0.89,
-            "subfields": ["Healthcare Informatics"],
-            "fields": ["Decision Sciences"],
-            "domains": ["Social Sciences"]
-        },
-        {
-            "topic": "Large Language Models in Healthcare",
-            "score": 0.85,
-            "subfields": ["Medical AI"],
-            "fields": ["Computer Science"],
-            "domains": ["Health Sciences"]
-        }
-    ],
-    "landing_page_url": "https://doi.org/10.1234/medalign.2025.005",
-    "pdf_url": "https://arxiv.org/pdf/medalign.2025.005.pdf"
-    }
-    ]
-    """
-    )
+        ]
+    """)
 
     print("\n========== Test Case 1: Query with precomputed similarity scores ==========")
     quality_control_loop(papers_with_metadata, prompts.user_message)
@@ -324,5 +324,3 @@ if __name__ == "__main__":
     print("\n========== Test Case 8: Non-sensical query – agent should trigger correction ==========")
     query_eight_papers = fetch_works_multiple_queries(queries=["Hello"])
     quality_control_loop(query_eight_papers, "Hello")
-
-    
