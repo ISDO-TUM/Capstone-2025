@@ -145,7 +145,6 @@ def decide_next_action(papers_with_metadata: list[dict], user_query: str) -> str
     #return response.content.strip().lower()
 
 
-
 def retry_with_modified_parameters(action: str, current_query: str, attempt: int) -> str:
     """
     Step 7: Based on the agent’s decision, generates the next query or parameters.
@@ -170,7 +169,7 @@ def retry_with_modified_parameters(action: str, current_query: str, attempt: int
 
     else:
         raise ValueError(f"Unknown action: {action}")
-    
+
 
 def quality_control_loop(retrieved_papers: list[dict], current_query: str, attempt: int = 0):
     """
@@ -194,7 +193,7 @@ def quality_control_loop(retrieved_papers: list[dict], current_query: str, attem
     # In the future add methods so the agent can modify the query based on the action (either broaden, or reformulate)
 
     # After query is reformulated or broadened, we want to fetch new papers
-    new_retrieved_papers = []
+    # new_retrieved_papers = []
     # new_retrieved_papers = get_paper_basic_data([next_query])
 
     return None
