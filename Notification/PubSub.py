@@ -1,5 +1,5 @@
 from typing import List, Dict, Optional
-from llm.Embeddings import embed_string
+from llm.Embeddings import embed_string, embed_user_profile
 from chroma_db.chroma_vector_db import ChromaVectorDB
 import logging
 from paper_handling.paper_handler import fetch_works_multiple_queries
@@ -122,11 +122,14 @@ def split_ranked_papers(
 
 
 if __name__ == '__main__':
-    #temp = simplify_paper_results(fetch_works_multiple_queries(TAGS)) # useless because we have it already in our pipline. it's just a hardcode
+    temp = simplify_paper_results(fetch_works_multiple_queries(TAGS)) # useless because we have it already in our pipline. it's just a hardcode
     #print(temp)
-    #db.store_embeddings(temp) #fill db with papers
-    #temp = simplify_paper_results(fetch_works_multiple_queries(TAGS)) # useless because we have it already in our pipline. it's just a hardcode
-    #new_papers = simplify_paper_results(fetch_works_multiple_queries(TAGS,TRIGGER_DATE)) # useless because we have it already in our pipline. it's just a hardcode
+    db.store_embeddings(temp) #fill db with papers
+    temp = simplify_paper_results(fetch_works_multiple_queries(TAGS)) # useless because we have it already in our pipline. it's just a hardcode
+    new_papers = simplify_paper_results(fetch_works_multiple_queries(TAGS,TRIGGER_DATE)) # useless because we have it already in our pipline. it's just a hardcode
+    similar_ids = db.perform_similarity_search(k=150, user_profile_embedding = embed_user_profile(USER_QUERY))
+
+    """
     similarity_ids = [
         "W005", "W0022", "W0092", "W0032", "W0012", "W015", "W002", "W007", "W011", "W008",
         "W014", "W012", "W017", "W029", "W026"
@@ -154,7 +157,10 @@ if __name__ == '__main__':
         {"hash": "W019", "text": "Title 19 about Topic 19"},
         {"hash": "W020", "text": "Title 20 about Topic 20"},
     ]
-    results = rank_and_filter_similar_papers(simplified_papers, similarity_ids)
+    """
+    results = rank_and_filter_similar_papers(new_papers, similar_ids)
     email, ui = split_ranked_papers(results, MAX_NUMBER_OF_SENT_MAIL)
-
+    print(email)
+    print("***********")
+    print(ui)
 
