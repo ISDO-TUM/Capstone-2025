@@ -18,6 +18,21 @@
                 <label for="projectDescription">Project Prompt</label>
                 <textarea id="projectDescription" name="projectDescription" rows="4" required></textarea>
             </div>
+            
+            <div class="paper-upload-section">
+                <h2>Add Relevant Paper (Optional)</h2>
+                <p>Upload a relevant paper to help us better understand your research interests.</p>
+                <div class="form-group">
+                    <label for="pdfFile">Upload PDF:</label>
+                    <input type="file" id="pdfFile" name="pdf" accept=".pdf">
+                </div>
+                <div class="form-group">
+                    <label for="paperContext">Why is this paper relevant to your research?</label>
+                    <textarea id="paperContext" name="paperContext" rows="4" 
+                              placeholder="Please provide context about why this paper is relevant to your research..."></textarea>
+                </div>
+            </div>
+            
             <button type="submit" class="btn btn-primary">Create Project</button>
         </form>
     </div>
