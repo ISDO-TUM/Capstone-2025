@@ -22,7 +22,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - capstone_chroma_data:/chroma/.chroma
+      - capstone_chroma_data:/data
     environment:
       - IS_PERSISTENT=TRUE
     restart: unless-stopped

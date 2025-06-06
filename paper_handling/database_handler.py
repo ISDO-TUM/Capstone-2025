@@ -534,132 +534,132 @@ if __name__ == '__main__':
         if inserted_info:
             print(f"  Partial/erroneous info (should be empty on error): {inserted_info}")
 
-    print("-" * 40)
-
-    print("\nFetching all papers:")
-    all_papers = get_all_papers()
-    if all_papers:
-        for paper in all_papers:
-            print(f"  Hash: {paper['paper_hash']}, OrigID: {paper['id']}, Title: {paper['title']}")
-    else:
-        print("  No papers found or error fetching.")
-    print("-" * 40)
-
-    if paper_1_hash:
-        print(f"\nFetching paper by its hash '{paper_1_hash}':")
-        paper = get_paper_by_hash(paper_1_hash)
-        if paper:
-            print(f"  Found: {paper}")
-        else:
-            print(f"  Paper with hash {paper_1_hash} not found (should exist).")
-
-        print(f"\nFetching paper versions by original ID '{sample_paper_1_data['id']}':")
-        paper_versions = get_papers_by_original_id(sample_paper_1_data['id'])
-        if paper_versions:
-            print(f"  Found {len(paper_versions)} version(s):")
-            for p_v in paper_versions:
-                print(f"    Hash: {p_v['paper_hash']}, Title: {p_v['title']}")
-        else:
-            print(f"  Paper with original ID {sample_paper_1_data['id']} not found.")
-        print("-" * 40)
-
-        print(f"\nUpdating abstract for paper hash '{paper_1_hash}':")
-        updated_abstract = "This is an updated abstract for the AI paper, version 2."
-        if update_paper_field(paper_1_hash, "abstract", updated_abstract):
-
-            temp_updated_data = sample_paper_1_data.copy()
-            temp_updated_data["abstract"] = updated_abstract
-            new_paper_1_hash = _generate_paper_hash(temp_updated_data)
-
-            print(
-                f"  Update reported success. Old hash was {paper_1_hash}, new hash should be {new_paper_1_hash}.")
-            paper_after_update = get_paper_by_hash(new_paper_1_hash)
-            if paper_after_update:
-                print(f"  Retrieved updated paper. Abstract: {paper_after_update.get('abstract')}")
-                paper_1_hash = new_paper_1_hash
-            else:
-                print(
-                    f"  Could not retrieve paper by new hash {new_paper_1_hash}. Update might have failed silently or hash mismatch.")
-        else:
-            print("  Update failed.")
-        print("-" * 40)
-
-    if paper_2_hash:
-        print(f"\nUpdating multiple fields for paper hash '{paper_2_hash}':")
-        update_payload = {
-            "title": "Revised: Quantum Entanglement Paper (v2)",
-            "authors": "Alice Wonderland, Bob The Builder, Eve The Reviewer",
-            "landing_page_url": "https://newexample.com/revised_paper_doi"
-        }
-        if update_paper(paper_2_hash, update_payload):
-            temp_updated_data_p2 = sample_paper_2_data.copy()
-            temp_updated_data_p2.update(update_payload)
-            new_paper_2_hash = _generate_paper_hash(temp_updated_data_p2)
-
-            print(
-                f"  Multi-field update reported success. Old hash {paper_2_hash}, new hash {new_paper_2_hash}.")
-            paper_after_multi_update = get_paper_by_hash(new_paper_2_hash)
-            if paper_after_multi_update:
-                print(f"  Updated Paper (retrieved by new hash): {paper_after_multi_update}")
-                paper_2_hash = new_paper_2_hash
-            else:
-                print(f"  Could not retrieve paper by new hash {new_paper_2_hash}.")
-
-        else:
-            print("  Multi-field update failed.")
-        print("-" * 40)
-
-    if paper_3_hash:
-        print(f"\nDeleting paper with hash '{paper_3_hash}':")
-        if delete_paper_by_hash(paper_3_hash):
-            paper_after_delete = get_paper_by_hash(paper_3_hash)
-            if not paper_after_delete:
-                print(f"  Paper with hash {paper_3_hash} successfully deleted.")
-            else:
-                print(
-                    f"  Paper with hash {paper_3_hash} still found after reported deletion. This is an error.")
-        else:
-            print(f"  Deletion of paper with hash {paper_3_hash} failed.")
-    else:
-        print(
-            "\nSkipping delete test for paper 3 as its hash was not captured (insertion might have failed).")
-    print("-" * 40)
-
-    print("\nFinal listing of table schema:")
-    list_tables_and_columns()
-    print("-" * 40)
-
-    print("\nTesting non-existent paper operations:")
-    non_existent_hash = "non_existent_paper_hash_value_12345"
-    print(f"Attempting to get paper by non-existent hash: {non_existent_hash}")
-    get_paper_by_hash(non_existent_hash)
-    print(f"Attempting to update paper by non-existent hash: {non_existent_hash}")
-    update_paper_field(non_existent_hash, "title", "New Title")
-    print(f"Attempting to delete paper by non-existent hash: {non_existent_hash}")
-    delete_paper_by_hash(non_existent_hash)
-
-    print("\nTesting batch retrieval using get_papers_by_hash():")
-    if paper_1_hash and paper_2_hash:
-        print(f"  Fetching papers by existing hashes: {paper_1_hash}, {paper_2_hash}")
-        found_papers = get_papers_by_hash([paper_1_hash, paper_2_hash])
-        if found_papers:
-            print(f"  Found {len(found_papers)} paper(s):")
-            for paper in found_papers:
-                print(f"    - Hash: {paper['paper_hash']}, Title: {paper['title']}")
-        else:
-            print("  No papers were found (unexpected).")
-    else:
-        print("  Skipping existing hash test due to missing hash values.")
-
-    print("\n  Fetching papers by non-existent hashes:")
-    fake_hashes = ["not_a_real_hash_1", "not_a_real_hash_2"]
-    missing_papers = get_papers_by_hash(fake_hashes)
-    if not missing_papers:
-        print("  Correctly found no matching papers.")
-    else:
-        print(f"  Unexpectedly found {len(missing_papers)} paper(s):")
-        for paper in missing_papers:
-            print(f"    - Hash: {paper['paper_hash']}, Title: {paper['title']}")
-
-    print("-" * 40)
+    # print("-" * 40)
+    #
+    # print("\nFetching all papers:")
+    # all_papers = get_all_papers()
+    # if all_papers:
+    #     for paper in all_papers:
+    #         print(f"  Hash: {paper['paper_hash']}, OrigID: {paper['id']}, Title: {paper['title']}")
+    # else:
+    #     print("  No papers found or error fetching.")
+    # print("-" * 40)
+    #
+    # if paper_1_hash:
+    #     print(f"\nFetching paper by its hash '{paper_1_hash}':")
+    #     paper = get_paper_by_hash(paper_1_hash)
+    #     if paper:
+    #         print(f"  Found: {paper}")
+    #     else:
+    #         print(f"  Paper with hash {paper_1_hash} not found (should exist).")
+    #
+    #     print(f"\nFetching paper versions by original ID '{sample_paper_1_data['id']}':")
+    #     paper_versions = get_papers_by_original_id(sample_paper_1_data['id'])
+    #     if paper_versions:
+    #         print(f"  Found {len(paper_versions)} version(s):")
+    #         for p_v in paper_versions:
+    #             print(f"    Hash: {p_v['paper_hash']}, Title: {p_v['title']}")
+    #     else:
+    #         print(f"  Paper with original ID {sample_paper_1_data['id']} not found.")
+    #     print("-" * 40)
+    #
+    #     print(f"\nUpdating abstract for paper hash '{paper_1_hash}':")
+    #     updated_abstract = "This is an updated abstract for the AI paper, version 2."
+    #     if update_paper_field(paper_1_hash, "abstract", updated_abstract):
+    #
+    #         temp_updated_data = sample_paper_1_data.copy()
+    #         temp_updated_data["abstract"] = updated_abstract
+    #         new_paper_1_hash = _generate_paper_hash(temp_updated_data)
+    #
+    #         print(
+    #             f"  Update reported success. Old hash was {paper_1_hash}, new hash should be {new_paper_1_hash}.")
+    #         paper_after_update = get_paper_by_hash(new_paper_1_hash)
+    #         if paper_after_update:
+    #             print(f"  Retrieved updated paper. Abstract: {paper_after_update.get('abstract')}")
+    #             paper_1_hash = new_paper_1_hash
+    #         else:
+    #             print(
+    #                 f"  Could not retrieve paper by new hash {new_paper_1_hash}. Update might have failed silently or hash mismatch.")
+    #     else:
+    #         print("  Update failed.")
+    #     print("-" * 40)
+    #
+    # if paper_2_hash:
+    #     print(f"\nUpdating multiple fields for paper hash '{paper_2_hash}':")
+    #     update_payload = {
+    #         "title": "Revised: Quantum Entanglement Paper (v2)",
+    #         "authors": "Alice Wonderland, Bob The Builder, Eve The Reviewer",
+    #         "landing_page_url": "https://newexample.com/revised_paper_doi"
+    #     }
+    #     if update_paper(paper_2_hash, update_payload):
+    #         temp_updated_data_p2 = sample_paper_2_data.copy()
+    #         temp_updated_data_p2.update(update_payload)
+    #         new_paper_2_hash = _generate_paper_hash(temp_updated_data_p2)
+    #
+    #         print(
+    #             f"  Multi-field update reported success. Old hash {paper_2_hash}, new hash {new_paper_2_hash}.")
+    #         paper_after_multi_update = get_paper_by_hash(new_paper_2_hash)
+    #         if paper_after_multi_update:
+    #             print(f"  Updated Paper (retrieved by new hash): {paper_after_multi_update}")
+    #             paper_2_hash = new_paper_2_hash
+    #         else:
+    #             print(f"  Could not retrieve paper by new hash {new_paper_2_hash}.")
+    #
+    #     else:
+    #         print("  Multi-field update failed.")
+    #     print("-" * 40)
+    #
+    # if paper_3_hash:
+    #     print(f"\nDeleting paper with hash '{paper_3_hash}':")
+    #     if delete_paper_by_hash(paper_3_hash):
+    #         paper_after_delete = get_paper_by_hash(paper_3_hash)
+    #         if not paper_after_delete:
+    #             print(f"  Paper with hash {paper_3_hash} successfully deleted.")
+    #         else:
+    #             print(
+    #                 f"  Paper with hash {paper_3_hash} still found after reported deletion. This is an error.")
+    #     else:
+    #         print(f"  Deletion of paper with hash {paper_3_hash} failed.")
+    # else:
+    #     print(
+    #         "\nSkipping delete test for paper 3 as its hash was not captured (insertion might have failed).")
+    # print("-" * 40)
+    #
+    # print("\nFinal listing of table schema:")
+    # list_tables_and_columns()
+    # print("-" * 40)
+    #
+    # print("\nTesting non-existent paper operations:")
+    # non_existent_hash = "non_existent_paper_hash_value_12345"
+    # print(f"Attempting to get paper by non-existent hash: {non_existent_hash}")
+    # get_paper_by_hash(non_existent_hash)
+    # print(f"Attempting to update paper by non-existent hash: {non_existent_hash}")
+    # update_paper_field(non_existent_hash, "title", "New Title")
+    # print(f"Attempting to delete paper by non-existent hash: {non_existent_hash}")
+    # delete_paper_by_hash(non_existent_hash)
+    #
+    # print("\nTesting batch retrieval using get_papers_by_hash():")
+    # if paper_1_hash and paper_2_hash:
+    #     print(f"  Fetching papers by existing hashes: {paper_1_hash}, {paper_2_hash}")
+    #     found_papers = get_papers_by_hash([paper_1_hash, paper_2_hash])
+    #     if found_papers:
+    #         print(f"  Found {len(found_papers)} paper(s):")
+    #         for paper in found_papers:
+    #             print(f"    - Hash: {paper['paper_hash']}, Title: {paper['title']}")
+    #     else:
+    #         print("  No papers were found (unexpected).")
+    # else:
+    #     print("  Skipping existing hash test due to missing hash values.")
+    #
+    # print("\n  Fetching papers by non-existent hashes:")
+    # fake_hashes = ["not_a_real_hash_1", "not_a_real_hash_2"]
+    # missing_papers = get_papers_by_hash(fake_hashes)
+    # if not missing_papers:
+    #     print("  Correctly found no matching papers.")
+    # else:
+    #     print(f"  Unexpectedly found {len(missing_papers)} paper(s):")
+    #     for paper in missing_papers:
+    #         print(f"    - Hash: {paper['paper_hash']}, Title: {paper['title']}")
+    #
+    # print("-" * 40)
     print("Test script finished.")

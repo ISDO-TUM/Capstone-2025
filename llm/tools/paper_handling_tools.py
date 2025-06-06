@@ -37,6 +37,7 @@ def update_papers(queries: list[str]) -> str:
         fetched_papers, status_fetch = fetch_works_multiple_queries(queries)
 
         status_postgres, deduplicated_papers = insert_papers(fetched_papers)
+        #todo print how many new papers for debugging
 
         embedded_papers = []
         for paper in deduplicated_papers:
