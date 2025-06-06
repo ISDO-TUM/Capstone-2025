@@ -4,6 +4,8 @@ from langgraph.prebuilt import create_react_agent
 from llm.LLMDefinition import LLM
 from langchain_core.messages import HumanMessage
 
+from llm.util.agent_log_formatter import format_log_message
+
 RECURSION_LIMIT = 2 * 4 + 1
 user_message = prompts.user_message
 tools = get_tools()
@@ -23,7 +25,9 @@ def trigger_agent_show_thoughts(user_message: str):
         {"recursion_limit": RECURSION_LIMIT},
         stream_mode="values",
     ):
-        step["messages"][-1].pretty_print()
+        log = step["messages"][-1].pretty_repr()
+        formatted_log = format_log_message(log)
+        print(formatted_log)
         messages = step
     return messages
 
