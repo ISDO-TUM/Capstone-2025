@@ -105,10 +105,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         const data = JSON.parse(jsonString);
 
                         if (data.thought) {
-                            const thoughtEl = document.createElement('div');
-                            thoughtEl.textContent = data.thought;
+                            const thoughtEl = document.createElement('li');
+
+                            let content = data.thought;
+                            let icon = '🧠';
+                            if (content.startsWith('Calling tool:')) {
+                                icon = '🛠️';
+                                content = content.replace('Calling tool:', '<strong>Calling tool:</strong>');
+                            } else if (content.startsWith('Tool response received:')) {
+                                icon = '✅';
+                                content = `<p>${content.replace('Tool response received:', '<strong>Tool response received:</strong>')}</p>`;
+                            } else if (content.startsWith('Receiving user input')) {
+                                icon = '👤';
+                            } else if (content.startsWith('Final response')) {
+                                icon = '🏁';
+                            }
+
+                            thoughtEl.innerHTML = `${icon} ${content}`;
                             thoughtsContainer.appendChild(thoughtEl);
-                            thoughtsContainer.scrollTop = thoughtsContainer.scrollHeight; // Auto-scroll
+                            thoughtsContainer.scrollTop = thoughtsContainer.scrollHeight;
                         } else if (data.recommendations) {
                             renderRecommendations(data.recommendations, recommendationsContainer);
                         } else if (data.error) {
