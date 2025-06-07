@@ -17,19 +17,30 @@ agent = create_react_agent(model=llm, tools=tools)
 def trigger_agent(user_message: str):
     return agent.invoke({'messages': [system_prompt, HumanMessage(content=user_message)]})
 
+
 def trigger_agent_show_thoughts(user_message: str):
-    messages = {}
+    """
+    A generator that yields each step of the agent's thought process.
+    """
+    last_step = None
 
     for step in agent.stream(
-        {"messages": [system_prompt, HumanMessage(content=user_message)]},
-        {"recursion_limit": RECURSION_LIMIT},
-        stream_mode="values",
+            {"messages": [system_prompt, HumanMessage(content=user_message)]},
+            {"recursion_limit": RECURSION_LIMIT},
+            stream_mode="values",
     ):
         log = step["messages"][-1].pretty_repr()
         formatted_log = format_log_message(log)
-        print(formatted_log)
-        messages = step
-    return messages
+        yield {"thought": formatted_log, "is_final": False, "final_content": None}
+        last_step = step
+
+    if last_step:
+        final_content = last_step["messages"][-1].content
+        yield {"thought": "Final response processing.", "is_final": True,
+               "final_content": final_content}
+    else:
+        yield {"thought": "Agent did not produce a response.", "is_final": True,
+               "final_content": None}
 
 
 # Left here to test the agent alone
