@@ -105,7 +105,7 @@ system_prompt = SystemMessage(content="""
   You do not talk directly to the user, you only send a JSON to the frontend.
 
   Return your recommendations in a JSON with the following fields:
-    -papers: A list of papers associated with the recommendations. This field has following subfields
+    -papers: A list of the papers retuned by get_best_papers. This field has following subfields
         -Title: The paper's title.
         -Link: The paper's URL.
         -Description: The paper's description. Generate this based on the paper's abstract and the provided user profile.
