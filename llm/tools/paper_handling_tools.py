@@ -1,6 +1,6 @@
 from typing import Any
 import json
-from llm.LLMDefinition import LLM 
+from llm.LLMDefinition import LLM
 import llm.Prompts as prompts
 
 from paper_handling.paper_handler import fetch_works_multiple_queries
@@ -76,7 +76,7 @@ def decide_next_action(papers_with_metadata: list[dict], user_query: str) -> str
     """
 
     formatted_metadata = "\n\n".join(
-    f"""Paper {i+1}:
+        f"""Paper {i + 1}:
         - Title: {paper.get("title", "N/A")}
         - Similarity Score: {paper.get("similarity_score", "N/A")}
         - Citation Count: {paper.get("cited_by_count", "N/A")}
@@ -89,7 +89,7 @@ def decide_next_action(papers_with_metadata: list[dict], user_query: str) -> str
         - Fields: {", ".join(f for t in paper.get("topics", []) for f in t.get("fields", []))}
         - Domains: {", ".join(d for t in paper.get("topics", []) for d in t.get("domains", []))}
     """
-    for i, paper in enumerate(papers_with_metadata)
+        for i, paper in enumerate(papers_with_metadata)
     )
 
     prompt = f"""
@@ -142,7 +142,7 @@ def decide_next_action(papers_with_metadata: list[dict], user_query: str) -> str
 
     return action, reason
 
-    #return response.content.strip().lower()
+    # return response.content.strip().lower()
 
 
 def retry_with_modified_parameters(action: str, current_query: str, attempt: int) -> str:
