@@ -123,7 +123,7 @@ def clean_topics_field(topics: list[dict]) -> list[dict]:
         topics (list[dict]): Original list of topic entries from OpenAlex.
 
     Returns:
-        list[dict]: Cleaned list of topic information.
+        list[dict]: Cleaned list of topic informations.
     """
     def get_names(entry):
         if isinstance(entry, list):
