@@ -11,7 +11,7 @@ repos:
     rev: v2.3.0
     hooks:
     -   id: autopep8
-        args: [--in-place]
+        args: [--in-place, --aggressive, --aggressive]
 
 -   repo: https://github.com/pycqa/flake8
     rev: 7.2.0
