@@ -1,5 +1,6 @@
 import re
 
+
 def format_log_message(message):
     # Format log messages based on type
     if "Human Message" in message:
@@ -18,14 +19,16 @@ def format_log_message(message):
 
     return message
 
+
 def extract_tool_name(message):
     # Look for patterns like "Tool Call: tool_name"
     match = re.search(r"Tool Calls?:\s*(\w+)", message)
     if match:
         return match.group(1)
-    else :
+    else:
         match = re.search(r"Name:\s*(\w+)", message)
     return "Unknown Tool"
+
 
 def extract_args(message):
     # Search for the "Args" part of the log message
@@ -37,6 +40,7 @@ def extract_args(message):
         return truncated_args
     return "No arguments found"
 
+
 def truncate_args(args_str, limit=200):
     # Truncate arguments list to the first 'limit' items
     try:
@@ -46,6 +50,7 @@ def truncate_args(args_str, limit=200):
         return str(truncated) + ('...' if len(args_str) > limit else '')
     except Exception:
         return args_str
+
 
 def extract_tool_response(message):
     # Search for the "Tool Message" section in the log message
@@ -57,6 +62,7 @@ def extract_tool_response(message):
         truncated_response = truncate_tool_response(response)
         return f"Tool: {tool_name}, Response: {truncated_response}"
     return "No tool response found"
+
 
 def truncate_tool_response(response_str, limit=100):
     # Truncate the response if it's too long
