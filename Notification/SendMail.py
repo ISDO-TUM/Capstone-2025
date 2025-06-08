@@ -2,6 +2,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr
+from utils.status import Status
 
 smtp_server = ""
 smtp_port = 587
@@ -30,7 +31,7 @@ def sendmail(email, html_content):
 
             server.sendmail(username, email, msg.as_string())
             print(f"E-Mail erfolgreich an {email} gesendet.")
-            return 1
+            return Status.SUCCESS
     except Exception as e:
         print(f"Fehler beim Senden an {email}: {e}")
-        return 0
+        return Status.FAILURE

@@ -1,9 +1,77 @@
+import logging
 from typing import Any
 import json
 from llm.LLMDefinition import LLM
 import llm.Prompts as prompts
 
+from langchain_core.tools import tool
+
+from chroma_db.chroma_vector_db import chroma_db
+from utils.status import Status
+from llm.Embeddings import embed_papers
+from paper_handling.database_handler import insert_papers
 from paper_handling.paper_handler import fetch_works_multiple_queries
+
+logger = logging.getLogger(__name__)
+
+
+@tool
+def update_papers(queries: list[str]) -> str:
+    """
+    Tool Name: update_papers
+    Description:
+        This tool updates the paper database with the latest research papers and their embeddings
+        based on a list of keyword search queries. It performs the following steps:
+        1. Fetches new papers using the provided list of keyword queries.
+        2. Stores the fetched papers in a PostgreSQL database, removing any duplicates.
+        3. Computes and stores embeddings for the newly stored papers.
+    Use Case:
+        Use this tool when you want to refresh the paper database with the latest research and ensure
+        that all relevant papers have updated embeddings for ranking or similarity comparison tasks.
+    Input:
+        queries (list[str]): A list of keyword strings to search for relevant papers.
+    Output:
+        A status message string indicating whether the process completed successfully without errors,
+        or completed with some errors that can be ignored.
+    Returns:
+        str: A human-readable summary of the update operation's result.
+    """
+    try:
+        fetched_papers, status_fetch = fetch_works_multiple_queries(queries)
+
+        status_postgres, deduplicated_papers = insert_papers(fetched_papers)
+
+        embedded_papers = []
+        for paper in deduplicated_papers:
+            embedding = embed_papers(paper['title'],
+                                     paper['abstract'])
+            embedded_paper = {
+                'embedding': embedding,
+                'hash': paper['hash'],
+            }
+            embedded_papers.append(embedded_paper)
+
+        status_chroma = chroma_db.store_embeddings(embedded_papers)
+
+        if all([
+            status_fetch == Status.SUCCESS,
+            status_postgres == Status.SUCCESS,
+            status_chroma == Status.SUCCESS
+        ]):
+            logger.info("Updating paper database successfully.")
+            return ("Paper database has been updated with the latest papers & embeddings. There were no errors. "
+                    "Now you can rank the papers.")
+        else:
+            logger.error("Updating paper database failed.")
+            return ("Paper database has been updated with the latest papers & embeddings. There were some errors. "
+                    "Ignore the errors and proceed with ranking the papers.")
+
+    except Exception as e:
+        logger.error(f"Updating paper database failed: {e}")
+        return ("Paper database has been updated with the latest papers & embeddings. There were some errors. "
+                "Ignore the errors and proceed with ranking the papers.")
+
+# DEPRECATED
 
 
 def get_paper_basic_data(queries: list[str]) -> list[dict[str, Any]]:

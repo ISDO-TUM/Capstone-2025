@@ -3,6 +3,7 @@ import psycopg2.extras
 import os
 from dotenv import load_dotenv
 import hashlib
+from utils.status import Status
 
 load_dotenv()
 
@@ -71,14 +72,14 @@ def insert_papers(papers_data_list):
     """
     if not isinstance(papers_data_list, list):
         print("Error: Input must be a list of paper dictionaries.")
-        return (0, [])
+        return (Status.SUCCESS, [])
     if not papers_data_list:
         print("No papers provided for insertion.")
-        return (0, [])
+        return (Status.SUCCESS, [])
 
     conn = connect_to_db()
     if not conn:
-        return 0, []
+        return Status.SUCCESS, []
 
     inserted_papers_details = []
     cur = conn.cursor()
@@ -129,21 +130,21 @@ def insert_papers(papers_data_list):
             conn.rollback()
             cur.close()
             conn.close()
-            return (0, [])
+            return (Status.SUCCESS, [])
         except Exception as ex:
             print(
                 f"An unexpected error occurred processing paper ID {paper_data.get('id', 'N/A')}: {ex}")
             conn.rollback()
             cur.close()
             conn.close()
-            return (0, [])
+            return (Status.SUCCESS, [])
 
     if not inserted_papers_details:
         conn.commit()
-        status_code = 0
+        status_code = Status.SUCCESS
     else:
         conn.commit()
-        status_code = 1
+        status_code = Status.FAILURE
 
     cur.close()
     conn.close()
