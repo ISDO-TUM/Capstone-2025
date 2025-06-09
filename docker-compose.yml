@@ -1,3 +1,4 @@
+# docker-compose.yml
 version: '3.8'
 
 services:
@@ -28,12 +29,24 @@ services:
     restart: unless-stopped
     networks:
       - capstone_network
+
   web:
     build: .
     container_name: capstone_web
     restart: always
+    command: >
+      sh -c "
+        until pg_isready -h db -p 5432 > /dev/null 2>&1; do
+          echo 'Waiting for database to be ready...'
+          sleep 2
+        done &&
+        echo 'Database ready. Running setup script...' &&
+        psql -h db -U ${DB_USER:-user} -d ${DB_NAME:-papers} -f /app/init.sql &&
+        echo 'Setup complete. Starting application...' &&
+        python app.py
+      "
     ports:
-      - "8081:5000"
+      - "7500:7500"
     volumes:
       - .:/app
     working_dir: /app
@@ -41,6 +54,7 @@ services:
       - db
       - chromadb
     environment:
+      - PGPASSWORD=${DB_PASSWORD:-password}
       - DB_HOST=db
       - DB_NAME=${DB_NAME:-papers}
       - DB_USER=${DB_USER:-user}
