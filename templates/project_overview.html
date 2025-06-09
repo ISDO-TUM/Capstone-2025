@@ -3,13 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Overview</title> <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>Project Overview</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <div class="container">
         <div class="project-header">
             <h1 id="projectTitleDisplay"></h1>
             <p id="projectDescriptionDisplay"></p>
+        </div>
+
+        <div class="agent-thoughts-section">
+            <h2>Agent's Thoughts</h2>
+            <ul id="agentThoughtsContainer" class="agent-thoughts-list">
+                </ul>
         </div>
 
         <div class="recommendations-section">

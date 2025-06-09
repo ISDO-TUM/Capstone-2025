@@ -51,43 +51,92 @@ document.addEventListener('DOMContentLoaded', () => {
         const titleDisplay = document.getElementById('projectTitleDisplay');
         const descriptionDisplay = document.getElementById('projectDescriptionDisplay');
         const recommendationsContainer = document.getElementById('recommendationsContainer');
+        const agentThoughtsContainer = document.getElementById('agentThoughtsContainer');
 
         if (titleDisplay) titleDisplay.textContent = projectData.title;
         if (descriptionDisplay) descriptionDisplay.textContent = projectData.description;
         if (document.title && titleDisplay) document.title = `Project: ${projectData.title}`;
 
-        if (recommendationsContainer) {
-            fetchRecommendations(projectData.title, projectData.description)
-                .then(recommendations => {
-                    renderRecommendations(recommendations, recommendationsContainer);
-                })
+        if (recommendationsContainer && agentThoughtsContainer) {
+            // Set initial state messages
+            agentThoughtsContainer.innerHTML = '<p>🧠 Agent is thinking...</p>';
+            recommendationsContainer.innerHTML = '<p>⌛ Waiting for agent to provide recommendations...</p>';
+
+            fetchRecommendationsStream(projectData.description, agentThoughtsContainer, recommendationsContainer)
                 .catch(error => {
-                    console.error("Error fetching recommendations:", error);
+                    console.error("Error fetching recommendations stream:", error);
+                    agentThoughtsContainer.innerHTML += '<p>❌ Error communicating with the agent.</p>';
                     recommendationsContainer.innerHTML = '<p>Could not load recommendations at this time.</p>';
                 });
         }
     };
 
-    async function fetchRecommendations(projectDescription) {
-        console.log(`Waiting on recommendations based on project description...`);
+    async function fetchRecommendationsStream(projectDescription, thoughtsContainer, recommendationsContainer) {
+        console.log(`Starting to stream recommendations based on project description...`);
+        thoughtsContainer.innerHTML = ''; // Clear for new thoughts
+
         try {
             const response = await fetch('/api/recommendations', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ projectDescription: projectDescription }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ projectDescription }),
             });
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-                throw new Error(`Network response was not ok: ${response.status} ${response.statusText}. Server said: ${errorData.error || 'No additional error info.'}`);
+                const errorText = await response.text();
+                throw new Error(`Network response was not ok: ${response.status}. ${errorText}`);
             }
-            const recommendations = await response.json();
-            return recommendations;
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n\n');
+                buffer = lines.pop(); // Keep incomplete message in buffer
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const jsonString = line.substring(6);
+                        const data = JSON.parse(jsonString);
+
+                        if (data.thought) {
+                            const thoughtEl = document.createElement('li');
+
+                            let content = data.thought;
+                            let icon = '🧠';
+                            if (content.startsWith('Calling tool:')) {
+                                icon = '🛠️';
+                                content = content.replace('Calling tool:', '<strong>Calling tool:</strong>');
+                            } else if (content.startsWith('Tool response received:')) {
+                                icon = '✅';
+                                content = `<p>${content.replace('Tool response received:', '<strong>Tool response received:</strong>')}</p>`;
+                            } else if (content.startsWith('Receiving user input')) {
+                                icon = '👤';
+                            } else if (content.startsWith('Final response')) {
+                                icon = '🏁';
+                            }
+
+                            thoughtEl.innerHTML = `${icon} ${content}`;
+                            thoughtsContainer.appendChild(thoughtEl);
+                            thoughtsContainer.scrollTop = thoughtsContainer.scrollHeight;
+                        } else if (data.recommendations) {
+                            renderRecommendations(data.recommendations, recommendationsContainer);
+                        } else if (data.error) {
+                            console.error('Server-side error:', data.error);
+                            recommendationsContainer.innerHTML = `<p>Error: ${data.error}</p>`;
+                            thoughtsContainer.innerHTML += `<p>❌ An error occurred.</p>`;
+                        }
+                    }
+                }
+            }
 
         } catch (error) {
-            console.error('Failed to fetch recommendations:', error);
+            console.error('Failed to fetch recommendations stream:', error);
             throw error;
         }
     }
@@ -122,9 +171,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     handleRouting();
-
-    if (window.location.pathname.startsWith('/project/')) {
-        const projectId = window.location.pathname.split('/').pop();
-        loadProjectOverviewData(projectId);
-    }
 });

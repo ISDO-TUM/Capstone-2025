@@ -5,6 +5,4 @@ __pycache__/
 *.pyc
 <<<<<<< Updated upstream
 *.idea
-=======
 chroma_storage/
->>>>>>> Stashed changes

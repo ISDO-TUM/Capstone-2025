@@ -1,4 +1,4 @@
-from chroma_vector_db import ChromaVectorDB
+from chroma_db.chroma_vector_db import ChromaVectorDB
 
 sample_data = [
     {"hash": "abc123", "text": "This is a test abstract about AI."},
