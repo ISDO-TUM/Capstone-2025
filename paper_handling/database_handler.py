@@ -150,6 +150,38 @@ def insert_papers(papers_data_list):
     conn.close()
     return (status_code, inserted_papers_details)
 
+def remove_all_rows():
+    """
+    Removes all rows from the papers_table.
+
+    This operation is irreversible and uses the TRUNCATE command for efficiency.
+
+    Returns:
+        bool: True if all rows were successfully removed, False otherwise.
+    """
+    conn = connect_to_db()
+    if not conn:
+        # The error is already printed by connect_to_db, so we just exit.
+        return False
+
+    cur = conn.cursor()
+    sql = "TRUNCATE TABLE papers_table;"
+
+    try:
+        cur.execute(sql)
+        conn.commit()
+        print("All rows have been successfully removed from papers_table.")
+        return True
+    except psycopg2.Error as e:
+        print(f"Error removing all rows from papers_table: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 def get_all_papers():
     """

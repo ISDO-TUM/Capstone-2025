@@ -5,6 +5,7 @@ import sys
 
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context
 from llm.Agent import trigger_agent_show_thoughts
+from paper_handling.database_handler import remove_all_rows
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,16 @@ def get_recommendations():
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
+@app.route('/api/truncate-papers', methods=['POST'])
+def truncate_papers_table():
+    """
+    API endpoint to trigger the removal of all rows from the papers_table.
+    """
+    success = remove_all_rows()
+    if success:
+        return jsonify({"status": "success", "message": "The papers_table has been successfully truncated."}), 200
+    else:
+        return jsonify({"status": "error", "message": "Failed to truncate the papers_table."}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True, port=7500)  # nosec B201, B104
+    app.run(host='0.0.0.0', debug=True, port=80)  # nosec B201, B104

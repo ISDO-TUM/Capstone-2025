@@ -46,7 +46,7 @@ services:
         python app.py
       "
     ports:
-      - "7500:7500"
+      - "80:80"
     volumes:
       - .:/app
     working_dir: /app

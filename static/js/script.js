@@ -126,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             thoughtsContainer.scrollTop = thoughtsContainer.scrollHeight;
                         } else if (data.recommendations) {
                             renderRecommendations(data.recommendations, recommendationsContainer);
+			    await truncatePapersTable();
                         } else if (data.error) {
                             console.error('Server-side error:', data.error);
                             recommendationsContainer.innerHTML = `<p>Error: ${data.error}</p>`;
@@ -138,6 +139,26 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Failed to fetch recommendations stream:', error);
             throw error;
+        }
+    }
+    
+    async function truncatePapersTable() {
+        console.log("Recommendations rendered. Sending request to truncate papers_table...");
+        try {
+            const response = await fetch('/api/truncate-papers', {
+                method: 'POST',
+            });
+            
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || 'Unknown error occurred during truncation.');
+            }
+
+            console.log('Backend response:', result.message);
+        } catch (error) {
+            console.error('Error truncating papers_table:', error);
+            // Optionally, display this error to the user in a non-intrusive way.
         }
     }
 
