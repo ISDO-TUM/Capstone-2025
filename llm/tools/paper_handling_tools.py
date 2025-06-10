@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Any
 import json
 from llm.LLMDefinition import LLM
@@ -37,9 +38,13 @@ def update_papers(queries: list[str]) -> str:
         str: A human-readable summary of the update operation's result.
     """
     try:
+        start = time.time()
         fetched_papers, status_fetch = fetch_works_multiple_queries(queries)
-
+        paper_query_time = time.time()
+        logger.info(f"Query took {paper_query_time - start} seconds.")
         status_postgres, deduplicated_papers = insert_papers(fetched_papers)
+        paper_insert_time = time.time()
+        logger.info(f"Paper insert took {paper_insert_time - paper_query_time} seconds.")
         # todo print how many new papers for debugging
 
         embedded_papers = []
@@ -51,23 +56,31 @@ def update_papers(queries: list[str]) -> str:
                 'hash': paper['hash'],
             }
             embedded_papers.append(embedded_paper)
-
+        embedding_time = time.time()
+        logger.info(f"Paper embedding took {embedding_time - paper_insert_time} seconds.")
         status_chroma = chroma_db.store_embeddings(embedded_papers)
-
+        embedding_insert_time = time.time()
+        logger.info("Storing embedding took {} seconds.".format(embedding_insert_time - embedding_time))
         if all([
             status_fetch == Status.SUCCESS,
             status_postgres == Status.SUCCESS,
             status_chroma == Status.SUCCESS
         ]):
             logger.info("Updating paper database successfully.")
+            end = time.time()
+            logger.info("Database update took {} seconds.".format(end - start))
             return ("Paper database has been updated with the latest papers & embeddings. There were no errors. "
                     "Now you can rank the papers.")
         else:
             logger.error("Updating paper database failed.")
+            end = time.time()
+            logger.info("Database update took {} seconds.".format(end - start))
             return ("Paper database has been updated with the latest papers & embeddings. There were some errors. "
                     "Ignore the errors and proceed with ranking the papers.")
 
     except Exception as e:
+        end = time.time()
+        logger.info("Database update took {} seconds.".format(end - start))
         logger.error(f"Updating paper database failed: {e}")
         return ("Paper database has been updated with the latest papers & embeddings. There were some errors. "
                 "Ignore the errors and proceed with ranking the papers.")

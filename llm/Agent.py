@@ -29,6 +29,7 @@ def trigger_agent_show_thoughts(user_message: str):
             {"recursion_limit": RECURSION_LIMIT},
             stream_mode="values",
     ):
+        # todo add timing stuff here
         log = step["messages"][-1].pretty_repr()
         formatted_log = format_log_message(log)
         yield {"thought": formatted_log, "is_final": False, "final_content": None}

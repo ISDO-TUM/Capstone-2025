@@ -4,7 +4,7 @@ from llm.Embeddings import embed_user_profile
 from langchain_core.tools import tool
 from chroma_db.chroma_vector_db import chroma_db
 from paper_handling.database_handler import get_papers_by_hash
-
+import time
 logger = logging.getLogger(__name__)
 
 
@@ -20,8 +20,11 @@ def get_best_papers(user_profile: str) -> list[dict]:
     Returns:
         List[Dict]: A list of paper metadata dictionaries.
     """
+    start = time.time()
     try:
         embedded_profile = embed_user_profile(user_profile)
+        embed_time = time.time()
+        logger.info(f"User profile embedding took {embed_time - start} seconds.")
     except Exception as e:
         logger.error(f"User profile could not be embedded: {e}")
         return []
@@ -32,6 +35,8 @@ def get_best_papers(user_profile: str) -> list[dict]:
 
     try:
         paper_hashes = chroma_db.perform_similarity_search(10, embedded_profile)
+        sim_search_time = time.time()
+        logger.info(f"Similarity search took {sim_search_time - embed_time} seconds.")
 
     except Exception as e:
         logger.error(f"Error performing similarity search: {e}")
@@ -43,11 +48,13 @@ def get_best_papers(user_profile: str) -> list[dict]:
 
     try:
         paper_metadata = get_papers_by_hash(paper_hashes)
-        logger.info("Paper metadata: {paper_metadata}")
+        paper_retrieval_time = time.time()
+        logger.info(f"Paper retrieval took {paper_retrieval_time - sim_search_time} seconds.")
     except Exception as e:
         logger.error(f"Error linking hashes to metadata: {e}")
         return []
-
+    end = time.time()
+    logger.info(f"elapsed total time for get_best_papers: {end - start}")
     return paper_metadata if paper_metadata else []
 
 # DEPRECATED
