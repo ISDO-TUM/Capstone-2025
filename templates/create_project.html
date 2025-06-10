@@ -20,26 +20,27 @@
             </div>
             <button type="submit" class="btn btn-primary">Create Project</button>
         </form>
-    </div>
 
-    <div class="container"> <h2>How to Get Better Recommendations</h2>
-        <h3>Project Title</h3>
-        <p>The title is for your reference only - our agent doesn't use it.</p>
-        
-        <h3>Project Description - The Key to Success</h3>
-        <p><strong>This is what matters most!</strong> Your description is the only information our agent uses to find relevant papers.</p>
-        <p><strong>How it works:</strong> The agent extracts keywords from your description to search for papers. Poor descriptions = poor recommendations.</p>
-        
-        <p><strong>Best practices:</strong></p>
-        <ul>
-            <li><strong>Be specific</strong> - include relevant keywords and technical terms</li>
-            <li><strong>Write naturally</strong> - describe your work or research interests in 3-4 sentences</li>
-            <li><strong>Provide enough detail</strong> - too brief won't give enough context</li>
-            <li><strong>Experiment</strong> - try different phrasings to steer recommendations</li>
-        </ul>
-        
-        <p><strong>Current limitation:</strong> The system only works with keyword extraction. It can't handle requests like "recent papers" or "highly cited papers."</p>
-        <p><strong>Bottom line:</strong> More precise, detailed descriptions = better recommendations. This is your only way to guide the agent, so make it count!</p>
+        <div class="instructions-section">
+            <h2>How to Get Better Recommendations</h2>
+            <h3>Project Title</h3>
+            <p>The title is for your reference only - our agent doesn't use it.</p>
+            
+            <h3>Project Description - The Key to Success</h3>
+            <p><strong>This is what matters most!</strong> Your description is the only information our agent uses to find relevant papers.</p>
+            <p><strong>How it works:</strong> The agent extracts keywords from your description to search for papers. Poor descriptions = poor recommendations.</p>
+            
+            <p><strong>Best practices:</strong></p>
+            <ul>
+                <li><strong>Be specific</strong> - include relevant keywords and technical terms</li>
+                <li><strong>Write naturally</strong> - describe your work or research interests in 3-4 sentences</li>
+                <li><strong>Provide enough detail</strong> - too brief won't give enough context</li>
+                <li><strong>Experiment</strong> - try different phrasings to steer recommendations</li>
+            </ul>
+            
+            <p><strong>Current limitation:</strong> The system only works with keyword extraction. It can't handle requests like "recent papers" or "highly cited papers."</p>
+            <p><strong>Bottom line:</strong> More precise, detailed descriptions = better recommendations. This is your only way to guide the agent, so make it count!</p>
+        </div>
     </div>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
