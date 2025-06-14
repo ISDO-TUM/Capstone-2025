@@ -18,6 +18,32 @@
                 <label for="projectDescription">Project Prompt</label>
                 <textarea id="projectDescription" name="projectDescription" rows="4" required></textarea>
             </div>
+            
+            <div class="form-group">
+                <label for="paperUpload">Upload Reference Paper (Optional)</label>
+                <p class="upload-description">Upload a PDF to enhance your project recommendations</p>
+                
+                <div id="uploadArea" class="upload-area">
+                    <div class="upload-content">
+                        <div class="upload-icon">📄</div>
+                        <p class="upload-text">Drag & drop your PDF here</p>
+                        <p class="upload-hint">Single PDF file, max 50MB</p>
+                    </div>
+                    <input type="file" id="paperUpload" accept=".pdf" style="display: none;">
+                </div>
+                
+                <div id="fileInfo" class="file-info" style="display: none;">
+                    <div class="file-details">
+                        <div class="file-icon">📄</div>
+                        <div class="file-name-size">
+                            <span id="fileName" class="file-name"></span>
+                            <span id="fileSize" class="file-size"></span>
+                        </div>
+                    </div>
+                    <button type="button" id="removeFile" class="btn-remove">Remove</button>
+                </div>
+            </div>
+            
             <button type="submit" class="btn btn-primary">Create Project</button>
         </form>
     </div>
