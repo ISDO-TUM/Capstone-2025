@@ -1,8 +1,12 @@
+from __future__ import annotations
 import logging
 from typing import Any
 import json
 from llm.LLMDefinition import LLM
 import llm.Prompts as prompts
+
+from datetime import datetime
+from typing import Optional, List
 
 from langchain_core.tools import tool
 
@@ -16,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 @tool
-def update_papers(queries: list[str]) -> str:
+def update_papers(queries: List[str], from_date: Optional[str] = None) -> str:
     """
     Tool Name: update_papers
     Description:
@@ -29,7 +33,10 @@ def update_papers(queries: list[str]) -> str:
         Use this tool when you want to refresh the paper database with the latest research and ensure
         that all relevant papers have updated embeddings for ranking or similarity comparison tasks.
     Input:
-        queries (list[str]): A list of keyword strings to search for relevant papers.
+        1. queries (list[str]): A list of keyword strings to search for relevant papers.
+        2. from_date : str, optional
+        A date string in ISO format ``"YYYY-MM-DD"``.
+        **Only papers published *after* this date are considered.**
     Output:
         A status message string indicating whether the process completed successfully without errors,
         or completed with some errors that can be ignored.
@@ -37,7 +44,7 @@ def update_papers(queries: list[str]) -> str:
         str: A human-readable summary of the update operation's result.
     """
     try:
-        fetched_papers, status_fetch = fetch_works_multiple_queries(queries)
+        fetched_papers, status_fetch = fetch_works_multiple_queries(queries, from_date)
 
         status_postgres, deduplicated_papers = insert_papers(fetched_papers)
         # todo print how many new papers for debugging

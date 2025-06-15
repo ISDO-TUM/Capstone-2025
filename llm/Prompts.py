@@ -88,6 +88,10 @@ user_message_six_keywords = [
     "Digit classification"
 ]
 
+pub_sub_system_prompt = SystemMessage(content="""
+todo
+  """)
+
 system_prompt = SystemMessage(content="""
   You are an expert assistant helping scientific researchers stay up-to-date with the latest literature.
   Your task is to analyze the user's research interests and use your available tools to query papers titles

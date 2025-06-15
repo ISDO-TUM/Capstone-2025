@@ -1,5 +1,5 @@
 import llm.Prompts as prompts
-from llm.tools.Tools_aggregator import get_tools
+from llm.tools.Tools_aggregator import get_tools, get_pub_sub_tools
 from langgraph.prebuilt import create_react_agent
 from llm.LLMDefinition import LLM
 from langchain_core.messages import HumanMessage
@@ -12,6 +12,15 @@ tools = get_tools()
 llm = LLM
 system_prompt = prompts.system_prompt
 agent = create_react_agent(model=llm, tools=tools)
+
+pubsub_tools = get_pub_sub_tools()
+pubsub_agent = create_react_agent(model=llm, tools=pubsub_tools)
+pubsub_system_prompt = prompts.pub_sub_system_prompt
+
+
+
+def trigger_pubsub_agent(user_message: str):
+    return pubsub_agent.invoke({'messages': [system_prompt, HumanMessage(content=user_message)]})
 
 
 def trigger_agent(user_message: str):

@@ -31,7 +31,7 @@ def get_best_papers(user_profile: str) -> list[dict]:
         return []
 
     try:
-        paper_hashes = chroma_db.perform_similarity_search(10, embedded_profile)
+        paper_hashes = chroma_db.perform_similarity_search(100, embedded_profile)
 
     except Exception as e:
         logger.error(f"Error performing similarity search: {e}")
