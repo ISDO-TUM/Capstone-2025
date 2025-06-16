@@ -40,7 +40,11 @@ services:
           echo 'Waiting for database to be ready...'
           sleep 2
         done &&
-        echo 'Database ready. Running setup script...' &&
+        until curl -s chroma_container:8000 > /dev/null; do
+          echo 'Waiting for ChromaDB to be ready...'
+          sleep 2
+        done &&
+        echo 'Both services ready. Running setup script...' &&
         psql -h db -U ${DB_USER:-user} -d ${DB_NAME:-papers} -f /app/init.sql &&
         echo 'Setup complete. Starting application...' &&
         python app.py
