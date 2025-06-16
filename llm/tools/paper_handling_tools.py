@@ -172,18 +172,29 @@ def retry_broaden(keywords: list[str], query_description: str = "") -> str:
         })
 
     prompt = f"""
-    You are an academic research assistant helping users improve their scientific search results.
+    You are an academic research assistant helping users improve their scientific paper search using the OpenAlex API.
 
-    A user has provided a brief research description and a set of keywords they used to search for papers.
-    Your task is to intelligently broaden the keyword set. Stay aligned with the original topic and avoid
-    repetition. You may use synonyms, generalizations, or adjacent terms from the same domain.
+    The user has provided:
+    - A natural language description of their research goal
+    - A small list of initial keywords they used to search for papers
 
-    Provide only a JSON list of additional keywords that can help retrieve more relevant scientific literature.
+    Your task is to intelligently **broaden and optimize** the keyword list. Follow these rules:
 
-    User query: "{query_description}"
+    1. Only suggest **2 to 4** high-quality keywords.
+    2. Prioritize **concepts or terms that would likely exist in academic knowledge graphs** (like OpenAlex).
+    3. Avoid exact duplicates or overly generic terms (e.g. "research", "science").
+    4. Prefer well-known **scientific disciplines**, **methods**, or **subfields** related to the original topic.
+    5. Assume the keywords will be used in a query like:
+    `filter=keywords.id:keyword1|keyword2|...` which uses AND matching — so do **not** add too many.
+
+    Respond only with a JSON list of new keywords (do not include the original ones), e.g.:
+    ["metabolomics", "cellular respiration", "photoperiodism"]
+
+    User research description: "{query_description}"
+
     Original keywords: {json.dumps(keywords)}
 
-    Respond with a JSON list of broadened keywords:
+    Broadened keyword list (JSON format only):
     """
 
     response = LLM.invoke(prompt)
@@ -228,20 +239,33 @@ def reformulate_query(keywords: list[str], query_description: str = "") -> str:
         })
 
     prompt = f"""
-    You are an AI-powered academic assistant.
+    You are an AI-powered academic assistant helping researchers refine their literature search strategy using OpenAlex.
 
-    The user has submitted a rough or ambiguous research topic and a corresponding list of keywords.
-    Your task is to reformulate the topic and refine the keywords to make the query more precise,
-    academically meaningful, and well-suited for literature search.
+    The user has submitted:
+    - A vague or imprecise research topic
+    - A list of keywords they initially used in the search
 
-    Do NOT broaden the topic — instead, focus it and remove irrelevant terms.
+    Your task is to **clarify the research intent** and **optimize the keyword list** so that:
+    1. The topic becomes academically precise and focused
+    2. The keywords are suitable for high-quality retrieval in OpenAlex
 
-    User query description: "{query_description}"
-    Original keywords: {json.dumps(keywords)}
+    🔎 Guidelines for Keyword Optimization:
+    - Suggest only **2 to 4** highly relevant keywords
+    - Prefer keywords that match academic fields, subdisciplines, or research methods
+    - Avoid filler words, overly generic terms, or keyword duplication
+    - Assume the keywords will be used in a strict **AND** filter (i.e. all must be present), so select carefully to **maximize relevance while maintaining sufficient recall**
 
-    Output your response as JSON with two keys:
-    - "reformulated_description": clearer research intent
-    - "refined_keywords": list of optimized keywords
+    💡 Your goal is **focus**, not breadth. Do not add unrelated or tangential concepts.
+
+    Input:
+    - User query description: "{query_description}"
+    - Original keywords: {json.dumps(keywords)}
+
+    Respond with a JSON object of the form:
+    {{
+    "reformulated_description": "More focused and academically clear version of the user's research goal",
+    "refined_keywords": ["...", "...", "..."]
+    }}
     """
 
     response = LLM.invoke(prompt)
