@@ -136,8 +136,11 @@ def check_relevance_threshold(papers_with_relevance_scores: list[dict], threshol
     return all(paper.get("similarity_score", 0.0) >= threshold for paper in top_papers)
 
 
+logger = logging.getLogger(__name__)
+
+
 @tool
-def accept(input: dict) -> str:
+def accept(confirmation: str) -> str:
     """
     Agent has accepted the current results.
     No reformulation or retry is needed.
@@ -149,7 +152,7 @@ def accept(input: dict) -> str:
 
 
 @tool
-def retry_broaden(input: dict) -> str:
+def retry_broaden(keywords: list[str], query_description: str = "") -> str:
     """
     Agent tool to broaden the user's original keyword list using LLM.
 
@@ -162,28 +165,25 @@ def retry_broaden(input: dict) -> str:
     Output:
         JSON-formatted string with new keywords, or fallback message.
     """
-    query_description = input.get("query_description", "")
-    keywords = input.get("keywords", [])
-
     if not keywords:
-        return "No keywords provided. Cannot broaden."
+        return json.dumps({
+            "status": "error",
+            "message": "No keywords provided. Cannot broaden."
+        })
 
     prompt = f"""
-    You are an academic research assistant.
+    You are an academic research assistant helping users improve their scientific search results.
 
-    You are given a user query description and a list of search keywords they used to find papers in OpenAlex.
+    A user has provided a brief research description and a set of keywords they used to search for papers.
+    Your task is to intelligently broaden the keyword set. Stay aligned with the original topic and avoid
+    repetition. You may use synonyms, generalizations, or adjacent terms from the same domain.
 
-    Your task is to expand or broaden the list of keywords intelligently without drifting from the main topic.
-    Avoid repeating the exact same terms. Add synonyms, generalizations, and useful adjacent concepts.
-
-    Respond ONLY with a valid JSON list. Do not add extra commentary.
+    Provide only a JSON list of additional keywords that can help retrieve more relevant scientific literature.
 
     User query: "{query_description}"
+    Original keywords: {json.dumps(keywords)}
 
-    Original keywords:
-    {json.dumps(keywords)}
-
-    Respond with a broader keyword list (JSON format only):
+    Respond with a JSON list of broadened keywords:
     """
 
     response = LLM.invoke(prompt)
@@ -207,9 +207,9 @@ def retry_broaden(input: dict) -> str:
 
 
 @tool
-def reformulate_query(input: dict) -> str:
+def reformulate_query(keywords: list[str], query_description: str = "") -> str:
     """
-    Reformulates the user's query to better capture intent.
+    Reformulates the user's query to better capture academic search intent.
 
     Input:
     {
@@ -218,11 +218,8 @@ def reformulate_query(input: dict) -> str:
     }
 
     Output:
-        JSON string with reformulated keywords or improved query intent.
+        JSON string with reformulated query description and keywords.
     """
-    query_description = input.get("query_description", "")
-    keywords = input.get("keywords", [])
-
     if not query_description:
         logger.error("Query description was missing")
         return json.dumps({
@@ -231,22 +228,21 @@ def reformulate_query(input: dict) -> str:
         })
 
     prompt = f"""
-    You are a helpful AI research assistant.
+    You are an AI-powered academic assistant.
 
-    You are given a vague or suboptimal research query description and keyword list.
-    Your task is to reformulate this query so that it better reflects clear academic intent.
+    The user has submitted a rough or ambiguous research topic and a corresponding list of keywords.
+    Your task is to reformulate the topic and refine the keywords to make the query more precise,
+    academically meaningful, and well-suited for literature search.
 
-    Do not broaden the topic — instead, make it more focused, accurate, and relevant.
+    Do NOT broaden the topic — instead, focus it and remove irrelevant terms.
 
-    Original query description: "{query_description}"
+    User query description: "{query_description}"
     Original keywords: {json.dumps(keywords)}
 
-    Return your output as a JSON object with the following fields:
-    {{
-        "reformulated_description": "...",  // more precise version of the description
-        "refined_keywords": ["...", "..."] // optimized keyword list
-    }}
-        """
+    Output your response as JSON with two keys:
+    - "reformulated_description": clearer research intent
+    - "refined_keywords": list of optimized keywords
+    """
 
     response = LLM.invoke(prompt)
 
@@ -266,47 +262,41 @@ def reformulate_query(input: dict) -> str:
 
 
 @tool
-def detect_out_of_scope_query(input: dict) -> str:
+def detect_out_of_scope_query(query_description: str) -> str:
     """
     Checks whether a user query is nonsensical or unrelated to scientific research.
 
     Input:
     {
-        "query_description": "How are you?",
+        "query_description": "How are you?"
     }
 
     Output:
-        JSON object with fields:
+        JSON object with:
         - status: "valid" or "out_of_scope"
         - reason: explanation if out_of_scope
     """
-
-    query = input.get("query_description", "")
-
-    if not query.strip():
+    if not query_description.strip():
         return json.dumps({
             "status": "out_of_scope",
             "reason": "Query is empty or whitespace."
         })
 
     prompt = f"""
-    You are a scientific assistant responsible for helping users find academic literature.
+    You are a research paper search assistant.
 
-    The following query was submitted:
-    "{query}"
+    Analyze the following user query and determine if it is a valid academic topic
+    for a scientific literature search or if it is out-of-scope (e.g., a greeting,
+    joke, personal opinion, or unrelated to science).
 
-    Your task is to decide whether this is a valid query for a scientific literature search or if it is out-of-scope.
+    Query: "{query_description}"
 
-    Respond with a JSON object:
+    Respond with a JSON object like:
     {{
-    "status": "valid" | "out_of_scope",
-    "reason": "..."  // Explain why (if out_of_scope)
+        "status": "valid" | "out_of_scope",
+        "reason": "..."  // explanation for decision
     }}
-
-    Guidance:
-    - Valid = query relates to a scientific research topic, even if vague.
-    - Out_of_scope = greetings, jokes, personal opinions, nonsense, or anything unrelated to research.
-        """
+    """
 
     response = LLM.invoke(prompt)
 
@@ -328,65 +318,75 @@ def main():
     from llm.LLMDefinition import LLM
     from llm.util.agent_log_formatter import format_log_message
 
-    # Phase 1: Direct tool testing
     print("\n========== PHASE 1: DIRECT TOOL TESTING ==========\n")
 
     tool_inputs = {
         "retry_broaden": [
-            "My research is about yeast metabolism under moonlight.",
-            "Low citation results on a very specific variant of quantum Hall effects.",
-            "I only got one result for 'subtypes of algae in Norwegian fjords' — can you expand that?",
+            {"query_description": "My research is about yeast metabolism under moonlight.", "keywords": ["yeast", "metabolism", "moonlight"]},
+            {"query_description": "Low citation results on a very specific variant of quantum Hall effects.", "keywords": ["quantum hall", "edge states", "low temperature"]},
+            {"query_description": "I only got one result for 'subtypes of algae in Norwegian fjords' — can you expand that?", "keywords": ["algae", "Norwegian fjords", "taxonomy"]}
         ],
         "reformulate_query": [
-            "biotech bio something cancer cell therapy general stuff",
-            "fuzzy logic relevance matching NLP graphs paper recommendation system vague idea",
+            {"query_description": "biotech bio something cancer cell therapy general stuff", "keywords": ["biotech", "cancer", "cell therapy"]},
+            {"query_description": "fuzzy logic relevance matching NLP graphs paper recommendation system vague idea", "keywords": ["fuzzy logic", "NLP", "recommendation"]}
         ],
         "accept": [
-            "Applications of transformers in biomedical entity recognition",
-            "Recent developments in reinforcement learning for robotics control",
+            {"confirmation": "yes"},
+            {"confirmation": "yes"}
         ],
         "detect_out_of_scope_query": [
-            "How are you doing today?"
+            {"query_description": "How are you doing today?"}
         ]
     }
 
-    for tool_name, queries in tool_inputs.items():
+    for tool_name, input_list in tool_inputs.items():
         print(f"\n🛠️ Tool: {tool_name.upper()}")
-        for query in queries:
+        for inputs in input_list:
+            print(f"Input: {inputs}")
             if tool_name == "retry_broaden":
-                from llm.tools.retry_broaden import retry_broaden
-                print(f"Query: {query}")
-                print("Output:", retry_broaden({'keywords': [query]}))
+                output = retry_broaden.invoke(inputs)
             elif tool_name == "reformulate_query":
-                from llm.tools.reformulate_query import reformulate_query
-                print(f"Query: {query}")
-                print("Output:", reformulate_query({'keywords': [query]}))
+                output = reformulate_query.invoke(inputs)
             elif tool_name == "accept":
-                from llm.tools.accept import accept
-                print(f"Query: {query}")
-                print("Output:", accept({'confirmation': 'yes'}))
+                output = accept.invoke(inputs)
             elif tool_name == "detect_out_of_scope_query":
-                from llm.tools.detect_out_of_scope_query import detect_out_of_scope_query
-                print(f"Query: {query}")
-                print("Output:", detect_out_of_scope_query({'query_description': query}))
+                output = detect_out_of_scope_query.invoke(inputs)
+            else:
+                output = "❌ Unknown tool"
+            print("Output:", output)
             print("-" * 60)
 
-    # Phase 2: Agent-based testing
     print("\n========== PHASE 2: AGENT STREAMING TESTING ==========\n")
 
     tools = get_tools()
     agent = create_react_agent(model=LLM, tools=tools)
 
     system_prompt = HumanMessage(content="""
-    You are a helpful research assistant.
-    You have access to tools like retry_broaden, reformulate_query, accept, and detect_out_of_scope_query.
-    Decide and act based on the user’s input.
-    Respond only with the final tool result.
+    You are a helpful academic research assistant.
+    You have access to tools like `retry_broaden`, `reformulate_query`, `accept`, and `detect_out_of_scope_query`.
+
+    Based on the user query, you must decide whether to:
+    - Broaden overly specific queries
+    - Reformulate vague or poorly phrased ones
+    - Accept a valid query if it needs no changes
+    - Detect and reject queries that are not related to scientific research
+
+    Your final output must always return the tool result only. Think carefully and choose the right action.
     """)
 
-    test_queries = sum(tool_inputs.values(), [])
+    # Combine all textual query inputs for testing the agent
+    agent_test_queries = [
+        "My research is about yeast metabolism under moonlight.",
+        "Low citation results on a very specific variant of quantum Hall effects.",
+        "I only got one result for 'subtypes of algae in Norwegian fjords' — can you expand that?",
+        "biotech bio something cancer cell therapy general stuff",
+        "fuzzy logic relevance matching NLP graphs paper recommendation system vague idea",
+        "Applications of transformers in biomedical entity recognition",
+        "Recent developments in reinforcement learning for robotics control",
+        "How are you doing today?"
+    ]
 
-    def stream_agent_reasoning(agent, query):
+    def stream_agent_reasoning(agent, query: str):
         print(f"\n🔍 Query: {query}\n")
         last_step = None
         for step in agent.stream(
@@ -403,7 +403,7 @@ def main():
         else:
             print("\n⚠️ Agent produced no output.\n")
 
-    for query in test_queries:
+    for query in agent_test_queries:
         stream_agent_reasoning(agent, query)
 
 
