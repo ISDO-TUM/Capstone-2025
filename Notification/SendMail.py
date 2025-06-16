@@ -12,7 +12,22 @@ NAME = "AI AGENT"
 
 
 def sendmail(email, html_content):
-    # SMTP-Server-Details
+    """
+    Send one HTML-formatted message to a single recipient.
+
+    Parameters
+    ----------
+    email : str
+        Recipient’s address.
+    html_content : str
+        The already-rendered HTML body (e.g. from ``generate_newsletter_html``).
+
+    Returns
+    -------
+    Status
+        ``Status.SUCCESS`` if the message was accepted by the server,
+        otherwise ``Status.FAILURE``.
+    """
 
     try:
         with smtplib.SMTP(smtp_server, smtp_port) as server:

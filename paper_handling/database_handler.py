@@ -221,30 +221,6 @@ def get_papers_after_date(date_after: str) -> List[Dict[str, object]]:
         cur.close()
         conn.close()
 
-
-def get_all_papers():
-    """
-    Retrieves all papers (all versions) from the papers_table.
-    Returns a list of dictionaries, where each dictionary represents a paper version.
-    """
-    conn = connect_to_db()
-    if not conn:
-        return []
-
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    sql = "SELECT paper_hash, id, title, abstract, authors, publication_date, landing_page_url, pdf_url FROM papers_table;"
-    try:
-        cur.execute(sql)
-        papers = [dict(row) for row in cur.fetchall()]
-        return papers
-    except psycopg2.Error as e:
-        print(f"Error fetching all papers: {e}")
-        return []
-    finally:
-        cur.close()
-        conn.close()
-
-
 def get_papers_by_original_id(original_id):
     """
     Retrieves all versions of a paper from the papers_table by its original ID.
