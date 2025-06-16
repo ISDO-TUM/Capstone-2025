@@ -26,10 +26,10 @@ def trigger_agent_show_thoughts(user_message: str):
 
     for step in agent.stream(
             {"messages": [system_prompt, HumanMessage(content=user_message)]},
-            {"recursion_limit": RECURSION_LIMIT},
             stream_mode="values",
     ):
         log = step["messages"][-1].pretty_repr()
+        # print(log)
         formatted_log = format_log_message(log)
         yield {"thought": formatted_log, "is_final": False, "final_content": None}
         last_step = step

@@ -19,15 +19,28 @@ def update_papers(queries: list[str]) -> str:
     Tool Name: update_papers
     Description:
         This tool updates the paper database with the latest research papers and their embeddings
-        based on a list of keyword search queries. It performs the following steps:
-        1. Fetches new papers using the provided list of keyword queries.
+        based on a list of search queries. It performs the following steps:
+        1. Fetches new papers using the provided list of queries.
         2. Stores the fetched papers in a PostgreSQL database, removing any duplicates.
         3. Computes and stores embeddings for the newly stored papers.
     Use Case:
         Use this tool when you want to refresh the paper database with the latest research and ensure
         that all relevant papers have updated embeddings for ranking or similarity comparison tasks.
     Input:
-        queries (list[str]): A list of keyword strings to search for relevant papers.
+        queries (list[str]): A list of strings corresponding to the user's interests to search for relevant papers.
+        When generating search queries based on the user's interests, make sure to preserve meaningful multi-word expressions as single, coherent search terms. For example, if the user mentions "ice cream," do not split this into "ice" and "cream" — treat it as a unified concept: "ice cream."
+        Generate search queries that reflect the actual intent of the user's interest, emphasizing quality over quantity. Avoid breaking compound phrases into individual words unless they are clearly independent concepts.
+        Use concise and targeted queries that represent whole ideas, domains, or research topics. Only split input into multiple queries if doing so improves the relevance or diversity of the results without losing semantic meaning.
+
+        Examples:
+            - User: "I'm interested in machine learning and neural networks"
+            queries: ["machine learning", "neural networks"]
+
+            - User: "I like ice cream and computer vision"
+            queries: ["ice cream", "computer vision"]
+
+        Avoid:
+            - ["ice", "cream", "computer", "vision"]
     Output:
         A status message string indicating whether the process completed successfully without errors,
         or completed with some errors that can be ignored.
