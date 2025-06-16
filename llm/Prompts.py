@@ -96,7 +96,7 @@ GOAL
 Whenever you are triggered, deliver fresh, highly relevant papers to subscriber and notify
 him by e-mail.
 
-WORKFLOW (execute **exactly** in this order)  
+WORKFLOW
 -------------------------------------------
 1. Determine the date exactly seven days ago (`date_cutoff`).  
 2. Add every paper published **after** `date_cutoff` to the local database (duplicates ignored).  

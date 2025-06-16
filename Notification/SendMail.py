@@ -1,13 +1,15 @@
+import os
 import smtplib
+import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr
 from utils.status import Status
 
-smtp_server = ""
+smtp_server = "mail.your-server.de"
 smtp_port = 587
-username = ""
-password = ""  # nosec B105
+username = "fake_hacked@thecardinal-agency.com"
+password = os.getenv("EMAIL_PASSWORD")
 NAME = "AI AGENT"
 
 
@@ -50,3 +52,7 @@ def sendmail(email, html_content):
     except Exception as e:
         print(f"Fehler beim Senden an {email}: {e}")
         return Status.FAILURE
+
+
+if __name__ == '__main__':
+    sendmail("hesam.rezaei@tum.de", "output.html")
