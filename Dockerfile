@@ -2,9 +2,7 @@
 FROM python:3.13-slim
 
 # Install PostgreSQL client tools (psql + pg_isready)
-RUN apt-get update && \
-    apt-get install -y postgresql-client-common postgresql-client && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables for Python
 ENV PYTHONDONTWRITEBYTECODE 1
