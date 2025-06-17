@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            
+
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 handleFileSelection(files[0]);
@@ -95,20 +95,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function displayFileInfo(file) {
             const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
-            
+
             fileName.textContent = file.name;
             fileSize.textContent = `${sizeInMB} MB`;
-            
+
             uploadArea.style.display = 'none';
             fileInfo.style.display = 'flex';
         }
 
         function removeFile() {
             fileInput.value = '';
-            
+
             fileInfo.style.display = 'none';
             uploadArea.style.display = 'block';
-            
+
             fileName.textContent = '';
             fileSize.textContent = '';
         }
@@ -243,12 +243,62 @@ document.addEventListener('DOMContentLoaded', () => {
             const descriptionEl = document.createElement('p');
             descriptionEl.textContent = paper.description;
 
+            const starRatingEl = document.createElement('div');
+            starRatingEl.classList.add('star-rating');
+            starRatingEl.innerHTML = `
+                <span class="star" data-value="1">&#9733;</span>
+                <span class="star" data-value="2">&#9733;</span>
+                <span class="star" data-value="3">&#9733;</span>
+                <span class="star" data-value="4">&#9733;</span>
+                <span class="star" data-value="5">&#9733;</span>
+            `;
+
             card.appendChild(titleEl);
             card.appendChild(linkEl);
             card.appendChild(descriptionEl);
+            card.appendChild(starRatingEl);
+
             container.appendChild(card);
         });
     }
 
     handleRouting();
+
+    // Star rating handlers
+    const recommendationsContainer = document.getElementById('recommendationsContainer');
+    if (recommendationsContainer) {
+        recommendationsContainer.addEventListener('mouseover', function (e) {
+            if (e.target.classList.contains('star')) {
+                const value = parseInt(e.target.dataset.value);
+                const stars = Array.from(e.target.parentNode.querySelectorAll('.star'));
+                stars.forEach(star => {
+                    star.classList.toggle('hovered', parseInt(star.dataset.value) <= value);
+                });
+            }
+        });
+
+        recommendationsContainer.addEventListener('mouseout', function (e) {
+            if (e.target.classList.contains('star')) {
+                const stars = Array.from(e.target.parentNode.querySelectorAll('.star'));
+                stars.forEach(star => {
+                    star.classList.remove('hovered');
+                });
+            }
+        });
+
+        recommendationsContainer.addEventListener('click', function (e) {
+            if (e.target.classList.contains('star')) {
+                const clickedStar = e.target;
+                const stars = Array.from(clickedStar.parentNode.querySelectorAll('.star'));
+                const value = parseInt(clickedStar.dataset.value);
+
+                stars.forEach(star => {
+                    star.classList.toggle('selected', parseInt(star.dataset.value) <= value);
+                });
+
+                console.log(`Rated ${value} star(s)`);
+                // TODO: Send rating to backend or store locally if needed
+            }
+        });
+    }
 });

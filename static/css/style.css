@@ -296,3 +296,25 @@ h1 {
 .btn-remove:active {
     transform: scale(0.98);
 }
+
+
+.star-rating {
+    display: flex;
+    gap: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.star {
+    font-size: 20px;
+    color: #ced4da;
+    transition: color 0.2s;
+}
+
+.star.selected {
+    color: #ffc107;
+}
+
+.star.hovered {
+    color: #ffc107;
+}
