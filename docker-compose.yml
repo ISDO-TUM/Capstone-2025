@@ -1,16 +1,76 @@
-version: "3.8"
+# docker-compose.yml
+version: '3.8'
 
 services:
+  db:
+    image: postgres:16
+    container_name: capstone_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-papers}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - capstone_postgres_data:/var/lib/postgresql/data
+    networks:
+      - capstone_network
+
   chromadb:
     image: chromadb/chroma
     container_name: chroma_container
     ports:
       - "8000:8000"
     volumes:
-      - chroma_data:/chroma/.chroma
+      - capstone_chroma_data:/data
     environment:
       - IS_PERSISTENT=TRUE
     restart: unless-stopped
+    networks:
+      - capstone_network
+
+  web:
+    build: .
+    container_name: capstone_web
+    restart: always
+    command: >
+      sh -c "
+        until pg_isready -h db -p 5432 > /dev/null 2>&1; do
+          echo 'Waiting for database to be ready...'
+          sleep 2
+        done &&
+        echo 'Database ready. Running setup script...' &&
+        psql -h db -U ${DB_USER:-user} -d ${DB_NAME:-papers} -f /app/init.sql &&
+        echo 'Setup complete. Starting application...' &&
+        python app.py
+      "
+    ports:
+      - "7500:7500"
+    volumes:
+      - .:/app
+    working_dir: /app
+    depends_on:
+      - db
+      - chromadb
+    environment:
+      - PGPASSWORD=${DB_PASSWORD:-password}
+      - DB_HOST=db
+      - DB_NAME=${DB_NAME:-papers}
+      - DB_USER=${DB_USER:-user}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_PORT=5432
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    networks:
+      - capstone_network
 
 volumes:
-  chroma_data:
+  capstone_postgres_data:
+  capstone_chroma_data:
+
+networks:
+  capstone_network:
+    driver: bridge
