@@ -1,8 +1,10 @@
 # Use an official Python runtime as a parent image
 FROM python:3.13-slim
 
-# Install postgresql-client to get the 'psql' command
-RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+# Install PostgreSQL client tools (psql + pg_isready)
+RUN apt-get update && \
+    apt-get install -y postgresql-client-common postgresql-client && \
+    rm -rf /var/lib/apt/lists/*
 
 # Set environment variables for Python
 ENV PYTHONDONTWRITEBYTECODE 1
