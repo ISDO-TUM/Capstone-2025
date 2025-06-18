@@ -2,9 +2,11 @@ import json
 import logging
 import os
 import sys
+import io
 
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context
 from llm.Agent import trigger_agent_show_thoughts
+import PyPDF2
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +70,42 @@ def get_recommendations():
             yield f"data: {error_payload}\n\n"
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+
+@app.route('/api/extract-pdf-text', methods=['POST'])
+def extract_pdf_text():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No file selected"}), 400
+    
+    if not file.filename.lower().endswith('.pdf'):
+        return jsonify({"error": "File must be a PDF"}), 400
+    
+    try:
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file.read()))
+        
+        text_content = ""
+        for page in pdf_reader.pages:
+            text_content += page.extract_text() + "\n"
+        
+        text_content = " ".join(text_content.split())
+        
+        if not text_content.strip():
+            return jsonify({"error": "Could not extract text from PDF"}), 400
+        
+        formatted_text = f"User provided this paper:\n\n{text_content}"
+        
+        return jsonify({
+            "success": True,
+            "extracted_text": formatted_text
+        })
+        
+    except Exception as e:
+        logger.error(f"Error extracting PDF text: {e}")
+        return jsonify({"error": f"Failed to process PDF: {str(e)}"}), 500
 
 
 if __name__ == '__main__':
