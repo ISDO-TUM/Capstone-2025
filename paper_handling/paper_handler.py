@@ -183,10 +183,6 @@ def is_valid_abstract(text, min_words=50, max_words=500):
     if sentence_endings < 3:
         return False
 
-    # Optional: Reject if it has repeated author names (common in bad extractions)
-    if re.search(r"(\b[A-Z][a-z]+\s+[A-Z][a-z]+\b).*\1", text):
-        return False
-
     return True
 
 
