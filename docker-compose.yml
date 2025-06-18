@@ -41,7 +41,7 @@ services:
           sleep 2
         done &&
         until curl -s chroma_container:8000 > /dev/null; do
-          echo 'Waiting for ChromaDB to be ready...'
+          echo 'waiting for ChromaDB to be ready...'
           sleep 2
         done &&
         echo 'Both services ready. Running setup script...' &&
