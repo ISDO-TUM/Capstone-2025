@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import sys
+import io
 
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context
 from llm.Agent import trigger_agent_show_thoughts
@@ -9,6 +10,7 @@ from paper_handling.database_handler import connect_to_db
 from paper_handling.database_handler import get_papers_by_original_id
 from paper_handling.database_handler import get_all_papers
 
+import PyPDF2
 
 logger = logging.getLogger(__name__)
 
@@ -50,25 +52,13 @@ def get_recommendations():
                     try:
                         llm_response_content = response_part['final_content']
                         recommendations = json.loads(llm_response_content).get('papers')
-                        all_papers = get_all_papers()
                         final_recommendations = []
                         for rec in recommendations:
-                            paper_hash = "N/A"
-                            rec_title = rec.get("title")
-
-                            # Match by title (can enhance with link if needed)
-                            for p in all_papers:
-                                if p["title"] == rec_title:
-                                    paper_hash = p["paper_hash"]
-                                    break
-
                             final_recommendations.append({
                                 "title": rec.get("title", "N/A"),
                                 "link": rec.get("link", "N/A"),
-                                "description": rec.get("description", "Relevant based on user interest."),
-                                "hash": paper_hash
+                                "description": rec.get("description", "Relevant based on user interest.")
                             })
-
                         yield f"data: {json.dumps({'recommendations': final_recommendations})}\n\n"
                     except json.JSONDecodeError:
                         print(f"Failed to parse LLM response: {llm_response_content}")
@@ -121,6 +111,42 @@ def rate_paper():
     finally:
         cur.close()
         conn.close()
+
+
+@app.route('/api/extract-pdf-text', methods=['POST'])
+def extract_pdf_text():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No file selected"}), 400
+
+    if not file.filename.lower().endswith('.pdf'):
+        return jsonify({"error": "File must be a PDF"}), 400
+
+    try:
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file.read()))
+
+        text_content = ""
+        for page in pdf_reader.pages:
+            text_content += page.extract_text() + "\n"
+
+        text_content = " ".join(text_content.split())
+
+        if not text_content.strip():
+            return jsonify({"error": "Could not extract text from PDF"}), 400
+
+        formatted_text = f"User provided this paper:\n\n{text_content}"
+
+        return jsonify({
+            "success": True,
+            "extracted_text": formatted_text
+        })
+
+    except Exception as e:
+        logger.error(f"Error extracting PDF text: {e}")
+        return jsonify({"error": f"Failed to process PDF: {str(e)}"}), 500
 
 
 if __name__ == '__main__':
