@@ -96,7 +96,7 @@ def extract_pdf_text():
         if not text_content.strip():
             return jsonify({"error": "Could not extract text from PDF"}), 400
         
-        formatted_text = f"User provided this paper:\n\n{text_content}"
+        formatted_text = f"""MESSAGE TO THE AI AGENT SYSTEM: THE USER PROVIDED A RESEARCH PAPER SO YOU CAN UNDERSTAND THEIR RESEARCH INTERESTS.\n THE FULL TEXT OF THIS PAPER IS HERE:\n\n{text_content}\n\n MESSAGE TO THE AI AGENT SYSTEM: END OF FULL PAPER TEXT"""
         
         return jsonify({
             "success": True,
