@@ -76,33 +76,33 @@ def get_recommendations():
 def extract_pdf_text():
     if 'file' not in request.files:
         return jsonify({"error": "No file provided"}), 400
-    
+
     file = request.files['file']
     if file.filename == '':
         return jsonify({"error": "No file selected"}), 400
-    
+
     if not file.filename.lower().endswith('.pdf'):
         return jsonify({"error": "File must be a PDF"}), 400
-    
+
     try:
         pdf_reader = PyPDF2.PdfReader(io.BytesIO(file.read()))
-        
+
         text_content = ""
         for page in pdf_reader.pages:
             text_content += page.extract_text() + "\n"
-        
+
         text_content = " ".join(text_content.split())
-        
+
         if not text_content.strip():
             return jsonify({"error": "Could not extract text from PDF"}), 400
-        
+
         formatted_text = f"""MESSAGE TO THE AI AGENT SYSTEM: THE USER PROVIDED A RESEARCH PAPER SO YOU CAN UNDERSTAND THEIR RESEARCH INTERESTS.\n THE FULL TEXT OF THIS PAPER IS HERE:\n\n{text_content}\n\n MESSAGE TO THE AI AGENT SYSTEM: END OF FULL PAPER TEXT"""
-        
+
         return jsonify({
             "success": True,
             "extracted_text": formatted_text
         })
-        
+
     except Exception as e:
         logger.error(f"Error extracting PDF text: {e}")
         return jsonify({"error": f"Failed to process PDF: {str(e)}"}), 500
