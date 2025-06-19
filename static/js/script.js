@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const path = window.location.pathname;
 
         if (path === '/create-project') {
-           // Do nothing in this case for now
+           setupPDFUpload();
         } else if (path.startsWith('/project/')) {
             const projectId = path.split('/').pop();
             loadProjectOverviewData(projectId);
@@ -33,6 +33,86 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     };
+
+    function setupPDFUpload() {
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('paperUpload');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const removeBtn = document.getElementById('removeFile');
+        if (!uploadArea || !fileInput) return;
+
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelection(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleFileSelection(file);
+            }
+        });
+
+        removeBtn?.addEventListener('click', () => {
+            removeFile();
+        });
+
+        function handleFileSelection(file) {
+            if (file.type !== 'application/pdf') {
+                alert('Please select a PDF file only.');
+                return;
+            }
+
+            const maxSize = 50 * 1024 * 1024;
+            if (file.size > maxSize) {
+                alert('File size must be less than 50MB.');
+                return;
+            }
+
+            displayFileInfo(file);
+        }
+
+        function displayFileInfo(file) {
+            const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+            
+            fileName.textContent = file.name;
+            fileSize.textContent = `${sizeInMB} MB`;
+            
+            uploadArea.style.display = 'none';
+            fileInfo.style.display = 'flex';
+        }
+
+        function removeFile() {
+            fileInput.value = '';
+            
+            fileInfo.style.display = 'none';
+            uploadArea.style.display = 'block';
+            
+            fileName.textContent = '';
+            fileSize.textContent = '';
+        }
+    }
 
     const loadProjectOverviewData = (projectId) => {
         // TODO: For now use localStorage for the project data
