@@ -31,6 +31,7 @@ def trigger_agent_show_thoughts(user_message: str):
         log = step["messages"][-1].pretty_repr()
         # print(log)
         formatted_log = format_log_message(log)
+        print(log)
         yield {"thought": formatted_log, "is_final": False, "final_content": None}
         last_step = step
 
