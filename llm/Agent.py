@@ -6,7 +6,7 @@ from langchain_core.messages import HumanMessage
 
 from llm.util.agent_log_formatter import format_log_message
 
-RECURSION_LIMIT = 2 * 4 + 1
+RECURSION_LIMIT = 15
 user_message = prompts.user_message
 tools = get_tools()
 llm = LLM
