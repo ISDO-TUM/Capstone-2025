@@ -253,6 +253,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="star" data-value="5">&#9733;</span>
             `;
 
+            card.dataset.paperHash = paper.hash;
+
             card.appendChild(titleEl);
             card.appendChild(linkEl);
             card.appendChild(descriptionEl);
@@ -286,19 +288,39 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        recommendationsContainer.addEventListener('click', function (e) {
-            if (e.target.classList.contains('star')) {
-                const clickedStar = e.target;
-                const stars = Array.from(clickedStar.parentNode.querySelectorAll('.star'));
-                const value = parseInt(clickedStar.dataset.value);
+       recommendationsContainer.addEventListener('click', function (e) {
+    if (e.target.classList.contains('star')) {
+        const clickedStar = e.target;
+        const stars = Array.from(clickedStar.parentNode.querySelectorAll('.star'));
+        const value = parseInt(clickedStar.dataset.value);
 
-                stars.forEach(star => {
-                    star.classList.toggle('selected', parseInt(star.dataset.value) <= value);
-                });
-
-                console.log(`Rated ${value} star(s)`);
-                // TODO: Send rating to backend or store locally if needed
-            }
+        stars.forEach(star => {
+            star.classList.toggle('selected', parseInt(star.dataset.value) <= value);
         });
+
+        console.log(`Rated ${value} star(s)`);
+
+        // Get paper hash (you should include it when rendering each recommendation card)
+        const paperHash = clickedStar.closest('.recommendation-card').dataset.paperHash;
+
+        fetch('/api/rate_paper', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paper_hash: paperHash, rating: value })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                console.log("Rating saved!");
+            } else {
+                console.error("Failed to save rating:", data.message);
+            }
+        })
+        .catch(err => {
+            console.error("Error sending rating:", err);
+        });
+    }
+});
+
     }
 });

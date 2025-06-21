@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS public.papers_table (
     authors TEXT,
     publication_date TEXT,
     landing_page_url TEXT,
-    pdf_url TEXT
+    pdf_url TEXT,
+    rating INTEGER
 );
 
 -- Clear all data from the table on every startup.
