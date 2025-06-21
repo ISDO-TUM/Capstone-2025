@@ -2,8 +2,6 @@ import logging
 from typing import Any
 import json
 from llm.LLMDefinition import LLM
-import llm.Prompts as prompts
-
 from langchain_core.tools import tool
 
 from chroma_db.chroma_vector_db import chroma_db
@@ -21,15 +19,28 @@ def update_papers(queries: list[str]) -> str:
     Tool Name: update_papers
     Description:
         This tool updates the paper database with the latest research papers and their embeddings
-        based on a list of keyword search queries. It performs the following steps:
-        1. Fetches new papers using the provided list of keyword queries.
+        based on a list of search queries. It performs the following steps:
+        1. Fetches new papers using the provided list of queries.
         2. Stores the fetched papers in a PostgreSQL database, removing any duplicates.
         3. Computes and stores embeddings for the newly stored papers.
     Use Case:
         Use this tool when you want to refresh the paper database with the latest research and ensure
         that all relevant papers have updated embeddings for ranking or similarity comparison tasks.
     Input:
-        queries (list[str]): A list of keyword strings to search for relevant papers.
+        queries (list[str]): A list of strings corresponding to the user's interests to search for relevant papers.
+        When generating search queries based on the user's interests, make sure to preserve meaningful multi-word expressions as single, coherent search terms. For example, if the user mentions "ice cream," do not split this into "ice" and "cream" — treat it as a unified concept: "ice cream."
+        Generate search queries that reflect the actual intent of the user's interest, emphasizing quality over quantity. Avoid breaking compound phrases into individual words unless they are clearly independent concepts.
+        Use concise and targeted queries that represent whole ideas, domains, or research topics. Only split input into multiple queries if doing so improves the relevance or diversity of the results without losing semantic meaning.
+
+        Examples:
+            - User: "I'm interested in machine learning and neural networks"
+            queries: ["machine learning", "neural networks"]
+
+            - User: "I like ice cream and computer vision"
+            queries: ["ice cream", "computer vision"]
+
+        Avoid:
+            - ["ice", "cream", "computer", "vision"]
     Output:
         A status message string indicating whether the process completed successfully without errors,
         or completed with some errors that can be ignored.
@@ -138,257 +149,300 @@ def check_relevance_threshold(papers_with_relevance_scores: list[dict], threshol
     return all(paper.get("similarity_score", 0.0) >= threshold for paper in top_papers)
 
 
-def decide_next_action(papers_with_metadata: list[dict], user_query: str) -> str:
-    """
-    Step 6: Agent logic to decide what to do next if results are not satisfactory.
-    Returns one of: "retry_broaden", "reformulate_query", "lower_threshold", or "accept".
-    """
+logger = logging.getLogger(__name__)
 
-    formatted_metadata = "\n\n".join(
-        f"""Paper {i + 1}:
-        - Title: {paper.get("title", "N/A")}
-        - Similarity Score: {paper.get("similarity_score", "N/A")}
-        - Citation Count: {paper.get("cited_by_count", "N/A")}
-        - FWCI: {paper.get("fwci", "N/A")}
-        - Citation Percentile: {paper.get("citation_normalized_percentile", "N/A")}
-        - Publication Date: {paper.get("publication_date", "N/A")}
-        - Abstract: {paper.get("abstract", "N/A")}
-        - Topics: {", ".join(t.get("topic", "N/A") for t in paper.get("topics", []))}
-        - Subfields: {", ".join(sf for t in paper.get("topics", []) for sf in t.get("subfields", []))}
-        - Fields: {", ".join(f for t in paper.get("topics", []) for f in t.get("fields", []))}
-        - Domains: {", ".join(d for t in paper.get("topics", []) for d in t.get("domains", []))}
+
+@tool
+def accept(confirmation: str) -> str:
     """
-        for i, paper in enumerate(papers_with_metadata)
-    )
+    Agent has accepted the current results.
+    No reformulation or retry is needed.
+    """
+    return json.dumps({
+        "status": "accepted",
+        "message": "The current paper results meet the quality requirements. Proceeding..."
+    })
+
+
+@tool
+def retry_broaden(keywords: list[str], query_description: str = "") -> str:
+    """
+    Agent tool to broaden the user's original keyword list using LLM.
+
+    Input:
+    {
+        "query_description": "AI for rare diseases",
+        "keywords": ["rare disease", "machine learning", "diagnosis"]
+    }
+
+    Output:
+        JSON-formatted string with new keywords, or fallback message.
+    """
+    if not keywords:
+        return json.dumps({
+            "status": "error",
+            "message": "No keywords provided. Cannot broaden."
+        })
 
     prompt = f"""
-    You are an intelligent research assistant responsible for evaluating a set of research papers returned from a query.
+    You are an academic research assistant helping users improve their scientific paper search using the OpenAlex API.
 
-    This is the user initial query: "{user_query}"
+    The user has provided:
+    - A natural language description of their research goal
+    - A small list of initial keywords they used to search for papers
 
-    For each paper, you have access to metadata such as:
-    - similarity score (relevance to the original query),
-    - citation count,
-    - field-weighted citation impact (FWCI),
-    - title,
-    - abstract.
+    Your task is to intelligently **broaden and optimize** the keyword list. Follow these rules:
 
-    Your goal is to assess whether the current set of results is satisfactory, or whether another action should be taken.
+    1. Only suggest **2 to 4** high-quality keywords.
+    2. Prioritize **concepts or terms that would likely exist in academic knowledge graphs** (like OpenAlex).
+    3. Avoid exact duplicates or overly generic terms (e.g. "research", "science").
+    4. Prefer well-known **scientific disciplines**, **methods**, or **subfields** related to the original topic.
+    5. Assume the keywords will be used in a query like:
+    `filter=keywords.id:keyword1|keyword2|...` which uses AND matching — so do **not** add too many.
 
-    Respond with a JSON object with the following structure:
-    {{
-    "action": "...",  // one of: accept, retry_broaden, reformulate_query
-    "reason": "..."   // brief explanation why the action was chosen (max 2 sentences)
-    }}
-    Only output the JSON object. Do not include any other text or formatting.
+    Respond only with a JSON list of new keywords (do not include the original ones), e.g.:
+    ["metabolomics", "cellular respiration", "photoperiodism"]
 
-    Guidance for choosing:
-    - Choose "accept" if the majority of papers are relevant, well-cited, and recent.
-    - Choose "retry_broaden" if the results are too narrow or too few.
-    - Choose "reformulate_query" if the query seems to miss the intent or is too vague or off-topic.
+    User research description: "{query_description}"
 
-    Now decide based on the following paper metadata:
+    Original keywords: {json.dumps(keywords)}
 
-    {formatted_metadata}
-
-    Respond with a JSON object with the following structure:
-    {{
-    "action": "...",  // one of: accept, retry_broaden, reformulate_query
-    "reason": "..."   // brief explanation why the action was chosen (max 2 sentences)
-    }}
-    Only output the JSON object. Do not include any other text or formatting.
+    Broadened keyword list (JSON format only):
     """
-    llm = LLM
-    response = llm.invoke(prompt)
+
+    response = LLM.invoke(prompt)
 
     try:
-        parsed = json.loads(response.content)
-        action = parsed["action"]
-        reason = parsed["reason"]
-    except json.JSONDecodeError:
-        print(response.content.strip().lower())
-        raise ValueError("Agent response could not be parsed. Check format and content.")
+        broadened_keywords = json.loads(response.content)
+        if isinstance(broadened_keywords, list):
+            logger.info("Broadened keyword query.")
+            return json.dumps({
+                "broadened_keywords": broadened_keywords,
+                "status": "success"
+            })
+        else:
+            raise ValueError
+    except Exception as e:
+        logger.error(f"Error while broadening the keyword query: {e}")
+        return json.dumps({
+            "status": "error",
+            "message": "Could not parse broadened keyword list."
+        })
 
-    return action, reason
 
-    # return response.content.strip().lower()
-
-
-def retry_with_modified_parameters(action: str, current_query: str, attempt: int) -> str:
+@tool
+def reformulate_query(keywords: list[str], query_description: str = "") -> str:
     """
-    Step 7: Based on the agent’s decision, generates the next query or parameters.
-    References the output of `decide_next_action`.
+    Reformulates the user's query to better capture academic search intent.
+
+    Input:
+    {
+        "query_description": "ML in healthcare diagnosis",
+        "keywords": ["ml", "healthcare", "diagnosis"]
+    }
+
+    Output:
+        JSON string with reformulated query description and keywords.
+    """
+    if not query_description:
+        logger.error("Query description was missing")
+        return json.dumps({
+            "status": "error",
+            "message": "Missing query description."
+        })
+
+    prompt = f"""
+    You are an AI-powered academic assistant helping researchers refine their literature search strategy using OpenAlex.
+
+    The user has submitted:
+    - A vague or imprecise research topic
+    - A list of keywords they initially used in the search
+
+    Your task is to **clarify the research intent** and **optimize the keyword list** so that:
+    1. The topic becomes academically precise and focused
+    2. The keywords are suitable for high-quality retrieval in OpenAlex
+
+    🔎 Guidelines for Keyword Optimization:
+    - Suggest only **2 to 4** highly relevant keywords
+    - Prefer keywords that match academic fields, subdisciplines, or research methods
+    - Avoid filler words, overly generic terms, or keyword duplication
+    - Assume the keywords will be used in a strict **AND** filter (i.e. all must be present), so select carefully to **maximize relevance while maintaining sufficient recall**
+
+    💡 Your goal is **focus**, not breadth. Do not add unrelated or tangential concepts.
+
+    Input:
+    - User query description: "{query_description}"
+    - Original keywords: {json.dumps(keywords)}
+
+    Respond with a JSON object of the form:
+    {{
+    "reformulated_description": "More focused and academically clear version of the user's research goal",
+    "refined_keywords": ["...", "...", "..."]
+    }}
     """
 
-    if action == "accept":
-        print(f"Action: {action} on attempt {attempt}. Found papers satisfactory.")
-        # return current_query  # No change needed, accept the current query
+    response = LLM.invoke(prompt)
 
-    elif action == "retry_broaden":
-        print(f"Action: {action} on attempt {attempt}. Retrying with a broader query.")
-        # Broaden the query by adding more general terms or synonyms
-        # broadened_query = f"{current_query} broadening search terms"
-        # return broadened_query
-
-    elif action == "reformulate_query":
-        print(f"Action: {action} on attempt {attempt}. Reformulating the query.")
-        # Reformulate the query to better capture user intent
-        # reformulated_query = f"Reformulated: {current_query} with better keywords"
-        # return reformulated_query
-
-    else:
-        raise ValueError(f"Unknown action: {action}")
+    try:
+        reformulated = json.loads(response.content)
+        logger.info("Query reformulated successfully.")
+        return json.dumps({
+            "status": "success",
+            "result": reformulated
+        })
+    except Exception as e:
+        logger.error(f"Error reformulating the query: {e}")
+        return json.dumps({
+            "status": "error",
+            "message": "Could not parse reformulated query."
+        })
 
 
-def quality_control_loop(retrieved_papers: list[dict], current_query: str, attempt: int = 0):
+@tool
+def detect_out_of_scope_query(query_description: str) -> str:
     """
-    Wraps steps 5–7 together.
-    - Calls `check_relevance_threshold`
-    - If False, calls `decide_next_action`
-    - Then `retry_with_modified_parameters` and loops if necessary
+    Checks whether a user query is nonsensical or unrelated to scientific research.
+
+    Input:
+    {
+        "query_description": "How are you?"
+    }
+
+    Output:
+        JSON object with:
+        - status: "valid" or "out_of_scope"
+        - reason: explanation if out_of_scope
     """
-    threshold = 0.7  # Example threshold for relevance
-    is_satisfactory = check_relevance_threshold(retrieved_papers, threshold, min_papers=3)
+    if not query_description.strip():
+        return json.dumps({
+            "status": "out_of_scope",
+            "reason": "Query is empty or whitespace."
+        })
 
-    if is_satisfactory:
-        print(f"Attempt {attempt}: Papers are satisfactory (accepted by similarity score, no agent action).")
-        return None
+    prompt = f"""
+    You are a research paper search assistant.
 
-    print(f"Number of retrieved papers: {len(retrieved_papers)}")
-    action, reason = decide_next_action(retrieved_papers, current_query)
-    print(f"Attempt {attempt}: Decided action - {action}")
-    print(f"Reason for action: {reason}")
+    Analyze the following user query and determine if it is a valid academic topic
+    for a scientific literature search or if it is out-of-scope (e.g., a greeting,
+    joke, personal opinion, or unrelated to science).
 
-    # In the future add methods so the agent can modify the query based on the action (either broaden, or reformulate)
+    Query: "{query_description}"
 
-    # After query is reformulated or broadened, we want to fetch new papers
-    # new_retrieved_papers = []
-    # new_retrieved_papers = get_paper_basic_data([next_query])
+    Respond with a JSON object like:
+    {{
+        "status": "valid" | "out_of_scope",
+        "reason": "..."  // explanation for decision
+    }}
+    """
 
-    return None
+    response = LLM.invoke(prompt)
+
+    try:
+        logger.info("Checking if query is out of scope.")
+        return json.dumps(json.loads(response.content))
+    except Exception as e:
+        logger.error(f"Failed to parse response: {e}")
+        return json.dumps({
+            "status": "error",
+            "reason": "Failed to parse response. Raw content: " + response.content
+        })
+
+
+def main():
+    from langgraph.prebuilt import create_react_agent
+    from langchain_core.messages import HumanMessage
+    from llm.tools.Tools_aggregator import get_tools
+    from llm.LLMDefinition import LLM
+    from llm.util.agent_log_formatter import format_log_message
+
+    print("\n========== PHASE 1: DIRECT TOOL TESTING ==========\n")
+
+    tool_inputs = {
+        "retry_broaden": [
+            {"query_description": "My research is about yeast metabolism under moonlight.", "keywords": ["yeast", "metabolism", "moonlight"]},
+            {"query_description": "Low citation results on a very specific variant of quantum Hall effects.", "keywords": ["quantum hall", "edge states", "low temperature"]},
+            {"query_description": "I only got one result for 'subtypes of algae in Norwegian fjords' — can you expand that?", "keywords": ["algae", "Norwegian fjords", "taxonomy"]}
+        ],
+        "reformulate_query": [
+            {"query_description": "biotech bio something cancer cell therapy general stuff", "keywords": ["biotech", "cancer", "cell therapy"]},
+            {"query_description": "fuzzy logic relevance matching NLP graphs paper recommendation system vague idea", "keywords": ["fuzzy logic", "NLP", "recommendation"]}
+        ],
+        "accept": [
+            {"confirmation": "yes"},
+            {"confirmation": "yes"}
+        ],
+        "detect_out_of_scope_query": [
+            {"query_description": "How are you doing today?"}
+        ]
+    }
+
+    for tool_name, input_list in tool_inputs.items():
+        print(f"\n🛠️ Tool: {tool_name.upper()}")
+        for inputs in input_list:
+            print(f"Input: {inputs}")
+            if tool_name == "retry_broaden":
+                output = retry_broaden.invoke(inputs)
+            elif tool_name == "reformulate_query":
+                output = reformulate_query.invoke(inputs)
+            elif tool_name == "accept":
+                output = accept.invoke(inputs)
+            elif tool_name == "detect_out_of_scope_query":
+                output = detect_out_of_scope_query.invoke(inputs)
+            else:
+                output = "❌ Unknown tool"
+            print("Output:", output)
+            print("-" * 60)
+
+    print("\n========== PHASE 2: AGENT STREAMING TESTING ==========\n")
+
+    tools = get_tools()
+    agent = create_react_agent(model=LLM, tools=tools)
+
+    system_prompt = HumanMessage(content="""
+    You are a helpful academic research assistant.
+    You have access to tools like `retry_broaden`, `reformulate_query`, `accept`, and `detect_out_of_scope_query`.
+
+    Based on the user query, you must decide whether to:
+    - Broaden overly specific queries
+    - Reformulate vague or poorly phrased ones
+    - Accept a valid query if it needs no changes
+    - Detect and reject queries that are not related to scientific research
+
+    Your final output must always return the tool result only. Think carefully and choose the right action.
+    """)
+
+    # Combine all textual query inputs for testing the agent
+    agent_test_queries = [
+        "My research is about yeast metabolism under moonlight.",
+        "Low citation results on a very specific variant of quantum Hall effects.",
+        "I only got one result for 'subtypes of algae in Norwegian fjords' — can you expand that?",
+        "biotech bio something cancer cell therapy general stuff",
+        "fuzzy logic relevance matching NLP graphs paper recommendation system vague idea",
+        "Applications of transformers in biomedical entity recognition",
+        "Recent developments in reinforcement learning for robotics control",
+        "How are you doing today?"
+    ]
+
+    def stream_agent_reasoning(agent, query: str):
+        print(f"\n🔍 Query: {query}\n")
+        last_step = None
+        for step in agent.stream(
+            {"messages": [system_prompt, HumanMessage(content=query)]},
+            {"recursion_limit": 6},
+            stream_mode="values",
+        ):
+            log = step["messages"][-1].pretty_repr()
+            print(format_log_message(log))
+            last_step = step
+
+        if last_step:
+            print("\n✅ Final Agent Output:\n", last_step["messages"][-1].content)
+        else:
+            print("\n⚠️ Agent produced no output.\n")
+
+    for query in agent_test_queries:
+        stream_agent_reasoning(agent, query)
 
 
 if __name__ == "__main__":
-
-    papers_with_metadata = json.loads
-    ("""
-        [
-            {
-            "id": "https://openalex.org/W4410932904",
-            "title": "Promising biomedical applications using superparamagnetic nanoparticles",
-            "abstract": "No abstract available",
-            "authors": "Yosri A. Fahim, Ibrahim W. Hasani, Waleed Mahmoud Ragab",
-            "publication_date": "2025-06-02",
-            "fwci": null,
-            "citation_normalized_percentile": null,
-            "cited_by_count": 0,
-            "counts_by_year": [],
-            "similarity_score": 0.72,
-            "topics": [
-            {
-                "topic": "Nanoparticle-Based Drug Delivery",
-                "score": 1.0,
-                "subfields": ["Biomaterials"],
-                "fields": ["Materials Science"],
-                "domains": ["Physical Sciences"]
-            },
-            {
-                "topic": "Characterization and Applications of Magnetic Nanoparticles",
-                "score": 0.9999,
-                "subfields": ["Biomedical Engineering"],
-                "fields": ["Engineering"],
-                "domains": ["Physical Sciences"]
-            },
-            {
-                "topic": "Gold and Silver Nanoparticles Synthesis and Applications",
-                "score": 0.9973,
-                "subfields": ["Electronic, Optical and Magnetic Materials"],
-                "fields": ["Materials Science"],
-                "domains": ["Physical Sciences"]
-            }
-            ],
-            "landing_page_url": "https://doi.org/10.1186/s40001-025-02696-z",
-            "pdf_url": null
-        },
-        {
-            "id": "https://openalex.org/W4410933080",
-            "title": "Enabling Doctor-Centric Medical AI with LLMs through Workflow-Aligned Tasks and Benchmarks",
-            "abstract": "<title>Abstract</title> The rise of large language models (LLMs) has profoundly influenced health-care by offering medical advice, diagnostic suggestions, and more. However, their deployment directly toward patients poses substantial risks, as limited domain knowledge may result in misleading or erroneous outputs. To address this challenge , we propose repositioning LLMs as clinical assistants that collaborate with experienced physicians rather than interacting with patients directly. We begin with a two-stage inspiration–feedback survey to identify real-world needs in clinical workflows. Guided by this, we construct DoctorFLAN, a large-scale Chi-nese medical dataset comprising 92,000 Q&A instances across 22 clinical tasks and 27 specialties. To evaluate model performance in doctor-facing applications, 1 we introduce DoctorFLAN-test (550 single-turn Q&A items) and DotaBench (74 multi-turn conversations mimicking realistic scenarios). Experimental results with over ten popular LLMs demonstrate that DoctorFLAN notably improves the performance of open-source LLMs in medical contexts, facilitating their alignment with physician workflows and complementing existing patient-oriented models. This work contributes a valuable resource and framework for advancing doctor-centered medical LLM development.",
-            "authors": "Wenya Xie, Qingying Xiao, Yu‐Jun Zheng, Xidong Wang, Junying Chen, Ke Ji, Anningzhe Gao, Prayag Tiwari, Xiang Wan, Feng Jiang, Benyou Wang",
-            "publication_date": "2025-06-02",
-            "fwci": null,
-            "citation_normalized_percentile": null,
-            "cited_by_count": 0,
-            "counts_by_year": [],
-            "similarity_score": 0.87,
-            "topics": [
-            {
-                "topic": "Scientific Computing and Data Management",
-                "score": 0.9139,
-                "subfields": ["Information Systems and Management"],
-                "fields": ["Decision Sciences"],
-                "domains": ["Social Sciences"]
-            }
-            ],
-            "landing_page_url": "https://doi.org/10.21203/rs.3.rs-6763537/v1",
-            "pdf_url": null
-        },
-        {
-        "id": "https://openalex.org/W1234567890",
-        "title": "Optimizing Clinical Workflow Integration of LLM-Based Decision Support Systems",
-        "abstract": "Recent advances in large language models (LLMs) have opened new frontiers for decision support in clinical environments. This paper presents a framework for aligning LLM capabilities with routine physician tasks by incorporating real-time feedback, structured knowledge grounding, and task-specific fine-tuning. We evaluate our approach on a multi-specialty dataset containing 75,000 structured clinical interactions and introduce MedAlignBench, a benchmark suite simulating realistic use cases across diagnostics, prescription drafting, and medical documentation. Results show significant improvements in clinician satisfaction and response accuracy, especially when models are tailored to workflow-specific prompts.",
-        "authors": "Alicia Zhang, David Patel, Rana Al-Hassan, Thomas L. Lee",
-        "publication_date": "2025-05-18",
-        "fwci": 1.42,
-        "citation_normalized_percentile": 82.3,
-        "cited_by_count": 12,
-        "counts_by_year": [{"year": 2025, "count": 12}],
-        "similarity_score": 0.79,
-        "topics": [
-            {
-                "topic": "Scientific Computing and Data Management",
-                "score": 0.89,
-                "subfields": ["Healthcare Informatics"],
-                "fields": ["Decision Sciences"],
-                "domains": ["Social Sciences"]
-            },
-            {
-                "topic": "Large Language Models in Healthcare",
-                "score": 0.85,
-                "subfields": ["Medical AI"],
-                "fields": ["Computer Science"],
-                "domains": ["Health Sciences"]
-            }
-        ],
-        "landing_page_url": "https://doi.org/10.1234/medalign.2025.005",
-        "pdf_url": "https://arxiv.org/pdf/medalign.2025.005.pdf"
-        }
-        ]
-    """)
-
-    print("\n========== Test Case 1: Query with precomputed similarity scores ==========")
-    quality_control_loop(papers_with_metadata, prompts.user_message)
-
-    print("\n========== Test Case 2: No similarity scores (should invoke agent) ==========")
-    query_two_papers = fetch_works_multiple_queries(queries=[prompts.user_message_two_keywords])
-    quality_control_loop(query_two_papers, prompts.user_message_two)
-
-    print("\n========== Test Case 3: No similarity scores (should invoke agent) ==========")
-    query_three_papers = fetch_works_multiple_queries(queries=[prompts.user_message_three_keywords])
-    quality_control_loop(query_three_papers, prompts.user_message_three)
-
-    print("\n========== Test Case 4: No similarity scores (should invoke agent) ==========")
-    query_four_papers = fetch_works_multiple_queries(queries=[prompts.user_message_four_keywords])
-    quality_control_loop(query_four_papers, prompts.user_message_four)
-
-    print("\n========== Test Case 5: Defective query – agent should suggest reformulation ==========")
-    query_five_papers = fetch_works_multiple_queries(queries=[prompts.user_message_five_keywords])
-    quality_control_loop(query_five_papers, prompts.user_message_five)
-
-    print("\n========== Test Case 6: Overly narrow query – agent should suggest broadening ==========")
-    query_six_papers = fetch_works_multiple_queries(queries=[prompts.user_message_six_keywords])
-    quality_control_loop(query_six_papers, prompts.user_message_six)
-
-    print("\n========== Test Case 8: Non-sensical query – agent should trigger correction ==========")
-    query_eight_papers = fetch_works_multiple_queries(queries=["Hello"])
-    quality_control_loop(query_eight_papers, "Hello")
+    main()
