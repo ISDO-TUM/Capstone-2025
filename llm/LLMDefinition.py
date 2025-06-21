@@ -19,4 +19,10 @@ llm_40 = ChatOpenAI(
     model="gpt-4",
     temperature=0,
 )
-LLM = llm_40
+
+llm_4o = ChatOpenAI(
+    api_key=OPENAI_API_KEY,
+    model="gpt-4.1",
+    temperature=0.3,
+)
+LLM = llm_41
