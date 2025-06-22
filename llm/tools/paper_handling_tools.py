@@ -33,6 +33,9 @@ def store_papers_for_project(project_id: str, papers: list[dict]):
             Each dict contains the following fields:
                 paper_hash: The hash of the paper. Provided by get_best_papers
                 summary: A summary describing why this paper is relevant for the user.
+                Must explain the key details of why this paper is relevant to the user without being overly verbose.
+
+
 
 
     Returns: Success or failure message.
