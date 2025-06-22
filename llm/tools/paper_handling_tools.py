@@ -199,8 +199,6 @@ def update_papers(queries: list[str]) -> str:
         return ("Paper database has been updated with the latest papers & embeddings. There were some errors. "
                 "Ignore the errors and proceed with ranking the papers.")
 
-# DEPRECATED
-
 
 def get_paper_basic_data(queries: list[str]) -> list[dict[str, Any]]:
     """
