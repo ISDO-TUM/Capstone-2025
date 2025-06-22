@@ -64,20 +64,20 @@ def get_recommendations():
                 else:
                     try:
                         llm_response_content = response_part['final_content']
-                        recs_basic_data = json.loads(get_papers_for_project(project_id))
+                        recs_basic_data = get_papers_for_project(project_id)
+                        print(f"Recs: {recs_basic_data}")
                         recommendations = []
-                        for recs in recs_basic_data:
-                            paper = get_paper_by_hash(recs['paper_hash'])
-                            paper_dict = {}
-                            paper_dict['title'] = paper['title']
-                            paper_dict['link'] = paper['landing_page_url']
-                            paper_dict['description'] = recs_basic_data['summary']
+                        for rec in recs_basic_data:
+                            paper = get_paper_by_hash(rec['paper_hash'])
+                            paper_dict = {'title': paper['title'], 'link': paper['landing_page_url'],
+                                          'description': rec['summary']}
+                            recommendations.append(paper_dict)
                         final_recommendations = []
                         for rec in recommendations:
                             final_recommendations.append({
                                 "title": rec.get("title", "N/A"),
                                 "link": rec.get("link", "N/A"),
-                                "description": rec.get("summary", "Relevant based on user interest.")
+                                "description": rec.get("description", "Relevant based on user interest.")
                             })
                         print(final_recommendations)
                         yield f"data: {json.dumps({'recommendations': final_recommendations})}\n\n"
@@ -87,7 +87,7 @@ def get_recommendations():
                         yield f"data: {error_payload}\n\n"
                     except Exception as e:
                         print(f"An unexpected error occurred: {e}")
-                        error_payload = json.dumps({"error": f"An server error occurred: {e}"})
+                        error_payload = json.dumps({"error": f"A server error occurred: {e}"})
                         yield f"data: {error_payload}\n\n"
         except Exception as e:
             print(f"An error occurred in /api/recommendations: {e}")
