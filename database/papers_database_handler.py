@@ -34,6 +34,7 @@ def _generate_paper_hash(paper_data_dict):
     data_string = "||".join(fields_to_hash)
     return hashlib.sha256(data_string.encode('utf-8')).hexdigest()
 
+
 def insert_papers(papers_data_list):
     """
     Inserts one or more new papers into the papers_table.
