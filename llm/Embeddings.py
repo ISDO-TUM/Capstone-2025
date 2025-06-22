@@ -16,3 +16,11 @@ def embed_user_profile(text):
 
 def embed_papers(title, abstract):
     return embed_string(title + abstract)
+
+
+def embed_keyword_set(keywords: set) -> list:
+    """
+    Embeds a set of keywords by joining them into a single string and embedding that string.
+    """
+    joined = ", ".join(keywords)
+    return embed_string(joined)
