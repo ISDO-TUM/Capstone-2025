@@ -1,6 +1,5 @@
 import psycopg2
 import psycopg2.extras
-import os
 from dotenv import load_dotenv
 import hashlib
 from utils.status import Status

@@ -43,7 +43,7 @@ def get_best_papers(user_profile: str) -> list[dict]:
 
     try:
         paper_metadata = get_papers_by_hash(paper_hashes)
-        logger.info("Paper metadata: {paper_metadata}")
+        logger.info(f"Paper metadata: {paper_metadata}")
     except Exception as e:
         logger.error(f"Error linking hashes to metadata: {e}")
         return []

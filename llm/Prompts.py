@@ -106,39 +106,19 @@ system_prompt = SystemMessage(content="""
 
     6. get_best_papers — Run this after `update_papers` to retrieve top-matching papers based on the improved or original query.
 
+    7. store_papers_for_project - Run this after 'get_best_papers' to link papers with a project and add a project specific description for the paper.
+
     🧠 Logic:
     - First, analyze the user input for clarity, scope, and quality.
     - If it's invalid or irrelevant, use detect_out_of_scope_query and return an empty JSON.
     - If it’s vague, use reformulate_query.
     - If it’s too narrow or no good results were found previously, use retry_broaden.
     - If it’s already suitable, use accept.
-    - Once a valid and optimized query is available, always run update_papers, then get_best_papers.
+    - Once a valid and optimized query is available, always run update_papers, then get_best_papers and finally store_papers_for_project.
     - Do not fabricate paper content. Only use output from get_best_papers.
 
     💬 Output Format:
-    You do not talk to the user directly. Only send a JSON to the frontend with the final recommendations.
-
-    The JSON should have the following structure:
-    {
-    "papers": [
-        {
-        "title": "...",
-        "link": "...",
-        "description": "A custom-written summary for the user based on the abstract and user interest"
-        },
-        ...
-    ]
-    }
-
-    Each description should:
-    - Highlight why the paper is a good match for the user
-    - Summarize the key contributions/findings from the abstract
-    - Be precise, relevant, and engaging
-
-    If no papers were returned by get_best_papers, return:
-    {
-    "papers": []
-    }
+    Summarize your actions in a message
   """)
 
 quality_check_decision_prompt = SystemMessage(content="""
