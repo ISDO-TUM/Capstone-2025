@@ -7,6 +7,10 @@ import uuid
 from datetime import datetime
 
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context
+
+from database.papers_database_handler import get_paper_by_hash
+from database.projectpaper_database_handler import get_papers_for_project
+from database.projects_database_handler import add_new_project_to_db
 from llm.Agent import trigger_agent_show_thoughts
 import PyPDF2
 
@@ -166,22 +170,34 @@ def get_old_recommendations():
 
     user_description = data['projectDescription']
 
+    # Hardcoded until frontend is updated
+    # todo create mock project
+    project_id = add_new_project_to_db("DummyProject", user_description)
+
     def generate():
         try:
-            for response_part in trigger_agent_show_thoughts(user_description):
+            for response_part in trigger_agent_show_thoughts(user_description + "project ID: " + project_id):
                 if not response_part['is_final']:
                     yield f"data: {json.dumps({'thought': response_part['thought']})}\n\n"
                 else:
                     try:
                         llm_response_content = response_part['final_content']
-                        recommendations = json.loads(llm_response_content).get('papers')
+                        recs_basic_data = json.loads(get_papers_for_project(project_id))
+                        recommendations = []
+                        for recs in recs_basic_data:
+                            paper = get_paper_by_hash(recs['paper_hash'])
+                            paper_dict = {}
+                            paper_dict['title'] = paper['title']
+                            paper_dict['link'] = paper['landing_page_url']
+                            paper_dict['description'] = recs_basic_data['summary']
                         final_recommendations = []
                         for rec in recommendations:
                             final_recommendations.append({
                                 "title": rec.get("title", "N/A"),
                                 "link": rec.get("link", "N/A"),
-                                "description": rec.get("description", "Relevant based on user interest.")
+                                "description": rec.get("summary", "Relevant based on user interest.")
                             })
+                        print(final_recommendations)
                         yield f"data: {json.dumps({'recommendations': final_recommendations})}\n\n"
                     except json.JSONDecodeError:
                         print(f"Failed to parse LLM response: {llm_response_content}")
@@ -300,4 +316,5 @@ def extract_pdf_text():
 
 
 if __name__ == '__main__':
+
     app.run(host='0.0.0.0', debug=True, port=7500)  # nosec B201, B104

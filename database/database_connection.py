@@ -1,3 +1,7 @@
+import psycopg2
+import os
+
+
 def connect_to_db():
     """
     Establishes a connection to the PostgreSQL database.
