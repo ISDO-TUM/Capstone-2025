@@ -3,7 +3,7 @@ import logging
 from llm.Embeddings import embed_user_profile
 from langchain_core.tools import tool
 from chroma_db.chroma_vector_db import chroma_db
-from paper_handling.database_handler import get_papers_by_hash
+from database.papers_database_handler import get_papers_by_hash
 
 logger = logging.getLogger(__name__)
 

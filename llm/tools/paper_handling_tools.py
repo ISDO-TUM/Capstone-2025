@@ -7,7 +7,7 @@ from langchain_core.tools import tool
 from chroma_db.chroma_vector_db import chroma_db
 from utils.status import Status
 from llm.Embeddings import embed_papers
-from paper_handling.database_handler import insert_papers
+from database.papers_database_handler import insert_papers
 from paper_handling.paper_handler import fetch_works_multiple_queries
 
 logger = logging.getLogger(__name__)
