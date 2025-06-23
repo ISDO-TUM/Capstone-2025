@@ -4,7 +4,7 @@ import psycopg2.extras
 from database.database_connection import connect_to_db
 
 
-def assign_paper_to_project(paper_hash: str, project_id: str, summary: str):
+def assign_paper_to_project(paper_hash: str, project_id: str, summary: str, newsletter: bool = False, seen: bool = False):
     connection = connect_to_db()
     cursor = connection.cursor()
 
