@@ -10,7 +10,20 @@
     <div class="container">
         <div class="project-header">
             <h1 id="projectTitleDisplay"></h1>
-            <p id="projectDescriptionDisplay"></p>
+            <div class="description-wrapper">
+                <div class="description-content" id="projectDescriptionDisplay">
+                    <!-- Project description will be loaded here -->
+                </div>
+                <div class="description-fade-overlay" id="descriptionFadeOverlay"></div>
+            </div>
+            <div class="description-controls" id="descriptionControls">
+                <button class="expand-btn" id="descriptionToggle">
+                    <span class="expand-text">Show more</span>
+                    <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <polyline points="6,9 12,15 18,9"></polyline>
+                    </svg>
+                </button>
+            </div>
         </div>
 
         <div class="agent-thoughts-section">
