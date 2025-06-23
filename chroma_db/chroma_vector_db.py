@@ -19,7 +19,7 @@ class PaperData(TypedDict):
 
 
 class ChromaVectorDB:
-    def __init__(self, collection_name: str = "research-papers", outside_docker = False) -> None:
+    def __init__(self, collection_name: str = "research-papers", outside_docker=False) -> None:
         # UNCOMMENT THIS FOR LOCAL TESTING ONLY;
         if outside_docker:
             self.client = chromadb.HttpClient(host="localhost", port=8000)

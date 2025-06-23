@@ -15,12 +15,14 @@ from paper_handling.paper_handler import fetch_works_multiple_queries
 
 logger = logging.getLogger(__name__)
 
+
 class PaperData(TypedDict):
     embedding: List[float]
     hash: str
 
+
 class ChromaVectorDB:
-    def __init__(self, collection_name: str = "research-papers", outside_docker = False) -> None:
+    def __init__(self, collection_name: str = "research-papers", outside_docker=False) -> None:
         # UNCOMMENT THIS FOR LOCAL TESTING ONLY;
         if outside_docker:
             self.client = chromadb.HttpClient(host="localhost", port=8000)
@@ -57,10 +59,12 @@ class ChromaVectorDB:
 
         return Status.FAILURE if any_failure else Status.SUCCESS
 
+
 chroma_db = ChromaVectorDB(outside_docker=True)
 
+
 def start_pubsub():
-    #todo call update newsletter papers periodically
+    # todo call update newsletter papers periodically
     pass
 
 
@@ -68,35 +72,37 @@ def _one_week_ago_date():
     one_week_ago = datetime.today() - timedelta(weeks=1)
     return one_week_ago.strftime("%Y-%m-%d")
 
-def update_newsletter_papers(project_id:str):
+
+def update_newsletter_papers(project_id: str):
     k = 3
-    #Get queries for project
+    # Get queries for project
     queries_str = get_queries_for_project(project_id)[0]
     print(queries_str)
     queries = ast.literal_eval(queries_str)
-    #Get papers from last week
+    # Get papers from last week
     papers, _ = fetch_works_multiple_queries(queries, from_publication_date="2020-01-01")
 
-    #Insert papers in postgres
-    #status_postgres, papers = insert_papers(papers)
+    # Insert papers in postgres
+    # status_postgres, papers = insert_papers(papers)
 
-    #Insert papers in chroma
-    #status_chroma = embed_papers(papers)
+    # Insert papers in chroma
+    # status_chroma = embed_papers(papers)
 
-    #Get project prompt
+    # Get project prompt
     project_prompt = get_project_prompt(project_id)
     print(f"Project prompt: {project_prompt}")
 
-    #todo store project prompt embedding together with project
-    #Embed project prompt
+    # todo store project prompt embedding together with project
+    # Embed project prompt
 
-    #Perform similarity search between latest papers and user query, get top k
+    # Perform similarity search between latest papers and user query, get top k
     sorted_sims = _sim_search(papers, project_prompt)
     top_results = sorted_sims[:3]
-    #Get current papers with newsletter tag and unseen tag
-    #Make agent decide a subset of top k latest papers and current news, set subset as new newsletter papers
-    #Determine different papers between old newsletter papers and new newsletter papers
-    #Send difference per mail
+    # Get current papers with newsletter tag and unseen tag
+    # Make agent decide a subset of top k latest papers and current news, set subset as new newsletter papers
+    # Determine different papers between old newsletter papers and new newsletter papers
+    # Send difference per mail
+
 
 def _embed_and_store(deduplicated_papers):
     embedded_papers = []
@@ -111,6 +117,7 @@ def _embed_and_store(deduplicated_papers):
 
     return chroma_db.store_embeddings(embedded_papers)
 
+
 def _sim_search(papers, project_vector):
     hashes = []
     for paper in papers:
@@ -122,10 +129,13 @@ def _sim_search(papers, project_vector):
         results.append((id, sim))
     results.sort(key=lambda x: x[1], reverse=True)
     return results
+
+
 def _cosine_similarity(a, b):
     a = np.array(a)
     b = np.array(b)
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
 
 if __name__ == '__main__':
     update_newsletter_papers("aaefbb83-47a5-4606-9026-d15cad897b10")
