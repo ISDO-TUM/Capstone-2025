@@ -181,7 +181,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const agentThoughtsContainer = document.getElementById('agentThoughtsContainer');
 
         if (titleDisplay) titleDisplay.textContent = projectData.title;
-        if (descriptionDisplay) descriptionDisplay.textContent = projectData.description;
+        if (descriptionDisplay) {
+            descriptionDisplay.textContent = projectData.description;
+            setupCollapsibleDescription(projectData.description);
+        }
         if (document.title && titleDisplay) document.title = `Project: ${projectData.title}`;
 
         if (recommendationsContainer && agentThoughtsContainer) {
@@ -295,6 +298,47 @@ document.addEventListener('DOMContentLoaded', () => {
             card.appendChild(descriptionEl);
             container.appendChild(card);
         });
+    }
+
+    function setupCollapsibleDescription(description) {
+        const descriptionDisplay = document.getElementById('projectDescriptionDisplay');
+        const descriptionWrapper = descriptionDisplay?.parentElement;
+        const toggleButton = document.getElementById('descriptionToggle');
+        const fadeOverlay = document.getElementById('descriptionFadeOverlay');
+        const controls = document.getElementById('descriptionControls');
+        const expandText = toggleButton?.querySelector('.expand-text');
+        
+        if (!descriptionDisplay || !descriptionWrapper || !toggleButton || !fadeOverlay || !controls || !expandText) return;
+
+        const wordCount = description.trim().split(/\s+/).length;
+
+        if (wordCount > 500) {
+            const isCollapsed = true;
+            
+            descriptionDisplay.classList.toggle('collapsed', isCollapsed);
+            descriptionDisplay.classList.toggle('expanded', !isCollapsed);
+            toggleButton.classList.toggle('expanded', !isCollapsed);
+            fadeOverlay.classList.toggle('visible', isCollapsed);
+            controls.classList.add('visible');
+            
+            expandText.textContent = isCollapsed ? 'Show full description' : 'Show less';
+            
+            toggleButton.addEventListener('click', () => {
+                const currentlyCollapsed = descriptionDisplay.classList.contains('collapsed');
+                
+                descriptionDisplay.classList.toggle('collapsed', !currentlyCollapsed);
+                descriptionDisplay.classList.toggle('expanded', currentlyCollapsed);
+                toggleButton.classList.toggle('expanded', currentlyCollapsed);
+                fadeOverlay.classList.toggle('visible', !currentlyCollapsed);
+                
+                expandText.textContent = !currentlyCollapsed ? 'Show full description' : 'Show less';
+            });
+        } else {
+            // Short description, no need to use expandable view
+            descriptionDisplay.classList.add('expanded');
+            fadeOverlay.classList.remove('visible');
+            controls.classList.remove('visible');
+        }
     }
 
     handleRouting();
