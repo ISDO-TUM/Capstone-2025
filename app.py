@@ -18,6 +18,15 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
                                              '..')))
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
+
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    logger.error(f"HTTP Error 413 - Request rejected. Request content length exceeds 50MB limit. Request Content Length: {request.content_length}")
+    return jsonify({
+        "error": "File size exceeds maximum allowed size (50MB)"
+    }), 413
 
 
 @app.route('/')
