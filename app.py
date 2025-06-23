@@ -151,6 +151,7 @@ def extract_pdf_text():
 
         formatted_text = f"User provided this paper:\n\n{text_content}"
 
+        formatted_text = f"User provided this paper: \n{text_content}"
         return jsonify({
             "success": True,
             "extracted_text": formatted_text
