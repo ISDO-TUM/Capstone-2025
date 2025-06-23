@@ -94,6 +94,108 @@ h1 {
     line-height: 1.6;
 }
 
+.description-wrapper {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.description-content {
+    font-size: 16px;
+    color: #6c757d;
+    line-height: 1.6;
+    padding: 0;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: relative;
+}
+
+.description-content.collapsed {
+    max-height: 9.3em; /* Approx. 5.8 lines with 1.6 line-height */
+}
+
+.description-content.expanded {
+    max-height: none;
+}
+
+.description-fade-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1.6em;
+    background: linear-gradient(to bottom, 
+        rgba(248, 249, 250, 0) 0%, 
+        rgba(248, 249, 250, 0.8) 70%, 
+        rgba(248, 249, 250, 1) 100%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.description-fade-overlay.visible {
+    opacity: 1;
+}
+
+.description-controls {
+    display: flex;
+    justify-content: center;
+    margin-top: 12px;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.description-controls.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.expand-btn {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 16px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    font-size: 13px;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.expand-btn:hover {
+    background: rgba(0, 0, 0, 0.06);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #495057;
+    transform: translateY(-1px);
+}
+
+.expand-btn:active {
+    transform: translateY(0);
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.expand-text {
+    font-size: 13px;
+    transition: all 0.2s ease;
+}
+
+.expand-icon {
+    width: 14px;
+    height: 14px;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    flex-shrink: 0;
+}
+
+.expand-btn.expanded .expand-icon {
+    transform: rotate(180deg);
+}
+
+
+
 .recommendations-section h2 {
     font-size: 22px;
     color: #343a40;
