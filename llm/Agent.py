@@ -6,7 +6,7 @@ from langchain_core.messages import HumanMessage
 
 from llm.util.agent_log_formatter import format_log_message
 
-RECURSION_LIMIT = 2 * 4 + 1
+RECURSION_LIMIT = 15
 user_message = prompts.user_message
 tools = get_tools()
 llm = LLM
@@ -26,11 +26,12 @@ def trigger_agent_show_thoughts(user_message: str):
 
     for step in agent.stream(
             {"messages": [system_prompt, HumanMessage(content=user_message)]},
-            {"recursion_limit": RECURSION_LIMIT},
             stream_mode="values",
     ):
         log = step["messages"][-1].pretty_repr()
+        # print(log)
         formatted_log = format_log_message(log)
+        print(log)
         yield {"thought": formatted_log, "is_final": False, "final_content": None}
         last_step = step
 

@@ -1,3 +1,5 @@
+import re
+
 from pyalex import Works
 from utils.status import Status
 
@@ -40,6 +42,8 @@ def _fetch_works_single_query(query, from_publication_date=None):
             if abstract_idx:
                 index_map = {v: k for k, values in abstract_idx.items() for v in values}
                 abstract = " ".join(index_map[i] for i in sorted(index_map))
+                if not is_valid_abstract(abstract):
+                    abstract = "No abstract available"
             else:
                 abstract = "No abstract available"
 
@@ -151,6 +155,35 @@ def clean_topics_field(topics: list[dict]) -> list[dict]:
         }
         cleaned.append(cleaned_entry)
     return cleaned
+
+
+def is_valid_abstract(text, min_words=50, max_words=500):
+    lower_text = text.lower()
+    word_count = len(text.split())
+
+    # Reject if too short or too long
+    if word_count < min_words or word_count > max_words:
+        return False
+
+    # Reject if it contains obvious non-abstract elements
+    spam_indicators = [
+        "previous article", "next article",
+        "google scholar", "crossref", "bibtex",
+        "https://doi.org", "add to favorites", "export citation"
+    ]
+    if any(indicator in lower_text for indicator in spam_indicators):
+        return False
+
+    # Reject if it contains many citation-style references like "[1]" or "[2]"
+    if len(re.findall(r"\[\d+\]", text)) > 5:
+        return False
+
+    # Reject if there are too few sentence-ending punctuations
+    sentence_endings = len(re.findall(r"[.!?]", text))
+    if sentence_endings < 3:
+        return False
+
+    return True
 
 
 if __name__ == "__main__":
