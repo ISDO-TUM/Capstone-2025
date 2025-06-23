@@ -41,6 +41,25 @@ def add_queries_to_project_db(queries: list[str], project_id: str):
     cursor.close()
     conn.close()
 
+def get_queries_for_project(project_id: str):
+    conn = connect_to_db(outside_chroma=True)
+    cursor = conn.cursor()
+
+    cursor.execute(""" SELECT queries FROM projects_table WHERE project_id = %s""", (project_id,))
+
+    queries = cursor.fetchone()
+    return queries
+
+def get_project_prompt(project_id: str):
+    conn = connect_to_db(outside_chroma=True)
+    cursor = conn.cursor()
+
+    cursor.execute(""" SELECT description
+                       FROM projects_table
+                       WHERE project_id = %s""", (project_id,))
+
+    prompt = cursor.fetchone()
+    return prompt
 
 def add_email_to_project_db(email: str, project_id: str):
     conn = connect_to_db()
