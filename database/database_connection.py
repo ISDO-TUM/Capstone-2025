@@ -2,7 +2,7 @@ import psycopg2
 import os
 
 
-def connect_to_db(outside_chroma = False):
+def connect_to_db(outside_chroma=False):
     """
     Establishes a connection to the PostgreSQL database.
     Reads connection parameters from environment variables.
