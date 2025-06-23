@@ -348,6 +348,82 @@ def detect_out_of_scope_query(query_description: str) -> str:
         })
 
 
+@tool
+def narrow_query(query_description: str, keywords: list[str]) -> str:
+    """
+    Agent tool that takes a broad set of keywords and returns a *narrower / more specific*
+    keyword list that stays fully inside the user’s topic.
+
+    Parameters
+    ----------
+    query_description : str
+        Short natural-language summary of what the user is looking for.
+    keywords : list[str]
+        Current (possibly too generic) keyword list.
+
+    Returns
+    -------
+    str
+        JSON string:
+        {
+            "status": "success" | "error",
+            "narrowed_keywords": [...],   # only if success
+            "message": "..."              # optional info / error reason
+        }
+    """
+
+    # --- basic validation ----------------------------------------------------
+    if not keywords:
+        return json.dumps({
+            "status": "error",
+            "message": "No keywords provided. Cannot narrow."
+        })
+
+    # --- prompt --------------------------------------------------------------
+    prompt = f"""
+    You are an academic research assistant.
+
+    The user’s current keyword list is *too broad*.
+    Your job is to **narrow / focus** the query so it retrieves _fewer, more precise_
+    papers from OpenAlex.
+
+    – Keep the core topic absolutely intact.
+    – Drop generic terms (e.g. "science", "analysis").
+    – Prefer specific subfields, methods, data types, time periods, organisms, etc.
+    – Do **NOT** add unrelated adjacent ideas.
+    – Remove duplicates.
+    – Limit the result to **5–8** focused keywords.
+
+    Output **only** a valid JSON list – no commentary.
+
+    User query description:
+    \"\"\"{query_description}\"\"\"
+
+    Original keywords:
+    {json.dumps(keywords)}
+
+    Return the narrowed keyword list (JSON only):
+    """
+
+    response = LLM.invoke(prompt)
+
+    try:
+        narrowed = json.loads(response.content)
+        if not isinstance(narrowed, list):
+            raise ValueError("Result must be a JSON list")
+        logger.info("Narrowed keyword list generated.")
+        return json.dumps({
+            "status": "success",
+            "narrowed_keywords": narrowed
+        })
+    except Exception as e:
+        logger.error(f"Narrow query parsing failed: {e}")
+        return json.dumps({
+            "status": "error",
+            "message": "Could not parse narrowed keyword list."
+        })
+
+
 def main():
     from langgraph.prebuilt import create_react_agent
     from langchain_core.messages import HumanMessage
