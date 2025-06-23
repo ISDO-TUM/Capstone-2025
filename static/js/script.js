@@ -121,6 +121,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: formData
                 });
                 
+                if (!response.ok) {
+                    try {
+                        const result = await response.json();
+                        alert(`Error extracting PDF text: ${result.error}`);
+                    } catch (jsonError) {
+                        alert(`Error extracting PDF text: HTTP ${response.status} - ${response.statusText}`);
+                    }
+                    projectDescription.value = originalValue;
+                    return;
+                }
+                
                 const result = await response.json();
                 
                 if (result.success) {
