@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 import chromadb
 import numpy as np
 from chromadb.api.models.Collection import Collection
+
+from database.projectpaper_database_handler import get_pubsub_papers_for_project
 from utils.status import Status
 from typing import List, Optional, TypedDict
 from database.papers_database_handler import insert_papers
@@ -97,8 +99,10 @@ def update_newsletter_papers(project_id: str):
 
     # Perform similarity search between latest papers and user query, get top k
     sorted_sims = _sim_search(papers, project_prompt)
-    top_results = sorted_sims[:3]
+    top_results = sorted_sims[:k]
     # Get current papers with newsletter tag and unseen tag
+    current_newsletter_papers = get_pubsub_papers_for_project(project_id)
+    # Link hashes to actual papers
     # Make agent decide a subset of top k latest papers and current news, set subset as new newsletter papers
     # Determine different papers between old newsletter papers and new newsletter papers
     # Send difference per mail
