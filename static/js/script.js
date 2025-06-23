@@ -101,6 +101,53 @@ document.addEventListener('DOMContentLoaded', () => {
             
             uploadArea.style.display = 'none';
             fileInfo.style.display = 'flex';
+            
+            extractPDFText(file);
+        }
+
+        async function extractPDFText(file) {
+            const projectDescription = document.getElementById('projectDescription');
+            if (!projectDescription) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const originalValue = projectDescription.value;
+                projectDescription.value = originalValue + '\n\n[Extracting PDF text...]';
+                
+                const response = await fetch('/api/extract-pdf-text', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    try {
+                        const result = await response.json();
+                        alert(`Error extracting PDF text: ${result.error}`);
+                    } catch (jsonError) {
+                        alert(`Error extracting PDF text: HTTP ${response.status} - ${response.statusText}`);
+                    }
+                    projectDescription.value = originalValue;
+                    return;
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const currentText = originalValue.trim();
+                    const newText = currentText ? 
+                        `${currentText}\n\n${result.extracted_text}` : 
+                        result.extracted_text;
+                    projectDescription.value = newText;
+                } else {
+                    projectDescription.value = originalValue;
+                    alert(`Error extracting PDF text: ${result.error}`);
+                }
+            } catch (error) {
+                projectDescription.value = projectDescription.value.replace('\n\n[Extracting PDF text...]', '');
+                alert(`Failed to extract PDF text: ${error.message}`);
+            }
         }
 
         function removeFile() {
