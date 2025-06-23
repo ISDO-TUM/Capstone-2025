@@ -424,6 +424,79 @@ def narrow_query(query_description: str, keywords: list[str]) -> str:
         })
 
 
+@tool
+def multi_step_reasoning(query_description: str,
+                         max_subqueries: int = 3,
+                         max_keywords: int = 5) -> str:
+    """
+    Break a LONG / multi-topic research query into focused sub-queries.
+
+    Input  (passed as kwargs!) :
+      query_description : str   – the raw user prompt
+      max_subqueries    : int   – upper-bound on splits (default 3)
+      max_keywords      : int   – keyword cap per split     (default 5)
+
+    Output: JSON string
+    {
+      "status": "success",
+      "subqueries": [
+        {
+          "sub_description": "...",
+          "keywords": ["k1","k2", ... up to max_keywords]
+        },
+        ...
+      ],
+      "reasoning": "short explanation"
+    }
+    """
+
+    prompt = f"""
+    You are an expert academic search planner.
+
+    The user’s query is potentially too broad to retrieve precise
+    papers in a single OpenAlex search (keyword limit ≈ {max_keywords}).
+
+    The users query is: {query_description}
+
+    • Decompose it into up to {max_subqueries} coherent sub-topics.
+      – Each sub-topic should be **independent** and “searchable”.
+      – Preserve the scientific intent; do not invent new themes.
+    • For EACH sub-topic produce a keyword list
+      (≤ {max_keywords} items, no duplicates, no stop-words).
+
+    Return ONLY valid JSON with this exact layout:
+    {{
+      "status": "success",
+      "subqueries": [
+        {{"sub_description": "...", "keywords": ["...", ...] }},
+        ...
+      ],
+      "reasoning": "why the split helps"
+    }}
+    """
+
+    try:
+        response = LLM.invoke(prompt)
+        plan_obj = json.loads(response.content)
+
+        # explicit validation (no assert)
+        if plan_obj.get("status") != "success":
+            raise ValueError("Planner did not return status=success")
+
+        if not isinstance(plan_obj.get("subqueries"), list) or not plan_obj["subqueries"]:
+            raise ValueError("Planner returned an empty or invalid subqueries list")
+
+        logger.info("Multi-step reasoning plan generated.")
+        return json.dumps(plan_obj)
+
+    except Exception as e:
+        logger.error("Query-split failed: %s", e)
+        return json.dumps({
+            "status": "error",
+            "message": "Could not parse sub-query list"
+        })
+
+
 def main():
     from langgraph.prebuilt import create_react_agent
     from langchain_core.messages import HumanMessage
