@@ -43,3 +43,16 @@ def get_papers_for_project(project_id: str):
         results.append(paper_dict)
     print("Successfully converted papers to dict")
     return results
+
+
+def get_pubsub_papers_for_project(project_id: str):
+    connection = connect_to_db()
+    cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor.execute("""
+    SELECT paper_hash from paperprojects_table
+        WHERE project_id = %s
+        AND newsletter = TRUE
+        AND SEEN = TRUE
+                   """, (project_id,))
+    papers = cursor.fetchall()
+    return papers
