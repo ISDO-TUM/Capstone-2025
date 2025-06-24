@@ -8,7 +8,7 @@ def assign_paper_to_project(paper_hash: str, project_id: str, summary: str):
     connection = connect_to_db()
     cursor = connection.cursor()
 
-    cursor.execute(f"INSERT INTO paperprojects_table (project_id, paper_hash, summary) VALUES (%s, %s, %s)",
+    cursor.execute("""INSERT INTO paperprojects_table (project_id, paper_hash, summary) VALUES (%s, %s, %s)""",
                    (project_id, paper_hash, summary))
     connection.commit()
     cursor.close()
