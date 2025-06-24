@@ -1,3 +1,93 @@
+    // Dummy papers for testing PubSub (take this out and then fetch to backend)
+const dummyPubSubPapers = [
+    {
+      title: "A Survey on LLM Agents",
+      description: "This paper reviews advances in large language model agents. It summarizes use cases and open challenges.",
+      link: "https://arxiv.org/abs/2401.00001"
+    },
+    {
+      title: "Generative AI for Science",
+      description: "Overview of how generative AI is changing the scientific process. Two key examples included.",
+      link: "https://arxiv.org/abs/2401.00002"
+    },
+    {
+      title: "Reinforcement Learning with LLMs",
+      description: "Examines how large language models can be fine-tuned with reinforcement learning techniques for improved task performance.",
+      link: "https://arxiv.org/abs/2401.00003"
+    },
+    {
+      title: "Ethics in Generative AI",
+      description: "Analyzes ethical considerations in deploying generative AI systems, including bias mitigation and transparency.",
+      link: "https://arxiv.org/abs/2401.00004"
+    },
+    {
+      title: "Multi-Agent Collaboration with LLMs",
+      description: "Studies architectures where multiple LLM-based agents interact to solve complex, multi-step problems collaboratively.",
+      link: "https://arxiv.org/abs/2401.00005"
+    }
+  ];
+
+
+// 1) Always render PubSub bar // This is called from loadProjectOverviewData()
+function renderPubSubSection() {
+    const container = document.getElementById('pubsubPapersContainer');
+    renderPubSubPapers(dummyPubSubPapers, container);
+  }
+  
+  // 2) newsletter form always ready
+  function setupPubSubForm() {
+    const form = document.getElementById('pubsubSubscribeForm');
+    const emailInput = document.getElementById('pubsubEmail');
+  
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const email = emailInput.value.trim();
+      if (!email) return;
+  
+      fetch('/api/pubsub-subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      })
+      .then(res => {
+        if (res.ok) {
+          alert('Thanks for subscribing!');
+          emailInput.value = '';
+        } else {
+          alert('Subscription failed. Please try again.');
+        }
+      })
+      .catch(() => {
+        alert('Network error. Please try later.');
+      });
+    });
+  }
+  
+  function renderPubSubPapers(papers, container) {
+    container.innerHTML = '';
+    papers.forEach(paper => {
+      const card = document.createElement('div');
+      card.classList.add('recommendation-card'); // Use sae style
+      card.style.minWidth = '240px';
+  
+      const titleEl = document.createElement('h4');
+      titleEl.textContent = paper.title;
+  
+      const linkEl = document.createElement('a');
+      linkEl.href = paper.link;
+      linkEl.textContent = "Read Paper";
+      linkEl.target = "_blank";
+  
+      const descriptionEl = document.createElement('p');
+      descriptionEl.textContent = paper.description;
+  
+      card.appendChild(titleEl);
+      card.appendChild(linkEl);
+      card.appendChild(descriptionEl);
+      container.appendChild(card);
+    });
+  }
+
 document.addEventListener('DOMContentLoaded', () => {
     const handleRouting = () => {
         const path = window.location.pathname;
@@ -56,6 +146,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (titleDisplay) titleDisplay.textContent = projectData.title;
         if (descriptionDisplay) descriptionDisplay.textContent = projectData.description;
         if (document.title && titleDisplay) document.title = `Project: ${projectData.title}`;
+        
+        renderPubSubSection(); //calling PubSub
 
         if (recommendationsContainer && agentThoughtsContainer) {
             // Set initial state messages
@@ -172,3 +264,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     handleRouting();
 });
+
