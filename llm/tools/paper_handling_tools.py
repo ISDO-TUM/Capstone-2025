@@ -11,7 +11,7 @@ from utils.status import Status
 from llm.Embeddings import embed_papers
 from paper_handling.database_handler import insert_papers
 from paper_handling.paper_handler import fetch_works_multiple_queries
-from llm.util.agent_custom_filter import _matches
+from llm.util.agent_custom_filter import _matches, _OPS
 
 logger = logging.getLogger(__name__)
 
@@ -505,90 +505,111 @@ def filter_by_user_defined_metrics(
     criteria_nl: str | None = None,
 ) -> str:
     """
-    Filter a list of paper metadata dicts by user-defined rules.
+    Filter a list of OpenAlex paper dicts.
 
-    Parameters (all passed as keyword arguments)
-    --------------------------------------------------------------------
-    papers : list[dict]
-        A list of paper objects exactly as returned by your OpenAlex layer.
-    filter_spec : dict | None
-        Structured rules, e.g.
-        {
-          "similarity_score": {"op": ">",  "value": 0.8},
-          "cited_by_count":   {"op": ">=", "value": 25},
-          "publication_date": {"op": ">=", "value": "2022-01-01"},
-          "journal":          {"op": "in", "value": ["Nature", "Science"]}
-        }
-    criteria_nl : str | None
-        Optional natural-language sentence; if provided and filter_spec is
-        None, we ask the LLM to translate it into a filter_spec.
+    Accepts either:
+        • filter_spec : structured JSON rules  (preferred in production)
+        • criteria_nl : natural language rules (converted via LLM)
 
-    Returns (JSON)
-    --------------------------------------------------------------------
-    {
-      "status" : "success" | "error",
-      "filters": <filter_spec_used>,
-      "kept_count": int,
-      "filtered_papers": [ ...subset of papers... ],
-      "reasoning": "human-readable explanation"
-    }
+    Returns JSON with status, applied filters, kept_count, filtered_papers.
     """
 
-    # ------------------------------------------------------------ #
-    # 1) Obtain a structured filter_spec
-    # ------------------------------------------------------------ #
+    # ----------------------------------------------------------------
+    # 1) If only NL given, ask LLM to create a strict filter_spec
+    # ----------------------------------------------------------------
     if filter_spec is None and criteria_nl:
-        prompt = f"""
-        Convert the following natural-language request into a JSON filter
-        specification.  Use the schema:
+        PARSE_PROMPT = f"""
+        You are a filtering assistant.
 
-          {{
-            "<field_name>": {{"op": "<operator>", "value": <number|str|list>}},
-            ...
-          }}
+        Translate the user's request into a JSON **object** using ONLY the metric
+        names below **exactly as written**.  Do not invent new fields.
 
-        • Operators allowed: ">", ">=", "<", "<=", "==", "in", "not in"
-        • "publication_date" should compare by year if the value is an int.
-        • Do NOT enclose the JSON in markdown; output JSON only.
+        Allowed metric names:
+        • authors
+        • publication_date
+        • fwci
+        • citation_normalized_percentile
+        • cited_by_count
+        • counts_by_year
+        • similarity_score
 
+        Allowed operators: ">", ">=", "<", "<=", "==", "!=", "in", "not in"
+
+        Schema per entry:
+        "<metric>": {{"op": "<operator>", "value": <number|string|list>}}
+
+        Examples
+        --------
+        NL:  Keep papers after 2022 with similarity above 0.8
+        JSON:
+        {{
+        "publication_date": {{"op": ">", "value": 2022}},
+        "similarity_score": {{"op": ">", "value": 0.8}}
+        }}
+
+        NL:  Only papers with >25 citations from Nature
+        JSON:
+        {{
+        "cited_by_count": {{"op": ">", "value": 25}},
+        "authors":        {{"op": "in", "value": ["Nature"]}}
+        }}
+
+        Return the JSON only – no markdown.
         Request:
         \"\"\"{criteria_nl}\"\"\"
         """
         try:
-            llm_resp = LLM.invoke(prompt)
-            filter_spec = json.loads(llm_resp.content)
-            logger.info("Parsed NL criteria into filter_spec: %s", filter_spec)
-        except Exception as exc:
-            logger.error("Failed to parse NL criteria: %s", exc)
+            llm_out = LLM.invoke(PARSE_PROMPT).content.strip()
+            filter_spec = json.loads(llm_out)
+            logger.info("LLM-generated filter_spec: %s", filter_spec)
+        except Exception as e:
+            logger.error("Failed to obtain filter_spec from NL: %s", e)
             return json.dumps(
-                {
-                    "status": "error",
-                    "message": "Could not interpret criteria_nl into a filter_spec",
-                }
+                {"status": "error",
+                 "message": "Could not parse criteria_nl into a filter spec"}
             )
 
-    # If still no filter_spec, nothing to do
+    # If still none → no filtering
     if not filter_spec:
         return json.dumps(
-            {
-                "status": "success",
-                "filters": {},
-                "kept_count": len(papers),
-                "filtered_papers": papers,
-                "reasoning": "No filter_spec provided – returning original list",
-            }
+            {"status": "success",
+             "filters": {},
+             "kept_count": len(papers),
+             "filtered_papers": papers,
+             "reasoning": "No filters supplied"}
         )
 
-    # ------------------------------------------------------------ #
-    # 2) Apply filters
-    # ------------------------------------------------------------ #
-    kept: List[Dict[str, Any]] = []
+    # ----------------------------------------------------------------
+    # 2) Validate keys/operators quickly
+    # ----------------------------------------------------------------
+    allowed_fields = {
+        "authors", "publication_date", "fwci",
+        "citation_normalized_percentile", "cited_by_count",
+        "counts_by_year", "similarity_score",
+    }
+    for k, rule in filter_spec.items():
+        if k not in allowed_fields:
+            return json.dumps(
+                {"status": "error",
+                 "message": f"Unknown metric '{k}' in filter_spec"}
+            )
+        if rule["op"] not in _OPS:
+            return json.dumps(
+                {"status": "error",
+                 "message": f"Unsupported operator '{rule['op']}'"}
+            )
+
+    # ----------------------------------------------------------------
+    # 3) Apply filters
+    # ----------------------------------------------------------------
+    kept: list[dict] = []
     for paper in papers:
-        if all(
-            _matches(paper.get(field), rule["op"], rule["value"])
-            for field, rule in filter_spec.items()
-        ):
-            kept.append(paper)
+        try:
+            if all(_matches(paper.get(metric), rule["op"], rule["value"])
+                   for metric, rule in filter_spec.items()):
+                kept.append(paper)
+        except Exception as exc:
+            logger.debug("Skip paper due to comparison error: %s", exc)
 
     return json.dumps(
         {
@@ -596,7 +617,7 @@ def filter_by_user_defined_metrics(
             "filters": filter_spec,
             "kept_count": len(kept),
             "filtered_papers": kept,
-            "reasoning": f"Applied {len(filter_spec)} metric filters",
+            "reasoning": f"Applied {len(filter_spec)} metric filter(s)"
         }
     )
 

@@ -1,53 +1,34 @@
-import datetime as dt
 from typing import Any
 import logging
+import operator
+import re
 
 logger = logging.getLogger(__name__)
 
 
-def _coerce_date_to_year(value: Any) -> Any:
-    """
-    Convert YYYY-MM-DD strings to int(year) so they compare naturally
-    (“2025-06-02” ≥ 2024 → True).
-    """
-    if isinstance(value, str) and value.count("-") == 2:
-        try:
-            return dt.datetime.strptime(value, "%Y-%m-%d").year
-        except ValueError:
-            # fall through – treat as string
-            pass
-    return value
+_OPS = {
+    ">": operator.gt,
+    ">=": operator.ge,
+    "<": operator.lt,
+    "<=": operator.le,
+    "==": operator.eq,
+    "!=": operator.ne,
+    "in": lambda x, vals: x in vals,
+    "not in": lambda x, vals: x not in vals,
+}
+
+DATE_RE = re.compile(r"^\d{4}(-\d{2}-\d{2})?$")
 
 
-def _matches(field_value: Any, op: str, target: Any) -> bool:
-    """
-    Returns True if `field_value <op> target` is satisfied.
-    Supported ops: '>', '>=', '<', '<=', '==', 'in', 'not in'
-    """
-    field_value = _coerce_date_to_year(field_value)
+def _coerce(val: Any):
+    """Try to make comparison types compatible."""
+    if isinstance(val, str) and DATE_RE.match(val):
+        # year or full date → int(year)
+        return int(val[:4])
+    return val
 
-    # Convert lists to sets for "in" / "not in"
-    if op in {"in", "not in"}:
-        if not isinstance(target, (list, set, tuple)):
-            target = [target]
-        target_set = {str(x) for x in target}
-        result = str(field_value) in target_set
-        return result if op == "in" else not result
 
-    # Numeric / lexicographic comparisons
-    try:
-        if op == ">":
-            return float(field_value) > float(target)
-        if op == ">=":
-            return float(field_value) >= float(target)
-        if op == "<":
-            return float(field_value) < float(target)
-        if op == "<=":
-            return float(field_value) <= float(target)
-        if op == "==":
-            return str(field_value).lower() == str(target).lower()
-    except (TypeError, ValueError):
-        return False
-
-    logger.warning("Unknown operator '%s' – returning False", op)
-    return False
+def _matches(field_val, op: str, target):
+    if op not in _OPS:
+        raise ValueError(f"Unsupported op '{op}'")
+    return _OPS[op](_coerce(field_val), _coerce(target))
