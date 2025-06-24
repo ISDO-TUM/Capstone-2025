@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            
+
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 handleFileSelection(files[0]);
@@ -95,32 +95,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function displayFileInfo(file) {
             const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
-            
+
             fileName.textContent = file.name;
             fileSize.textContent = `${sizeInMB} MB`;
-            
+
             uploadArea.style.display = 'none';
             fileInfo.style.display = 'flex';
-            
+
             extractPDFText(file);
         }
 
         async function extractPDFText(file) {
             const projectDescription = document.getElementById('projectDescription');
             if (!projectDescription) return;
-            
+
             const formData = new FormData();
             formData.append('file', file);
-            
+
             try {
                 const originalValue = projectDescription.value;
                 projectDescription.value = originalValue + '\n\n[Extracting PDF text...]';
-                
+
                 const response = await fetch('/api/extract-pdf-text', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 if (!response.ok) {
                     try {
                         const result = await response.json();
@@ -131,13 +131,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     projectDescription.value = originalValue;
                     return;
                 }
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     const currentText = originalValue.trim();
-                    const newText = currentText ? 
-                        `${currentText}\n\n${result.extracted_text}` : 
+                    const newText = currentText ?
+                        `${currentText}\n\n${result.extracted_text}` :
                         result.extracted_text;
                     projectDescription.value = newText;
                 } else {
@@ -152,10 +152,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function removeFile() {
             fileInput.value = '';
-            
+
             fileInfo.style.display = 'none';
             uploadArea.style.display = 'block';
-            
+
             fileName.textContent = '';
             fileSize.textContent = '';
         }
@@ -307,14 +307,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const fadeOverlay = document.getElementById('descriptionFadeOverlay');
         const controls = document.getElementById('descriptionControls');
         const expandText = toggleButton?.querySelector('.expand-text');
-        
+
         if (!descriptionDisplay || !descriptionWrapper || !toggleButton || !fadeOverlay || !controls || !expandText) return;
 
         const wordCount = description.trim().split(/\s+/).length;
 
         if (wordCount > 500) {
             const isCollapsed = true;
-            
+
             descriptionDisplay.classList.toggle('collapsed', isCollapsed);
             descriptionDisplay.classList.toggle('expanded', !isCollapsed);
             toggleButton.classList.toggle('expanded', !isCollapsed);
@@ -325,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             toggleButton.addEventListener('click', () => {
                 const currentlyCollapsed = descriptionDisplay.classList.contains('collapsed');
-                
+
                 descriptionDisplay.classList.toggle('collapsed', !currentlyCollapsed);
                 descriptionDisplay.classList.toggle('expanded', currentlyCollapsed);
                 toggleButton.classList.toggle('expanded', currentlyCollapsed);
@@ -419,13 +419,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // On DOMContentLoaded, render projects and set up search
     if (window.location.pathname === '/') {
         let allProjects = [];
-        
+
         // Load projects from API
         loadProjectsFromAPI().then(projects => {
             allProjects = projects;
             renderProjects(allProjects);
         });
-        
+
         const searchInput = document.getElementById('projectSearchInput');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
