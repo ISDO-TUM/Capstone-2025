@@ -1,18 +1,17 @@
 import json
 import logging
 from datetime import datetime, timedelta
-
 import chromadb
 import numpy as np
 from chromadb.api.models.Collection import Collection
-
-from database.projectpaper_database_handler import get_pubsub_papers_for_project
+from database.projectpaper_database_handler import get_pubsub_papers_for_project, reset_newsletter_tags, \
+    set_newsletter_tags_for_project
+from pubsub.temporary_llm_that_will_be_replaced_soon import calL_temp_agent
 from utils.status import Status
 from typing import List, TypedDict
-from database.papers_database_handler import insert_papers, get_papers_by_original_id
+from database.papers_database_handler import insert_papers, get_papers_by_original_id, get_paper_by_hash
 from database.projects_database_handler import get_queries_for_project, get_project_prompt
 import ast
-
 from llm.Embeddings import embed_papers, embed_user_profile
 from paper_handling.paper_handler import fetch_works_multiple_queries
 
@@ -50,7 +49,6 @@ class ChromaVectorDB:
             try:
                 hash_id = item["hash"]
                 embedding = item["embedding"]
-                print(f"Storing embedding: {embedding} for hash: {hash_id}")
                 self.collection.upsert(
                     ids=[hash_id],
                     embeddings=[embedding],
@@ -80,25 +78,25 @@ def update_newsletter_papers(project_id: str):
     k = 3
     # Get queries for project
     queries_str = get_queries_for_project(project_id)[0]
-    print(queries_str)
     queries = ast.literal_eval(queries_str)
+
     # Get papers from last week
     papers, _ = fetch_works_multiple_queries(queries, from_publication_date="2020-01-01")
 
     # Insert papers in postgres
     insert_papers(papers)
 
+    # Get the paper's hashes (we dont use the deduplication from insert_papers as the latest papers may already be in the table
+    # and would thus be ignored)
     papers_w_hash = []
     for paper in papers:
         papers_w_hash.append(get_papers_by_original_id(paper['id'])[0])  # For now, we only use a single version of the paper
     papers_w_hash = _remove_duplicate_dicts(papers_w_hash)
-    print(f"papers with hash: {papers_w_hash}")
     # Insert papers in chroma
     _embed_and_store(papers_w_hash)
 
     # Get project prompt
     project_prompt = get_project_prompt(project_id)[0]
-    print(f"Project prompt: {project_prompt}")
 
     # todo store project prompt embedding together with project
     # Embed project prompt
@@ -107,12 +105,24 @@ def update_newsletter_papers(project_id: str):
     sorted_sims = _sim_search(papers_w_hash, embedded_prompt)
     top_results = sorted_sims[:k]
     # Get current papers with newsletter tag and unseen tag
-    current_newsletter_papers = get_pubsub_papers_for_project(project_id)
-
-    print(f"Current newsletter papers: {current_newsletter_papers}")
-    print(top_results)
+    current_newsletter_papers = get_pubsub_papers_for_project(project_id)  # This is a list of lists btw
     # Link hashes to actual papers
+    potential_newsletter_papers = []
+    for paper_hash in current_newsletter_papers:
+        paper = get_paper_by_hash(paper_hash[0])
+        potential_newsletter_papers.append(paper)
+    for result in top_results:
+        paper = get_paper_by_hash(result[0])
+        potential_newsletter_papers.append(paper)
     # Make agent decide a subset of top k latest papers and current news, set subset as new newsletter papers
+
+    print(potential_newsletter_papers)
+
+    recommendation_hashes_str = calL_temp_agent(str(potential_newsletter_papers), project_prompt, str(k)).content
+    recommendation_hashes = ast.literal_eval(recommendation_hashes_str)
+    # Store new newsletter papers
+    reset_newsletter_tags()
+    set_newsletter_tags_for_project(project_id, paper_hashes=recommendation_hashes)
     # Determine different papers between old newsletter papers and new newsletter papers
     # Send difference per mail
 
@@ -136,7 +146,6 @@ def _sim_search(papers, project_vector):
     for paper in papers:
         hashes.append(paper['paper_hash'])
     latest_papers_subset = chroma_db.collection.get(ids=hashes, include=['embeddings'])
-    print(latest_papers_subset)
     results = []
     for id, embedding in zip(latest_papers_subset["ids"], latest_papers_subset["embeddings"]):
         sim = _cosine_similarity(project_vector, embedding)
@@ -172,4 +181,4 @@ def _remove_duplicate_dicts(dict_list):
 
 
 if __name__ == '__main__':
-    update_newsletter_papers("044c3e5d-ec24-4664-8967-e1d64fcfd276")
+    update_newsletter_papers("e10064c7-b160-4e91-8af6-09c6ed9273b3")
