@@ -5,7 +5,6 @@ from llm.tools.paper_handling_tools import (
     narrow_query,
     reformulate_query,
     detect_out_of_scope_query,
-    multi_step_reasoning,
     filter_by_user_defined_metrics
 )
 from paper_ranking.paper_ranker import get_best_papers
@@ -18,7 +17,6 @@ tools = [
     narrow_query,
     reformulate_query,
     detect_out_of_scope_query,
-    multi_step_reasoning,
     filter_by_user_defined_metrics
 ]
 
