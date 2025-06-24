@@ -53,7 +53,6 @@ def get_recommendations():
     user_description = data['projectDescription']
 
     # Hardcoded until frontend is updated
-    # todo create mock project
     project_id = add_new_project_to_db("DummyProject", user_description)
 
     def generate():
