@@ -102,16 +102,22 @@ def fetch_works_multiple_queries(queries, from_publication_date=None):
     - authors: A comma-separated list of author names
     - publication_date: Date of publication
     - landing_page_url: URL to the paper's landing page
-    - pdf_url: Direct URL to the PDF, if available. Prefer this over landing_page_url where possible
+    - pdf_url: Direct URL to the PDF, if available
+    - similarity_score: OpenAlex relevance_score (float) – renamed for clarity
+    - fwci: Field-Weighted Citation Impact (float or None)
+    - citation_normalized_percentile: Citation percentile within field/year (float or None)
+    - cited_by_count: Raw citation count (int or None)
+    - counts_by_year: Year-by-year citation breakdown (list of dicts or None)
 
     Parameters:
-    - queries (List[str]): List of search keywords or phrases to query in OpenAlex.
-    - from_publication_date (str, optional): Filter works published on or after this date (YYYY-MM-DD format).
+    - queries (List[str]): Search keywords or phrases.
+    - from_publication_date (str, optional): Filter works published on or after this
+      date (YYYY-MM-DD).
 
     Returns:
     - Tuple[List[dict], int]: A tuple containing:
-        - A single, combined list of work metadata dictionaries from all queries
-        - Status code (Status.SUCCESS if all queries succeeded, Status.FAILURE if any query failed)
+        • A combined list of work-metadata dictionaries (schema above)
+        • Status code (Status.SUCCESS if all queries succeeded, Status.FAILURE if any failed)
     """
     all_works = []
     any_failure = False
