@@ -106,7 +106,8 @@ system_prompt = SystemMessage(content="""
 
     6. get_best_papers — Run this after `update_papers` to retrieve top-matching papers based on the improved or original query.
 
-    7. store_papers_for_project - Run this after 'get_best_papers' to link papers with a project and add a project specific description for the paper.
+    7. store_papers_for_project - Run this after 'get_best_papers' to link papers with a project and add a project specific description for the papers.
+    store and create a summary for ALL PAPERS returned by 'get_best_papers'.
 
     🧠 Logic:
     - First, analyze the user input for clarity, scope, and quality.
