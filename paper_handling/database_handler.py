@@ -1,5 +1,5 @@
 import psycopg2
-import psycopg2.extras
+from psycopg2 import extras
 import os
 from dotenv import load_dotenv
 import hashlib
@@ -57,27 +57,43 @@ def connect_to_db():
 
 def insert_papers(papers_data_list):
     """
-    Insert one or more papers into `papers_table`, persisting the extra
-    metrics (similarity_score, fwci, citation_normalized_percentile,
+    Insert one or more paper records into public.papers_table, including
+    the extra metrics (similarity_score, fwci, citation_normalized_percentile,
     cited_by_count, counts_by_year).
 
-    Each paper **must** contain at least: id, title
-    Optional keys (nullable) are automatically handled.
+    Args
+    ----
+    papers_data_list : list[dict]
+        • Required keys:  id, title
+        • Optional keys:  abstract, authors, publication_date,
+                          landing_page_url, pdf_url,
+                          similarity_score, fwci,
+                          citation_normalized_percentile, cited_by_count,
+                          counts_by_year (list/obj → JSONB)
+
+    Returns
+    -------
+    (status_code, inserted_details)
+
+    status_code          : Status.SUCCESS if at least one row inserted,
+                           Status.FAILURE otherwise.
+    inserted_details     : list of {"title": str, "abstract": str, "hash": str}
+                           describing every newly inserted row.
     """
-    # ---------------- quick upfront checks ----------------
+    # ---------------- upfront checks -----------------
     if not isinstance(papers_data_list, list):
         print("insert_papers expects a list of dicts.")
         return Status.FAILURE, []
 
     if not papers_data_list:
-        return Status.SUCCESS, []   # nothing to do
+        return Status.SUCCESS, []
 
-    # ---------------- DB connection -----------------------
+    # ---------------- DB connection ------------------
     conn = connect_to_db()
     if conn is None:
         return Status.FAILURE, []
 
-    cur = conn.cursor()
+    cur = conn.cursor(cursor_factory=extras.DictCursor)
 
     SQL = """
         INSERT INTO public.papers_table (
@@ -90,33 +106,35 @@ def insert_papers(papers_data_list):
         ON CONFLICT (paper_hash) DO NOTHING;
     """
 
-    inserted = []
+    inserted_details = []
 
-    # ---------------- main loop ---------------------------
+    # ---------------- main loop ----------------------
     for p in papers_data_list:
         if not isinstance(p, dict) or "id" not in p or "title" not in p:
-            print(f"Skipping malformed record: {str(p)[:120]}")
+            print(f"Skipping malformed record: {p!r}")
             continue
 
         try:
             p_hash = _generate_paper_hash(p)
 
-            # optional fields with sane defaults
-            abstract = p.get("abstract")                      # STRING
-            authors = p.get("authors")                       # STRING
-            pub_date = p.get("publication_date")              # STRING
-            landing_url = p.get("landing_page_url")              # STRING
-            pdf_url = p.get("pdf_url")                       # STRING
-            pdf_url = p.get("pdf_url")                       # STRING
+            abstract = p.get("abstract")
+            authors = p.get("authors")
+            pub_date = p.get("publication_date")
+            landing_url = p.get("landing_page_url")
+            pdf_url = p.get("pdf_url")
 
-            sim_score = p.get("similarity_score")              # REAL
-            fwci = p.get("fwci")                          # REAL
-            cit_norm_pct = p.get("citation_normalized_percentile")  # REAL
-            cited_count = p.get("cited_by_count")                # INTEGER
+            sim_score = _to_float(p.get("similarity_score"))
+            fwci = _to_float(p.get("fwci"))
+
+            # ---------- NEW: pull only the numeric percentile ----------
+            cit_norm_raw = p.get("citation_normalized_percentile")
+            cit_norm_pct = _to_float(cit_norm_raw["value"]) if isinstance(cit_norm_raw, dict) else None
+
+            cited_count = _to_int(p.get("cited_by_count"))
 
             counts_years = p.get("counts_by_year")
             if counts_years is not None:
-                counts_years = json.dumps(counts_years)           # → JSONB
+                counts_years = json.dumps(counts_years)          # -> JSONB text
 
             cur.execute(
                 SQL,
@@ -129,25 +147,21 @@ def insert_papers(papers_data_list):
             )
 
             if cur.rowcount:
-                inserted.append(
-                    {"title": p["title"],
-                     "abstract": abstract or "",
-                     "hash": p_hash}
+                inserted_details.append(
+                    {"title": p["title"], "abstract": abstract or "", "hash": p_hash}
                 )
 
         except psycopg2.Error as db_err:
-            print(f"[DB] error inserting {p.get('id', '?')}: {db_err.pgerror}")
-            conn.rollback()
-        except Exception as exc:
-            print(f"Unexpected error inserting {p.get('id', '?')}: {exc}")
+            print(f"[DB] error inserting {p.get('id')}: {db_err.diag.message_primary}")
             conn.rollback()
 
+    # --------------- finalise ------------------------
     conn.commit()
     cur.close()
     conn.close()
 
-    status = Status.SUCCESS if inserted else Status.FAILURE
-    return status, inserted
+    status_code = Status.SUCCESS if inserted_details else Status.FAILURE
+    return status_code, inserted_details
 
 
 def get_all_papers():
@@ -494,6 +508,21 @@ def list_tables_and_columns():
     finally:
         cur.close()
         conn.close()
+
+
+# HELPER functions
+def _to_float(val):
+    try:
+        return float(val) if val is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _to_int(val):
+    try:
+        return int(val) if val is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 if __name__ == '__main__':
