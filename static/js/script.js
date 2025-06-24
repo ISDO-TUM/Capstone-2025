@@ -341,5 +341,265 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- HOMEPAGE PROJECTS & SEARCH ---
+    const hardcodedProjects = [
+        // 30 example projects with name, description, tags, and creation date
+        {
+            name: "AI for Drug Discovery",
+            description: "Leveraging deep learning to accelerate the identification of novel drug candidates for rare diseases.",
+            tags: ["AI", "Drug Discovery", "Deep Learning", "Healthcare"],
+            date: "2024-01-15"
+        },
+        {
+            name: "Climate Change Impact Analysis",
+            description: "Analyzing satellite data to predict the long-term effects of climate change on coastal regions.",
+            tags: ["Climate", "Satellite", "Prediction", "Environment"],
+            date: "2024-02-02"
+        },
+        {
+            name: "Quantum Computing Algorithms",
+            description: "Developing new quantum algorithms for optimization problems in logistics.",
+            tags: ["Quantum", "Algorithms", "Optimization", "Logistics"],
+            date: "2024-01-28"
+        },
+        {
+            name: "Cancer Genomics",
+            description: "Integrating multi-omics data to identify biomarkers for early cancer detection.",
+            tags: ["Genomics", "Cancer", "Biomarkers", "Multi-omics"],
+            date: "2024-03-10"
+        },
+        {
+            name: "Renewable Energy Forecasting",
+            description: "Machine learning models for predicting solar and wind energy production.",
+            tags: ["Renewable", "Energy", "Forecasting", "Machine Learning"],
+            date: "2024-02-18"
+        },
+        {
+            name: "Social Network Analysis",
+            description: "Studying the spread of information and influence in online social networks.",
+            tags: ["Social Network", "Influence", "Information Spread", "Data Science"],
+            date: "2024-01-22"
+        },
+        {
+            name: "Autonomous Vehicles Safety",
+            description: "Evaluating safety protocols and AI decision-making in self-driving cars.",
+            tags: ["Autonomous", "Vehicles", "Safety", "AI"],
+            date: "2024-03-01"
+        },
+        {
+            name: "Brain-Computer Interfaces",
+            description: "Exploring non-invasive methods for direct communication between brain and computer systems.",
+            tags: ["Brain", "BCI", "Neuroscience", "Interfaces"],
+            date: "2024-02-25"
+        },
+        {
+            name: "Smart Agriculture",
+            description: "IoT and AI for precision farming and crop yield optimization.",
+            tags: ["Agriculture", "IoT", "AI", "Precision Farming"],
+            date: "2024-01-30"
+        },
+        {
+            name: "Natural Language Understanding",
+            description: "Advancing NLP models for better comprehension of scientific literature.",
+            tags: ["NLP", "Language", "AI", "Literature"],
+            date: "2024-02-12"
+        },
+        {
+            name: "Materials Discovery",
+            description: "AI-driven search for new materials with unique electronic properties.",
+            tags: ["Materials", "AI", "Discovery", "Electronics"],
+            date: "2024-03-05"
+        },
+        {
+            name: "Urban Mobility Planning",
+            description: "Simulation and optimization of public transport systems in megacities.",
+            tags: ["Urban", "Mobility", "Transport", "Simulation"],
+            date: "2024-01-18"
+        },
+        {
+            name: "Protein Structure Prediction",
+            description: "Deep learning for accurate prediction of protein folding and structure.",
+            tags: ["Protein", "Structure", "Deep Learning", "Biology"],
+            date: "2024-02-20"
+        },
+        {
+            name: "Digital Humanities",
+            description: "Text mining and visualization for historical document analysis.",
+            tags: ["Humanities", "Text Mining", "Visualization", "History"],
+            date: "2024-03-08"
+        },
+        {
+            name: "Robotics in Surgery",
+            description: "Evaluating the precision and outcomes of robot-assisted surgical procedures.",
+            tags: ["Robotics", "Surgery", "Precision", "Healthcare"],
+            date: "2024-01-25"
+        },
+        {
+            name: "Wildlife Conservation AI",
+            description: "Using AI to monitor endangered species and prevent poaching.",
+            tags: ["Wildlife", "Conservation", "AI", "Monitoring"],
+            date: "2024-02-28"
+        },
+        {
+            name: "Blockchain for Science",
+            description: "Decentralized data sharing and reproducibility in scientific research.",
+            tags: ["Blockchain", "Reproducibility", "Data Sharing", "Science"],
+            date: "2024-03-12"
+        },
+        {
+            name: "Personalized Medicine",
+            description: "Genetic and lifestyle data for tailored healthcare solutions.",
+            tags: ["Personalized", "Medicine", "Genetics", "Healthcare"],
+            date: "2024-01-27"
+        },
+        {
+            name: "Astrophysics Simulations",
+            description: "High-performance computing for simulating galaxy formation.",
+            tags: ["Astrophysics", "Simulation", "Galaxy", "HPC"],
+            date: "2024-02-15"
+        },
+        {
+            name: "Emotion Recognition",
+            description: "AI models for detecting emotions in speech and facial expressions.",
+            tags: ["Emotion", "Recognition", "AI", "Speech"],
+            date: "2024-03-03"
+        },
+        {
+            name: "Smart Grids",
+            description: "Optimizing energy distribution using real-time data and AI.",
+            tags: ["Smart Grid", "Energy", "AI", "Optimization"],
+            date: "2024-01-19"
+        },
+        {
+            name: "Microbiome Analysis",
+            description: "Studying the human microbiome's role in health and disease.",
+            tags: ["Microbiome", "Health", "Disease", "Biology"],
+            date: "2024-02-22"
+        },
+        {
+            name: "Edge Computing for IoT",
+            description: "Low-latency data processing at the edge for IoT devices.",
+            tags: ["Edge", "IoT", "Computing", "Data"],
+            date: "2024-03-07"
+        },
+        {
+            name: "Virtual Reality in Education",
+            description: "Immersive VR experiences for interactive science learning.",
+            tags: ["VR", "Education", "Immersive", "Science"],
+            date: "2024-01-23"
+        },
+        {
+            name: "Gene Editing Ethics",
+            description: "Exploring the ethical implications of CRISPR and gene editing.",
+            tags: ["Gene Editing", "Ethics", "CRISPR", "Biotech"],
+            date: "2024-02-27"
+        },
+        {
+            name: "Financial Market Prediction",
+            description: "AI and statistical models for stock and crypto market forecasting.",
+            tags: ["Finance", "Prediction", "AI", "Markets"],
+            date: "2024-03-11"
+        },
+        {
+            name: "Speech Synthesis",
+            description: "Neural networks for natural-sounding text-to-speech systems.",
+            tags: ["Speech", "Synthesis", "Neural Networks", "Audio"],
+            date: "2024-01-29"
+        },
+        {
+            name: "Food Security Monitoring",
+            description: "Remote sensing and AI for global food supply chain monitoring.",
+            tags: ["Food", "Security", "Remote Sensing", "AI"],
+            date: "2024-02-24"
+        },
+        {
+            name: "Exoplanet Detection",
+            description: "Machine learning for identifying exoplanets in telescope data.",
+            tags: ["Exoplanet", "Detection", "Machine Learning", "Astronomy"],
+            date: "2024-03-09"
+        },
+        {
+            name: "Digital Twin Manufacturing",
+            description: "Simulating and optimizing manufacturing processes with digital twins.",
+            tags: ["Digital Twin", "Manufacturing", "Simulation", "Optimization"],
+            date: "2024-01-31"
+        },
+        {
+            name: "Mental Health Chatbots",
+            description: "Conversational AI for mental health support and early intervention.",
+            tags: ["Mental Health", "Chatbot", "AI", "Support"],
+            date: "2024-02-26"
+        }
+    ];
+
+    function renderProjects(projects) {
+        const projectsList = document.getElementById('projectsList');
+        if (!projectsList) return;
+        projectsList.innerHTML = '';
+        projects.forEach((project, idx) => {
+            const card = document.createElement('div');
+            card.className = 'project-card';
+            card.style.animationDelay = `${idx * 0.04 + 0.1}s`;
+            card.innerHTML = `
+                <div class="project-title">${project.name}</div>
+                <div class="project-description">${project.description}</div>
+                <div class="project-tags">
+                    ${project.tags.map(tag => `<span class="project-tag">${tag}</span>`).join(' ')}
+                </div>
+                <div class="project-date">Created: ${project.date}</div>
+            `;
+            // Optionally, add click event for future navigation or toast
+            card.addEventListener('click', () => {
+                // For now, just a simple animation or toast
+                card.classList.add('card-clicked');
+                setTimeout(() => card.classList.remove('card-clicked'), 400);
+            });
+            projectsList.appendChild(card);
+        });
+        animateCardsOnScroll();
+    }
+
+    function filterProjectsBySearch(projects, searchValue) {
+        const val = searchValue.trim().toLowerCase();
+        if (!val) return projects;
+        return projects.filter(p =>
+            p.name.toLowerCase().includes(val) ||
+            p.description.toLowerCase().includes(val) ||
+            p.tags.some(tag => tag.toLowerCase().includes(val))
+        );
+    }
+
+    function animateCardsOnScroll() {
+        const cards = document.querySelectorAll('.project-card');
+        const observer = new window.IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = 1;
+                    entry.target.style.transform = 'translateY(0) scale(1)';
+                }
+            });
+        }, { threshold: 0.12 });
+        cards.forEach(card => {
+            card.style.opacity = 0;
+            card.style.transform = 'translateY(40px) scale(0.98)';
+            observer.observe(card);
+        });
+    }
+
+    // On DOMContentLoaded, render projects and set up search
+    if (window.location.pathname === '/') {
+        renderProjects(hardcodedProjects);
+        const searchInput = document.getElementById('projectSearchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const filtered = filterProjectsBySearch(hardcodedProjects, e.target.value);
+                renderProjects(filtered);
+            });
+        }
+        // Animate cards on scroll (again, in case of resize/search)
+        window.addEventListener('resize', animateCardsOnScroll);
+        window.addEventListener('scroll', animateCardsOnScroll);
+    }
+
     handleRouting();
 });
