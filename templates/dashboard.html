@@ -3,13 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>Capstone 2025</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div class="container dashboard">
-        <button id="createProjectBtn" class="btn btn-primary">Create Project</button>
-    </div>
+    <header class="main-header">
+        <div class="logo-title">
+            <span class="logo-svg">
+                <!-- Simple SVG logo placeholder -->
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="20" cy="20" r="20" fill="#007bff"/>
+                  <text x="50%" y="55%" text-anchor="middle" fill="#fff" font-size="18" font-family="Segoe UI, Arial" dy=".3em">C</text>
+                </svg>
+            </span>
+            <h1>Capstone 2025</h1>
+        </div>
+        <button id="createProjectBtn" class="btn btn-primary create-project-cta">Create Project</button>
+    </header>
+    <main class="main-content">
+        <div class="search-bar-wrapper">
+            <input type="text" id="projectSearchInput" class="search-bar" placeholder="Search by tag or keyword...">
+        </div>
+        <div id="projectsList" class="projects-list">
+            <!-- Project cards will be rendered here by JS -->
+        </div>
+    </main>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>
