@@ -15,7 +15,9 @@ CREATE TABLE IF NOT EXISTS public.projects_table (
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     email TEXT,
-    queries TEXT
+    queries TEXT,
+    tags TEXT[],
+    description_emb FLOAT8[]
 );
 
 CREATE TABLE IF NOT EXISTS public.paperprojects_table (
