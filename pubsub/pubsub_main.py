@@ -118,11 +118,16 @@ def update_newsletter_papers(project_id: str):
 
     print(potential_newsletter_papers)
 
-    recommendation_hashes_str = calL_temp_agent(str(potential_newsletter_papers), project_prompt, str(k)).content
-    recommendation_hashes = ast.literal_eval(recommendation_hashes_str)
+    agent_response = ast.literal_eval(calL_temp_agent(str(potential_newsletter_papers), project_prompt, str(k)).content)
+    recommendation_hashes = []
+    summaries = []
+    for paper in agent_response:
+        print(paper)
+        recommendation_hashes.append(paper['paper_hash'])
+        summaries.append(paper['summary'])
     # Store new newsletter papers
     reset_newsletter_tags()
-    set_newsletter_tags_for_project(project_id, paper_hashes=recommendation_hashes)
+    set_newsletter_tags_for_project(project_id, paper_hashes=recommendation_hashes, summaries=summaries)
     # Determine different papers between old newsletter papers and new newsletter papers
     # Send difference per mail
 
@@ -181,4 +186,4 @@ def _remove_duplicate_dicts(dict_list):
 
 
 if __name__ == '__main__':
-    update_newsletter_papers("e10064c7-b160-4e91-8af6-09c6ed9273b3")
+    update_newsletter_papers("3d564ede-a9e1-4311-8140-9d833531fada")

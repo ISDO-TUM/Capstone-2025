@@ -45,17 +45,22 @@ def get_papers_for_project(project_id: str):
     return results
 
 
-def set_newsletter_tags_for_project(project_id: str, paper_hashes: list):
+def set_newsletter_tags_for_project(project_id: str, paper_hashes: list, summaries: list):
     connection = connect_to_db()
     cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    # Prepare data: List of tuples (project_id, paper_hash, newsletter, seen)
+    values = [(project_id, paper_hash, summary, True, False) for (paper_hash, summary) in zip(paper_hashes, summaries)]
+
     query = """
-            UPDATE your_table_name
-            SET newsletter = FALSE,
-                seen       = FALSE
-            WHERE (project_id, paper_hash) IN %s
+            INSERT INTO paperprojects_table (project_id, paper_hash, summary, newsletter, seen)
+            VALUES %s ON CONFLICT (project_id, paper_hash)
+            DO \
+            UPDATE SET
+                newsletter = EXCLUDED.newsletter, \
+                seen = EXCLUDED.seen; \
             """
-    targets = [(project_id, paper_hash) for paper_hash in paper_hashes]
-    cursor.execute(query, targets)
+
+    psycopg2.extras.execute_values(cursor, query, values)
 
     connection.commit()
     cursor.close()
@@ -66,7 +71,7 @@ def reset_newsletter_tags():
     connection = connect_to_db()
     cursor = connection.cursor()
     cursor.execute("""
-    UPDATE your_table_name
+    UPDATE paperprojects_table
     SET newsletter = FALSE,
         seen = FALSE;
     """)
