@@ -14,8 +14,8 @@ body {
     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.10);
     padding: 48px 44px 36px 44px;
     margin: 48px auto;
-    max-width: 520px;
-    width: 95vw;
+    max-width: 90vw;
+    width: 90vw;
     backdrop-filter: blur(18px) saturate(1.2);
     -webkit-backdrop-filter: blur(18px) saturate(1.2);
     border: 1.5px solid rgba(255,255,255,0.35);
@@ -24,6 +24,9 @@ body {
     align-items: center;
 }
 
+.container > * {
+    width: 95%;
+}
 .container h1 {
     font-size: 2rem;
     font-weight: 700;
