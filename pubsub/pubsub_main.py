@@ -1,3 +1,4 @@
+import os
 import json
 import logging
 from datetime import datetime, timedelta
@@ -24,14 +25,20 @@ class PaperData(TypedDict):
 
 
 class ChromaVectorDB:
-    def __init__(self, collection_name: str = "research-papers", outside_docker=False) -> None:
-        # UNCOMMENT THIS FOR LOCAL TESTING ONLY;
-        if outside_docker:
-            self.client = chromadb.HttpClient(host="localhost", port=8000)
-        # THIS SHOULD BE USED IN PRODUCTION
-        else:
-            self.client = chromadb.HttpClient(host="chromadb", port=8000)
+    def __init__(self, collection_name: str = "research-papers") -> None:
+        # Read Chroma host from ENV variables 
+        CHROMA_HOST = os.environ.get("CHROMA_HOST", "chromadb")
+        CHROMA_PORT = int(os.environ.get("CHROMA_PORT", 8000))
+        self.client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
         self.collection: Collection = self.client.get_or_create_collection(collection_name)
+    #def __init__(self, collection_name: str = "research-papers", outside_docker=False) -> None:
+        # UNCOMMENT THIS FOR LOCAL TESTING ONLY;
+        #if outside_docker:
+            #self.client = chromadb.HttpClient(host="localhost", port=8000)
+        # THIS SHOULD BE USED IN PRODUCTION
+        #else:
+            #self.client = chromadb.HttpClient(host="chromadb", port=8000)
+        #self.collection: Collection = self.client.get_or_create_collection(collection_name)
 
     def store_embeddings(self, data: List[PaperData]) -> int:
         """
@@ -61,7 +68,7 @@ class ChromaVectorDB:
         return Status.FAILURE if any_failure else Status.SUCCESS
 
 
-chroma_db = ChromaVectorDB(outside_docker=True)
+chroma_db = ChromaVectorDB()#outside_docker=True)
 
 
 def start_pubsub():
@@ -186,4 +193,4 @@ def _remove_duplicate_dicts(dict_list):
 
 
 if __name__ == '__main__':
-    update_newsletter_papers("3d564ede-a9e1-4311-8140-9d833531fada")
+    update_newsletter_papers("babbab43-0323-423e-ba29-f74ec07e2d57")

@@ -1,12 +1,52 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const handleRouting = () => {
+// ←← PUBSUB UI HELPERS: Definitions first ←←
+function renderPubSubSection() {
+}
+
+function setupPubSubForm() {
+}
+
+function renderPubSubPapers(papers, container) {
+}
+
+function setupPDFUpload() {
+}
+
+//document.addEventListener('DOMContentLoaded', () => {
+    //Invoke form only one time
+    //setupPubSubForm();
+    // 1) Use async to use await inside
+    async function handleRouting () {
         const path = window.location.pathname;
 
         if (path === '/create-project') {
            setupPDFUpload();
         } else if (path.startsWith('/project/')) {
             const projectId = path.split('/').pop();
+
+            const projectRes = await fetch(`/api/project/${projectId}`);
+            if (projectRes.ok) {
+              const projectData = await projectRes.json();
+              console.log('Project data:', projectData);
+
+            } else {
+                console.error('Couldnt load project data');
+            }
+
+            // ‹‹ PUBSUB – STEP 1: update backend
+            await fetch('/api/pubsub/update_newsletter_papers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ projectId })
+            })
+            // ‹‹ PUBSUB – STEP 2: load and render real papers
+            const container = document.getElementById('pubsubPapersContainer');
+            renderPubSubSection();    // clean or show placeholder
+            const papers = await fetch(`/api/pubsub/get_newsletter_papers?projectId=${projectId}`)
+                                    .then(r => r.json());
+            renderPubSubPapers(papers, container);
+
             loadProjectOverviewData(projectId);
+
         } else if (path === '/') {
             const createProjectBtn = document.getElementById('createProjectBtn');
             if (createProjectBtn) {
@@ -320,9 +360,9 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleButton.classList.toggle('expanded', !isCollapsed);
             fadeOverlay.classList.toggle('visible', isCollapsed);
             controls.classList.add('visible');
-            
+
             expandText.textContent = isCollapsed ? 'Show full description' : 'Hide full description';
-            
+
             toggleButton.addEventListener('click', () => {
                 const currentlyCollapsed = descriptionDisplay.classList.contains('collapsed');
 
@@ -330,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 descriptionDisplay.classList.toggle('expanded', currentlyCollapsed);
                 toggleButton.classList.toggle('expanded', currentlyCollapsed);
                 fadeOverlay.classList.toggle('visible', !currentlyCollapsed);
-                
+
                 expandText.textContent = !currentlyCollapsed ? 'Show full description' : 'Hide full description';
             });
         } else {
@@ -340,6 +380,8 @@ document.addEventListener('DOMContentLoaded', () => {
             controls.classList.remove('visible');
         }
     }
+    document.addEventListener('DOMContentLoaded', () => {
+    setupPubSubForm();
 
     // --- HOMEPAGE PROJECTS & SEARCH ---
     async function loadProjectsFromAPI() {
