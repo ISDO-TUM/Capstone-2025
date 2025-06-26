@@ -181,12 +181,12 @@ def api_get_project(project_id):
         # etc
     })
 
-@app.route('/api/project/<project_id>')
-def api_get_project(project_id):
-    proj = get_project_by_id(project_id)
-    if not proj:
-        return jsonify({"error": "Project not found"}), 404
-    return jsonify(proj), 200
+#@app.route('/api/project/<project_id>')
+#def api_get_project(project_id):
+    #proj = get_project_by_id(project_id)
+    #if not proj:
+        #return jsonify({"error": "Project not found"}), 404
+    #return jsonify(proj), 200
 
 if __name__ == '__main__':
 

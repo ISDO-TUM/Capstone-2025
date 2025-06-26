@@ -1,11 +1,77 @@
+// ←← MOCK DATA PARA DEMO PUBSUB
+const dummyPubSubPapers = [
+    {
+        title: "Learner Motivation and Language Attitudes: A Meta-Analysis",
+        description: "A review of studies exploring the relationship between student motivation and their attitudes toward learning English in EFL contexts worldwide.",
+        link: "https://arxiv.org/abs/2101.06547"
+    },
+    {
+        title: "Classroom Environment and English Language Learning Attitudes",
+        description: "Examines how the physical and social design of the classroom influences students’ attitudes toward English as a foreign language in secondary schools across Asia and Europe.",
+        link: "https://arxiv.org/abs/2009.05235"
+    },
+    {
+        title: "Peer Influence on EFL Learner Attitudes: A Longitudinal Study",
+        description: "A longitudinal study analyzing how peer interactions affect students’ perceptions and interest in learning English at Latin American high schools.",
+        link: "https://arxiv.org/abs/1905.12345"
+    },
+    {
+        title: "Impact of Teaching Materials on EFL Student Motivation",
+        description: "Investigates the effect of different types of teaching materials (videos, authentic texts, interactive activities) on the motivation and attitude of EFL students in European institutes.",
+        link: "https://arxiv.org/abs/2203.08765"
+    },
+    {
+        title: "Technology Integration and EFL Learner Engagement",
+        description: "Analyzes how technological tools (online platforms, mobile apps) enhance students’ attitudes and engagement with English as a foreign language in secondary education settings.",
+        link: "https://arxiv.org/abs/2304.01234"
+    }
+];
+
+  
+
 // ←← PUBSUB UI HELPERS: Definitions first ←←
 function renderPubSubSection() {
+    document.getElementById('pubsubPapersContainer').innerHTML = '';
 }
   
 function setupPubSubForm() {
+    const form = document.getElementById('pubsubSubscribeForm');
+    if (!form) return;        // if there is no #pubsubSubscribeForm, exit
+    const emailInput = document.getElementById('pubsubEmail');
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      alert(`Thanks for subscribing, ${emailInput.value}!`);
+      emailInput.value = '';
+    });
 }
   
 function renderPubSubPapers(papers, container) {
+    container.innerHTML = '';
+    papers.forEach(paper => {
+      // 1) crear el div de la card
+      const card = document.createElement('div');
+      card.classList.add('recommendation-card');
+  
+      // 2) crear y llenar el h4 del título
+      const titleEl = document.createElement('h4');
+      titleEl.textContent = paper.title;
+  
+      // 3) crear el enlace
+      const linkEl = document.createElement('a');
+      linkEl.href = paper.link;
+      linkEl.textContent = "Read Paper";
+      linkEl.target = "_blank";
+  
+      // 4) crear el párrafo de descripción
+      const descriptionEl = document.createElement('p');
+      descriptionEl.textContent = paper.description;
+  
+      // 5) ensamblar todo en la card
+      card.appendChild(titleEl);
+      card.appendChild(linkEl);
+      card.appendChild(descriptionEl);
+      container.appendChild(card);
+    });
 }
 
 function setupPDFUpload() {
@@ -23,27 +89,33 @@ function setupPDFUpload() {
         } else if (path.startsWith('/project/')) {
             const projectId = path.split('/').pop();
 
-            const projectRes = await fetch(`/api/project/${projectId}`);
-            if (projectRes.ok) {
-              const projectData = await projectRes.json();
-              console.log('Project data:', projectData);
+            // ——— DEMO MOCK: show dummyPubSubPapers always ———
+            const container = document.getElementById('pubsubPapersContainer');
+            renderPubSubSection();               // 
+            renderPubSubPapers(dummyPubSubPapers, container);
+            setupPubSubForm();                   //
+
+            //const projectRes = await fetch(`/api/project/${projectId}`);
+            //if (projectRes.ok) {
+            //  const projectData = await projectRes.json();
+            //  console.log('Project data:', projectData);
             
-            } else {
-                console.error('Couldnt load project data');
-            }
+            //} else {
+            //    console.error('Couldnt load project data');
+            //}
 
             // ‹‹ PUBSUB – STEP 1: update backend 
-            await fetch('/api/pubsub/update_newsletter_papers', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ projectId })
-            })
+            //await fetch('/api/pubsub/update_newsletter_papers', {
+            //    method: 'POST',
+            //    headers: { 'Content-Type': 'application/json' },
+            //    body: JSON.stringify({ projectId })
+            //})
             // ‹‹ PUBSUB – STEP 2: load and render real papers 
-            const container = document.getElementById('pubsubPapersContainer');
-            renderPubSubSection();    // clean or show placeholder
-            const papers = await fetch(`/api/pubsub/get_newsletter_papers?projectId=${projectId}`)
-                                    .then(r => r.json());
-            renderPubSubPapers(papers, container);
+            //const container = document.getElementById('pubsubPapersContainer');
+            //renderPubSubSection();    // clean or show placeholder
+            //const papers = await fetch(`/api/pubsub/get_newsletter_papers?projectId=${projectId}`)
+                                    //.then(r => r.json());
+            //renderPubSubPapers(papers, container);
             
             loadProjectOverviewData(projectId);
 

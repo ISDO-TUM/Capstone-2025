@@ -21,11 +21,12 @@ class PaperData(TypedDict):
 
 class ChromaVectorDB:
     def __init__(self, collection_name: str = "research-papers") -> None:
-        # LEEMOS EL HOST DE CHROMA DE LAS ENV VARS
         CHROMA_HOST = os.environ.get("CHROMA_HOST", "chromadb")
         CHROMA_PORT = int(os.environ.get("CHROMA_PORT", 8000))
         self.client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
         self.collection: Collection = self.client.get_or_create_collection(collection_name)
+
+        #At some time we have to remove all these below about outside docker
     #def __init__(self, collection_name: str = "research-papers", outside_docker=False) -> None:
         # UNCOMMENT THIS FOR LOCAL TESTING ONLY;
         #if outside_docker:
