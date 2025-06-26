@@ -1,4 +1,5 @@
 import uuid
+import psycopg2.extras
 from database.database_connection import connect_to_db
 
 
@@ -43,7 +44,8 @@ def add_queries_to_project_db(queries: list[str], project_id: str):
 
 
 def get_queries_for_project(project_id: str):
-    conn = connect_to_db(outside_chroma=True)
+    #conn = connect_to_db(outside_chroma=True)
+    conn = connect_to_db()
     cursor = conn.cursor()
 
     cursor.execute(""" SELECT queries FROM projects_table WHERE project_id = %s""", (project_id,))
@@ -53,7 +55,8 @@ def get_queries_for_project(project_id: str):
 
 
 def get_project_prompt(project_id: str):
-    conn = connect_to_db(outside_chroma=True)
+    conn = connect_to_db()
+    #conn = connect_to_db(outside_chroma=True)
     cursor = conn.cursor()
 
     cursor.execute(""" SELECT description
@@ -84,3 +87,20 @@ def _uuid_exists(project_id: str, cursor) -> bool:
     result = cursor.fetchone()
 
     return result is not None
+
+def get_project_by_id(project_id: str):
+    """
+    Returns a dict with all fields from row projects_table
+    or None if it does not exist.
+    """
+    conn = connect_to_db()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor.execute("""
+        SELECT project_id, title, description, email, queries
+          FROM projects_table
+         WHERE project_id = %s
+    """, (project_id,))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return dict(row) if row else None

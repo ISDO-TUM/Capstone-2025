@@ -12,6 +12,11 @@ from database.projects_database_handler import add_new_project_to_db
 from llm.Agent import trigger_agent_show_thoughts
 import PyPDF2
 
+from pubsub.pubsub_main import update_newsletter_papers
+from database.projectpaper_database_handler import get_pubsub_papers_for_project
+from database.projects_database_handler import get_project_by_id
+
+
 logger = logging.getLogger(__name__)
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
@@ -130,6 +135,58 @@ def extract_pdf_text():
         logger.error(f"Error extracting PDF text: {e}")
         return jsonify({"error": f"Failed to process PDF: {str(e)}"}), 500
 
+@app.route('/api/pubsub/update_newsletter_papers', methods=['POST'])
+def api_update_newsletter():
+    payload = request.get_json() or {}
+    project_id = payload.get('projectId')
+    if not project_id:
+        return jsonify({"error": "Missing projectId"}), 400
+    
+    try:
+        update_newsletter_papers(project_id)
+        return jsonify({'status': 'ok'}), 200
+    except Exception as e:
+        logger.exception("Error to update newsletters")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/pubsub/get_newsletter_papers', methods=['GET'])
+def api_get_newsletter():
+    project_id = request.args.get('projectId')
+    if not project_id:
+        return jsonify({"error": "Missing projectId"}), 400
+
+    rows = get_pubsub_papers_for_project(project_id)  # [(hash, summary), …]
+    papers = []
+    for paper_hash, summary in rows:
+        paper = get_paper_by_hash(paper_hash)
+        papers.append({
+            "title":       paper.get("title", "Untitled"),
+            "link":        paper.get("landing_page_url", "#"),
+            "description": summary
+        })
+    return jsonify(papers), 200
+
+from database.projects_database_handler import get_project_by_id  # tendrás que implementarlo
+
+@app.route('/api/project/<project_id>')
+def api_get_project(project_id):
+    proj = get_project_by_id(project_id)
+    if not proj:
+        return jsonify({"error": "Project not found"}), 404
+    return jsonify({
+        "projectId": proj["project_id"],
+        "title": proj["title"],
+        "description": proj["description"],
+        # etc
+    })
+
+@app.route('/api/project/<project_id>')
+def api_get_project(project_id):
+    proj = get_project_by_id(project_id)
+    if not proj:
+        return jsonify({"error": "Project not found"}), 404
+    return jsonify(proj), 200
 
 if __name__ == '__main__':
 

@@ -2,6 +2,8 @@
 import psycopg2
 import psycopg2.extras
 from database.database_connection import connect_to_db
+from database.papers_database_handler import get_paper_by_hash
+
 
 
 def assign_paper_to_project(paper_hash: str, project_id: str, summary: str, newsletter: bool = False, seen: bool = False):

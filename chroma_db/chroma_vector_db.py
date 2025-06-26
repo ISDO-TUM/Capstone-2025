@@ -1,3 +1,4 @@
+import os
 import logging
 from typing import List, Optional, TypedDict
 
@@ -19,14 +20,20 @@ class PaperData(TypedDict):
 
 
 class ChromaVectorDB:
-    def __init__(self, collection_name: str = "research-papers", outside_docker=False) -> None:
-        # UNCOMMENT THIS FOR LOCAL TESTING ONLY;
-        if outside_docker:
-            self.client = chromadb.HttpClient(host="localhost", port=8000)
-        # THIS SHOULD BE USED IN PRODUCTION
-        else:
-            self.client = chromadb.HttpClient(host="chromadb", port=8000)
+    def __init__(self, collection_name: str = "research-papers") -> None:
+        # LEEMOS EL HOST DE CHROMA DE LAS ENV VARS
+        CHROMA_HOST = os.environ.get("CHROMA_HOST", "chromadb")
+        CHROMA_PORT = int(os.environ.get("CHROMA_PORT", 8000))
+        self.client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
         self.collection: Collection = self.client.get_or_create_collection(collection_name)
+    #def __init__(self, collection_name: str = "research-papers", outside_docker=False) -> None:
+        # UNCOMMENT THIS FOR LOCAL TESTING ONLY;
+        #if outside_docker:
+            #self.client = chromadb.HttpClient(host="localhost", port=8000)
+        # THIS SHOULD BE USED IN PRODUCTION
+        #else:
+            #self.client = chromadb.HttpClient(host="chromadb", port=8000)
+        #self.collection: Collection = self.client.get_or_create_collection(collection_name)
 
     def store_embeddings(self, data: List[PaperData]) -> int:
         """
