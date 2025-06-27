@@ -108,6 +108,8 @@ You have access to the following tools:
 
 9. filter_by_user_defined_metrics — If the user specifies numeric or metadata constraints
    (e.g. date > 2022, citations ≥ 50, similarity_score > 0.8, specific authors, journal names, etc.),
+   **You MUST supply BOTH arguments: (papers=…, criteria_nl=…).
+    If you omit either, validation will fail.**
    **call this tool exactly once** and pass:
         filter_by_user_defined_metrics(
             papers      = <the received list of retrieved papers from upstream>,

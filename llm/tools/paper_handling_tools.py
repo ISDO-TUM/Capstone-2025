@@ -11,7 +11,7 @@ from utils.status import Status
 from llm.Embeddings import embed_papers
 from paper_handling.database_handler import insert_papers
 from paper_handling.paper_handler import fetch_works_multiple_queries
-from llm.util.agent_custom_filter import _matches, _OPS
+from llm.util.agent_custom_filter import _matches, _OPERATORS
 
 logger = logging.getLogger(__name__)
 
@@ -595,7 +595,7 @@ def filter_by_user_defined_metrics(
                 {"status": "error",
                  "message": f"Unknown metric '{filter_field}' in filter_spec"}
             )
-        if rule["op"] not in _OPS:
+        if rule["op"] not in _OPERATORS:
             return json.dumps(
                 {"status": "error",
                  "message": f"Unsupported operator '{rule['op']}'"}
