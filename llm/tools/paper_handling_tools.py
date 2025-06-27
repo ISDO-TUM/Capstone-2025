@@ -360,7 +360,7 @@ def narrow_query(query_description: str, keywords: list[str]) -> str:
     Parameters
     ----------
     query_description : str
-        Short natural-language summary of what the user is looking for.
+        The user prompt string written in natural language
     keywords : list[str]
         Current (possibly too generic) keyword list.
 
@@ -389,7 +389,9 @@ def narrow_query(query_description: str, keywords: list[str]) -> str:
     papers from OpenAlex.
 
     – Keep the core topic absolutely intact.
-    – Drop generic terms (e.g. "science", "analysis").
+    – Drop purely generic filler terms (e.g. "science", stand-alone "analysis")
+  **unless the term is clearly domain-defining** (e.g. “Data Science”,
+  “spectral analysis”, “metabolite analysis”).
     – Prefer specific subfields, methods, data types, time periods, organisms, etc.
     – Do **NOT** add unrelated adjacent ideas.
     – Remove duplicates.
@@ -508,7 +510,7 @@ def filter_by_user_defined_metrics(
     Filter a list of OpenAlex paper dicts.
 
     Accepts either:
-        • filter_spec : structured JSON rules  (preferred in production)
+        • filter_spec : structured JSON rules  (used for direct method testing)
         • criteria_nl : natural language rules (converted via LLM)
 
     Returns JSON with status, applied filters, kept_count, filtered_papers.
@@ -587,11 +589,11 @@ def filter_by_user_defined_metrics(
         "citation_normalized_percentile", "cited_by_count",
         "counts_by_year", "similarity_score",
     }
-    for k, rule in filter_spec.items():
-        if k not in allowed_fields:
+    for filter_field, rule in filter_spec.items():
+        if filter_field not in allowed_fields:
             return json.dumps(
                 {"status": "error",
-                 "message": f"Unknown metric '{k}' in filter_spec"}
+                 "message": f"Unknown metric '{filter_field}' in filter_spec"}
             )
         if rule["op"] not in _OPS:
             return json.dumps(
@@ -602,12 +604,12 @@ def filter_by_user_defined_metrics(
     # ----------------------------------------------------------------
     # 3) Apply filters
     # ----------------------------------------------------------------
-    kept: list[dict] = []
+    kept_papers: list[dict] = []
     for paper in papers:
         try:
             if all(_matches(paper.get(metric), rule["op"], rule["value"])
                    for metric, rule in filter_spec.items()):
-                kept.append(paper)
+                kept_papers.append(paper)
         except Exception as exc:
             logger.debug("Skip paper due to comparison error: %s", exc)
 
@@ -615,8 +617,8 @@ def filter_by_user_defined_metrics(
         {
             "status": "success",
             "filters": filter_spec,
-            "kept_count": len(kept),
-            "filtered_papers": kept,
+            "kept_count": len(kept_papers),
+            "kept_papers": kept_papers,
             "reasoning": f"Applied {len(filter_spec)} metric filter(s)"
         }
     )

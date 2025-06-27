@@ -6,7 +6,7 @@ import re
 logger = logging.getLogger(__name__)
 
 
-_OPS = {
+_OPERATORS = {
     ">": operator.gt,
     ">=": operator.ge,
     "<": operator.lt,
@@ -29,6 +29,6 @@ def _coerce(val: Any):
 
 
 def _matches(field_val, op: str, target):
-    if op not in _OPS:
+    if op not in _OPERATORS:
         raise ValueError(f"Unsupported op '{op}'")
-    return _OPS[op](_coerce(field_val), _coerce(target))
+    return _OPERATORS[op](_coerce(field_val), _coerce(target))

@@ -110,7 +110,7 @@ You have access to the following tools:
    (e.g. date > 2022, citations ≥ 50, similarity_score > 0.8, specific authors, journal names, etc.),
    **call this tool exactly once** and pass:
         filter_by_user_defined_metrics(
-            papers      = ,
+            papers      = <the received list of retrieved papers from upstream>,
             criteria_nl = “<the user’s constraint sentence>”
         )
    – Valid fields: `authors`, `publication_date`, `fwci`, `citation_normalized_percentile`,
