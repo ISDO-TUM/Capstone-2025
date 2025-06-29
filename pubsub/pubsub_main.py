@@ -170,64 +170,6 @@ def update_newsletter_papers(project_id: str):
     set_newsletter_tags_for_project(project_id, paper_hashes=recommendation_hashes, summaries=summaries)
     logger.info(f"[update_newsletter_papers] DONE for project {project_id}")
 
-#def update_newsletter_papers(project_id: str):
-    #k = 3
-    # Get queries for project
-    #queries_str = get_queries_for_project(project_id)[0]
-    #queries = ast.literal_eval(queries_str)
-
-    # Get papers from last week
-    #papers, _ = fetch_works_multiple_queries(queries, from_publication_date="2020-01-01")
-
-    # Insert papers in postgres
-    #insert_papers(papers)
-
-    # Get the paper's hashes (we dont use the deduplication from insert_papers as the latest papers may already be in the table
-    # and would thus be ignored)
-    #papers_w_hash = []
-    #for paper in papers:
-    #    papers_w_hash.append(get_papers_by_original_id(paper['id'])[0])  # For now, we only use a single version of the paper
-    #papers_w_hash = _remove_duplicate_dicts(papers_w_hash)
-    # Insert papers in chroma
-    #_embed_and_store(papers_w_hash)
-
-    # Get project prompt
-    #project_prompt = get_project_prompt(project_id)[0]
-
-    # todo store project prompt embedding together with project
-    # Embed project prompt
-    #embedded_prompt = embed_user_profile(project_prompt)
-    # Perform similarity search between latest papers and user query, get top k
-    #sorted_sims = _sim_search(papers_w_hash, embedded_prompt)
-    #top_results = sorted_sims[:k]
-    # Get current papers with newsletter tag and unseen tag
-    #current_newsletter_papers = get_pubsub_papers_for_project(project_id)  # This is a list of lists btw
-    # Link hashes to actual papers
-    #potential_newsletter_papers = []
-    #for paper_hash in current_newsletter_papers:
-    #    paper = get_paper_by_hash(paper_hash[0])
-    #    potential_newsletter_papers.append(paper)
-    #for result in top_results:
-    #    paper = get_paper_by_hash(result[0])
-    #   potential_newsletter_papers.append(paper)
-    # Make agent decide a subset of top k latest papers and current news, set subset as new newsletter papers
-
-    #print(potential_newsletter_papers)
-
-    #agent_response = ast.literal_eval(calL_temp_agent(str(potential_newsletter_papers), project_prompt, str(k)).content)
-    #recommendation_hashes = []
-    #summaries = []
-    #for paper in agent_response:
-    #    print(paper)
-    #    recommendation_hashes.append(paper['paper_hash'])
-    #    summaries.append(paper['summary'])
-    # Store new newsletter papers
-    #reset_newsletter_tags()
-    #set_newsletter_tags_for_project(project_id, paper_hashes=recommendation_hashes, summaries=summaries)
-    # Determine different papers between old newsletter papers and new newsletter papers
-    # Send difference per mail
-
-
 def _embed_and_store(papers):
     embedded_papers = []
     for paper in papers:
