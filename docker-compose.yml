@@ -1,5 +1,5 @@
 # docker-compose.yml
-version: '3.8'
+#version: '3.8' #attribute version is obsolete, it will be ignored, remove it to avoid confusion
 
 services:
   db:
@@ -65,6 +65,7 @@ services:
       - FLASK_ENV=development
       - FLASK_DEBUG=1
       - CHROMA_HOST=chromadb
+      #- CRHOMA_PORT = 8000
     networks:
       - capstone_network
 

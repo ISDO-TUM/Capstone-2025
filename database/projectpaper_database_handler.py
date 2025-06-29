@@ -69,14 +69,27 @@ def set_newsletter_tags_for_project(project_id: str, paper_hashes: list, summari
     connection.close()
 
 
-def reset_newsletter_tags():
+#def reset_newsletter_tags():
+#    connection = connect_to_db()
+#    cursor = connection.cursor()
+#    cursor.execute("""
+#    UPDATE paperprojects_table
+#    SET newsletter = FALSE,
+#        seen = FALSE;
+#    """)
+#    connection.commit()
+#    cursor.close()
+#    connection.close()
+
+def reset_newsletter_tags(project_id: str):
     connection = connect_to_db()
     cursor = connection.cursor()
     cursor.execute("""
-    UPDATE paperprojects_table
-    SET newsletter = FALSE,
-        seen = FALSE;
-    """)
+        UPDATE paperprojects_table
+           SET newsletter = FALSE,
+               seen       = FALSE
+         WHERE project_id = %s;
+    """, (project_id,))
     connection.commit()
     cursor.close()
     connection.close()
@@ -84,12 +97,15 @@ def reset_newsletter_tags():
 
 def get_pubsub_papers_for_project(project_id: str):
     connection = connect_to_db()
-    cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor = connection.cursor() #(cursor_factory=psycopg2.extras.DictCursor)
     cursor.execute("""
-    SELECT paper_hash from paperprojects_table
+    SELECT paper_hash, summary
+        FROM paperprojects_table
         WHERE project_id = %s
         AND newsletter = TRUE
         AND seen = FALSE
                    """, (project_id,))
     papers = cursor.fetchall()
+    cursor.close()
+    connection.close()
     return papers

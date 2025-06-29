@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify, render_template, Response, stream_wit
 
 from database.papers_database_handler import get_paper_by_hash
 from database.projectpaper_database_handler import get_papers_for_project
-from database.projects_database_handler import add_new_project_to_db
+from database.projects_database_handler import get_project_by_id, add_new_project_to_db, get_queries_for_project
 from llm.Agent import trigger_agent_show_thoughts
 import PyPDF2
 
@@ -48,17 +48,30 @@ def create_project_page():
 def project_overview_page(project_id):
     return render_template('project_overview.html', project_id=project_id)
 
+@app.route('/api/projects', methods=['POST'])
+def api_create_project():
+    data = request.get_json() or {}
+    title = data.get('title')
+    desc  = data.get('description')
+    queries = data.get('queries', [])
+    if not title or not desc:
+        return jsonify({ "error": "Missing title or description" }), 400
+    queries_str = json.dumps(queries)
+    project_id = add_new_project_to_db(title, desc, queries_str)
+    return jsonify({ "projectId": project_id }), 201
 
 @app.route('/api/recommendations', methods=['POST'])
 def get_recommendations():
     data = request.get_json()
-    if not data or 'projectDescription' not in data:
-        return jsonify({"error": "Missing projectDescription"}), 400
+    project_id = data.get("projectId")
+    user_description = data.get("projectDescription")
+    if not project_id or not user_description:
+        return jsonify({"error": "Missing projectId or projectDescription"}), 400
 
     user_description = data['projectDescription']
 
     # Hardcoded until frontend is updated
-    project_id = add_new_project_to_db("DummyProject", user_description)
+    #project_id = add_new_project_to_db("DummyProject", user_description)
 
     def generate():
         try:
@@ -84,6 +97,9 @@ def get_recommendations():
                                 "description": rec.get("description", "Relevant based on user interest.")
                             })
                         print(final_recommendations)
+                        #updates table with project_id
+                        update_newsletter_papers(project_id)
+
                         yield f"data: {json.dumps({'recommendations': final_recommendations})}\n\n"
                     except json.JSONDecodeError:
                         print(f"Failed to parse LLM response: {llm_response_content}")
@@ -94,12 +110,11 @@ def get_recommendations():
                         error_payload = json.dumps({"error": f"A server error occurred: {e}"})
                         yield f"data: {error_payload}\n\n"
         except Exception as e:
-            print(f"An error occurred in /api/recommendations: {e}")
+            logger.exception("Unexpected error in /api/recommendations stream")
             error_payload = json.dumps({"error": f"An internal error occurred: {str(e)}"})
             yield f"data: {error_payload}\n\n"
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
-
 
 @app.route('/api/extract-pdf-text', methods=['POST'])
 def extract_pdf_text():
@@ -135,24 +150,43 @@ def extract_pdf_text():
         logger.error(f"Error extracting PDF text: {e}")
         return jsonify({"error": f"Failed to process PDF: {str(e)}"}), 500
 
+#Triggers server-side logic (update_newsletter_papers) to fetch new papers, run agent, and update newsletter/seen flags in database.
+#call this from front-end to “refresh” which papers should be marked for the newsletter.
 @app.route('/api/pubsub/update_newsletter_papers', methods=['POST'])
 def api_update_newsletter():
     payload = request.get_json() or {}
-    project_id = payload.get('projectId')
+    project_id = payload.get('projectId') 
     if not project_id:
         return jsonify({"error": "Missing projectId"}), 400
+    
+    #first read queries
+    queries = get_queries_for_project(project_id)
+    if not queries:
+        #no queries: return ok but without doing anything
+        return jsonify({'status': 'no-queries'}), 200
     
     try:
         update_newsletter_papers(project_id)
         return jsonify({'status': 'ok'}), 200
+    except ValueError as e:
+        msg = str(e)
+        #Chroma sends ValueError with this text when there are no IDs
+        if "Expected IDs to be a non-empty list" in msg:
+            #return 200 so frontend continues and reads get_newsletter_papers
+            return jsonify({'status': 'no-results'}), 200
+        #if there is another ValueError, we make it fall down
+        return jsonify({'error': msg}), 500
     except Exception as e:
+        #rest of exceptions
         logger.exception("Error to update newsletters")
         return jsonify({'error': str(e)}), 500
 
 
+#Returns current set of (paper_hash, summary) tuples that are both newsletter = TRUE and seen = FALSE for a given project.
+#JS then looks up the full paper details via get_paper_by_hash and renders them.
 @app.route('/api/pubsub/get_newsletter_papers', methods=['GET'])
 def api_get_newsletter():
-    project_id = request.args.get('projectId')
+    project_id = request.args.get('projectId') or request.args.get('project_id')
     if not project_id:
         return jsonify({"error": "Missing projectId"}), 400
 
@@ -167,8 +201,9 @@ def api_get_newsletter():
         })
     return jsonify(papers), 200
 
-from database.projects_database_handler import get_project_by_id  # tendrás que implementarlo
-
+#Gives front-end the project’s metadata (title, description, queries, email).
+#need this on page load to fill in the header (project title/description) 
+#and to know which project_id to pass into the other two endpoints.
 @app.route('/api/project/<project_id>')
 def api_get_project(project_id):
     proj = get_project_by_id(project_id)
@@ -178,15 +213,10 @@ def api_get_project(project_id):
         "projectId": proj["project_id"],
         "title": proj["title"],
         "description": proj["description"],
+        "queries": proj["queries"],
+        "email": proj["email"],
         # etc
-    })
-
-#@app.route('/api/project/<project_id>')
-#def api_get_project(project_id):
-    #proj = get_project_by_id(project_id)
-    #if not proj:
-        #return jsonify({"error": "Project not found"}), 404
-    #return jsonify(proj), 200
+    }), 200
 
 if __name__ == '__main__':
 
