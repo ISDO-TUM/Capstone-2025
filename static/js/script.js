@@ -30,13 +30,15 @@ const dummyPubSubPapers = [
 
 
 // ←← PUBSUB UI HELPERS: Definitions first ←←
+//renderPubSubSection clears out the <div id="pubsubPapersContainer">
 function renderPubSubSection() {
     document.getElementById('pubsubPapersContainer').innerHTML = '';
 }
-  
+
+//setupPubSubForm wires up Subscribe form.
 function setupPubSubForm() {
     const form = document.getElementById('pubsubSubscribeForm');
-    if (!form) return;        // if there is no #pubsubSubscribeForm, exit
+    if (!form) return;        // if there is no pubsubSubscribeForm, exit
     const emailInput = document.getElementById('pubsubEmail');
     form.addEventListener('submit', e => {
       e.preventDefault();
@@ -44,29 +46,29 @@ function setupPubSubForm() {
       emailInput.value = '';
     });
 }
-
+//renderPubSubPapers turns an array of paper objects into cards.
 function renderPubSubPapers(papers, container) {
     container.innerHTML = '';
     papers.forEach(paper => {
-      // 1) crear el div de la card
+      // 1) create card's div
       const card = document.createElement('div');
       card.classList.add('recommendation-card');
-
-      // 2) crear y llenar el h4 del título
+  
+      // 2) create and fill out h4 from title
       const titleEl = document.createElement('h4');
       titleEl.textContent = paper.title;
-
-      // 3) crear el enlace
+  
+      // 3) creates link
       const linkEl = document.createElement('a');
       linkEl.href = paper.link;
       linkEl.textContent = "Read Paper";
       linkEl.target = "_blank";
-
-      // 4) crear el párrafo de descripción
+  
+      // 4) creates paragraph for description
       const descriptionEl = document.createElement('p');
       descriptionEl.textContent = paper.description;
-
-      // 5) ensamblar todo en la card
+  
+      // 5) ensambles all in card
       card.appendChild(titleEl);
       card.appendChild(linkEl);
       card.appendChild(descriptionEl);
@@ -74,44 +76,91 @@ function renderPubSubPapers(papers, container) {
     });
 }
 
-function setupPDFUpload() {
-}
 
-//document.addEventListener('DOMContentLoaded', () => {
-    //Invoke form only one time
-    //setupPubSubForm();
-    // 1) Use async to use await inside
     async function handleRouting () {
         const path = window.location.pathname;
 
         if (path === '/create-project') {
            setupPDFUpload();
+
+           const createProjectForm = document.getElementById('createProjectForm');
+           createProjectForm?.addEventListener('submit', async(event) => {
+            event.preventDefault();
+            const title       = document.getElementById('projectTitle').value;
+            const description = document.getElementById('projectDescription').value;
+            const queries = [];
+
+            // POST to real endpoint instead of localStorage
+            const res = await fetch('/api/projects', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ title, description })
+            });
+            if (!res.ok) {
+              return alert('Error creating project');
+            }
+            const { projectId } = await res.json();
+            window.location.href = `/project/${projectId}`;
+          });
+
+
         } else if (path.startsWith('/project/')) {
             const projectId = path.split('/').pop();
-
-            const projectRes = await fetch(`/api/project/${projectId}`);
-            if (projectRes.ok) {
-              const projectData = await projectRes.json();
-              console.log('Project data:', projectData);
-
-            } else {
-                console.error('Couldnt load project data');
+            // 1Fetch the title/description/queries from Flask (real metadata from project)
+            const projectRes = await fetch (`/api/project/${projectId}`)
+            if (!projectRes.ok) {
+                // if fails, shows error UI and goes out
+                document.getElementById('projectTitleDisplay').textContent = 'Project Not Found';
+                return;
             }
+            const project = await projectRes.json();
+            // Populate header
+            document.getElementById('projectTitleDisplay').textContent = project.title;
+            document.getElementById('projectDescriptionDisplay').textContent = project.description;
+            //To not depending on localStorage for title and description:
+            document.title = `Project: ${project.title}`;
+            setupCollapsibleDescription(project.description);
 
-            // ‹‹ PUBSUB – STEP 1: update backend
-            await fetch('/api/pubsub/update_newsletter_papers', {
+            const container = document.getElementById('pubsubPapersContainer');
+
+            // clear and wire up form
+            renderPubSubSection();               //
+            setupPubSubForm();                   //
+
+            // tell backend to update newsletter papers. Try to update but not break UI if fails
+        try {
+            const updateRes = await fetch('/api/pubsub/update_newsletter_papers', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ projectId })
-            })
-            // ‹‹ PUBSUB – STEP 2: load and render real papers
-            const container = document.getElementById('pubsubPapersContainer');
-            renderPubSubSection();    // clean or show placeholder
-            const papers = await fetch(`/api/pubsub/get_newsletter_papers?projectId=${projectId}`)
-                                    .then(r => r.json());
+            });
+            const updateJson = await updateRes.json();
+            if (!updateRes.ok) {
+              console.warn('⚠️ update_newsletter_papers status failed:', updateRes.status, updateJson);
+            }
+          } catch (err) {
+            console.error('Error when calling update_newsletter_papers:', err);
+          }
+            // 3. fetch them back. Read papers even if update failed
+            const papers = await fetch(
+                `/api/pubsub/get_newsletter_papers?projectId=${projectId}`
+            ).then(r => r.json());
+            console.log('PubSub papers fetched:', papers);
+            console.log('pubsubPapersContainer is', container);
+            //4. render - first test if comes empty, then always shows the real ones
+        if (papers.length === 0) {
+            console.log('Render TEST cards because no papers came out');
+            renderPubSubPapers([
+                { title: 'Test A', link: '#', description: 'Test A: This is a card to test PubSub UI' },
+                { title: 'Test B', link: '#', description: 'Test B: This is a card to test PubSub UI' }
+            ], container);
+        } else {
+            console.log('📬 Rendering real PubSub papers:', papers);
             renderPubSubPapers(papers, container);
+        }
 
-            loadProjectOverviewData(projectId);
+            //5. Load rest of UI
+            loadProjectOverviewData(projectId, project.description);
 
         } else if (path === '/') {
             const createProjectBtn = document.getElementById('createProjectBtn');
@@ -122,22 +171,22 @@ function setupPDFUpload() {
             }
         }
 
-        const createProjectForm = document.getElementById('createProjectForm');
-        if (createProjectForm) {
-            createProjectForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                const title = document.getElementById('projectTitle').value;
-                const description = document.getElementById('projectDescription').value;
+        //const createProjectForm = document.getElementById('createProjectForm');
+        //if (createProjectForm) {
+        //    createProjectForm.addEventListener('submit', async (event) => {
+        //        event.preventDefault();
+        //        const title = document.getElementById('projectTitle').value;
+        //        const description = document.getElementById('projectDescription').value;
 
                 // TODO: For now in local storage, in the future will be sent to Flask backend
-                const projectId = `project_${Date.now()}`;
-                const projectData = { id: projectId, title, description };
-                localStorage.setItem(projectId, JSON.stringify(projectData));
+        //        const projectId = `project_${Date.now()}`;
+        //        const projectData = { id: projectId, title, description };
+        //        localStorage.setItem(projectId, JSON.stringify(projectData));
 
                 // TODO: For now simulate this, in the future redirect and URL by backend
-                window.location.href = `/project/${projectId}`;
-            });
-        }
+        //        window.location.href = `/project/${projectId}`;
+        //    });
+        //}
     };
 
     function setupPDFUpload() {
@@ -267,47 +316,46 @@ function setupPDFUpload() {
         }
     }
 
-    const loadProjectOverviewData = (projectId) => {
+    //const loadProjectOverviewData = (projectId) => {
         // TODO: For now use localStorage for the project data
-        const projectDataString = localStorage.getItem(projectId);
-        if (!projectDataString) {
-            console.error("Project data not found for ID:", projectId);
-            if (document.getElementById('projectTitleDisplay')) {
-                 document.getElementById('projectTitleDisplay').textContent = "Project Not Found";
-                 document.getElementById('projectDescriptionDisplay').textContent = "The project data could not be loaded.";
-            }
-            return;
-        }
+    //    const projectDataString = localStorage.getItem(projectId);
+    //    if (!projectDataString) {
+    //        console.error("Project data not found for ID:", projectId);
+    //        if (document.getElementById('projectTitleDisplay')) {
+    //             document.getElementById('projectTitleDisplay').textContent = "Project Not Found";
+    //             document.getElementById('projectDescriptionDisplay').textContent = "The project data could not be loaded.";
+    //        }
+    //        return;
+    //    }
 
-        const projectData = JSON.parse(projectDataString);
-
-        const titleDisplay = document.getElementById('projectTitleDisplay');
-        const descriptionDisplay = document.getElementById('projectDescriptionDisplay');
+    //    const projectData = JSON.parse(projectDataString);
+    function loadProjectOverviewData (projectId, projectDescription) {
+        //const titleDisplay = document.getElementById('projectTitleDisplay');
+        //const descriptionDisplay = document.getElementById('projectDescriptionDisplay');
         const recommendationsContainer = document.getElementById('recommendationsContainer');
         const agentThoughtsContainer = document.getElementById('agentThoughtsContainer');
 
-        if (titleDisplay) titleDisplay.textContent = projectData.title;
-        if (descriptionDisplay) {
-            descriptionDisplay.textContent = projectData.description;
-            setupCollapsibleDescription(projectData.description);
-        }
-        if (document.title && titleDisplay) document.title = `Project: ${projectData.title}`;
+        //if (titleDisplay) titleDisplay.textContent = projectData.title;
+        //if (descriptionDisplay) {
+        //    descriptionDisplay.textContent = projectData.description;
+        //    setupCollapsibleDescription(projectData.description);
+        //}
+        //if (document.title && titleDisplay) document.title = `Project: ${projectData.title}`;
 
-        if (recommendationsContainer && agentThoughtsContainer) {
+        //if (recommendationsContainer && agentThoughtsContainer) {
             // Set initial state messages
             agentThoughtsContainer.innerHTML = '<p>🧠 Agent is thinking...</p>';
             recommendationsContainer.innerHTML = '<p>⌛ Waiting for agent to provide recommendations...</p>';
 
-            fetchRecommendationsStream(projectData.description, agentThoughtsContainer, recommendationsContainer)
+            fetchRecommendationsStream(projectId, projectDescription, agentThoughtsContainer, recommendationsContainer)
                 .catch(error => {
                     console.error("Error fetching recommendations stream:", error);
                     agentThoughtsContainer.innerHTML += '<p>❌ Error communicating with the agent.</p>';
                     recommendationsContainer.innerHTML = '<p>Could not load recommendations at this time.</p>';
                 });
         }
-    };
 
-    async function fetchRecommendationsStream(projectDescription, thoughtsContainer, recommendationsContainer) {
+    async function fetchRecommendationsStream(projectId, projectDescription, thoughtsContainer, recommendationsContainer) {
         console.log(`Starting to stream recommendations based on project description...`);
         thoughtsContainer.innerHTML = ''; // Clear for new thoughts
 
@@ -315,7 +363,10 @@ function setupPDFUpload() {
             const response = await fetch('/api/old_recommendations', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ projectDescription }),
+                body: JSON.stringify({
+                    projectId: projectId,
+                    projectDescription: projectDescription,
+                }),
             });
 
             if (!response.ok) {

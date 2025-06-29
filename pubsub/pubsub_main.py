@@ -31,14 +31,6 @@ class ChromaVectorDB:
         CHROMA_PORT = int(os.environ.get("CHROMA_PORT", 8000))
         self.client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
         self.collection: Collection = self.client.get_or_create_collection(collection_name)
-    #def __init__(self, collection_name: str = "research-papers", outside_docker=False) -> None:
-        # UNCOMMENT THIS FOR LOCAL TESTING ONLY;
-        #if outside_docker:
-            #self.client = chromadb.HttpClient(host="localhost", port=8000)
-        # THIS SHOULD BE USED IN PRODUCTION
-        #else:
-            #self.client = chromadb.HttpClient(host="chromadb", port=8000)
-        #self.collection: Collection = self.client.get_or_create_collection(collection_name)
 
     def store_embeddings(self, data: List[PaperData]) -> int:
         """
@@ -80,61 +72,158 @@ def _one_week_ago_date():
     one_week_ago = datetime.today() - timedelta(weeks=1)
     return one_week_ago.strftime("%Y-%m-%d")
 
+#debugging for update_newsletter_papers
 
 def update_newsletter_papers(project_id: str):
     k = 3
-    # Get queries for project
-    queries_str = get_queries_for_project(project_id)[0]
+    logger.info(f"[update_newsletter_papers] START for project {project_id}")
+
+    # 1. Get queries for project
+    logger.info("  ↳ fetching queries for project…")
+    qs = get_queries_for_project(project_id)
+    if not qs:
+        logger.error(f"  ✖ no queries found for project {project_id}")
+        return
+    queries_str = qs[0]
     queries = ast.literal_eval(queries_str)
+    logger.info(f"    ✓ queries: {queries}")
+
+    # 2. Fetch works
+    logger.info("  ↳ fetching works from API…")
+    papers, _ = fetch_works_multiple_queries(queries, from_publication_date="2020-01-01")
+    logger.info(f"    ✓ fetched {len(papers)} papers")
+
+    # 3. Insert into Postgres
+    logger.info("  ↳ inserting papers into Postgres…")
+    insert_papers(papers)
+    logger.info("    ✓ insert complete")
+
+    # 4. Resolve hashes
+    logger.info("  ↳ resolving paper hashes…")
+    papers_w_hash = []
+    for paper in papers:
+        p = get_papers_by_original_id(paper["id"])
+        if not p:
+            logger.warning(f"    ⚠ no DB record for original id {paper['id']}")
+            continue
+        papers_w_hash.append(p[0])
+    papers_w_hash = _remove_duplicate_dicts(papers_w_hash)
+    logger.info(f"    ✓ {len(papers_w_hash)} unique hashed papers")
+
+    # 5. Embed & store in Chroma
+    logger.info("  ↳ embedding & upserting into Chroma…")
+    _embed_and_store(papers_w_hash)
+    logger.info("    ✓ chroma upsert complete")
+
+    # 6. Get prompt + embed
+    logger.info("  ↳ fetching project prompt…")
+    pp = get_project_prompt(project_id)
+    if not pp:
+        logger.error(f"    ✖ no prompt found for project {project_id}")
+        return
+    project_prompt = pp[0]
+    logger.info(f"    ✓ prompt: {project_prompt[:50]}…")
+
+    logger.info("  ↳ embedding project prompt…")
+    embedded_prompt = embed_user_profile(project_prompt)
+    logger.info("    ✓ prompt embedding complete")
+
+    # 7. Similarity search
+    logger.info(f"  ↳ running similarity search (top {k})…")
+    sims = _sim_search(papers_w_hash, embedded_prompt)
+    top_results = sims[:k]
+    logger.info(f"    ✓ top results: {top_results}")
+
+    # 8. Collect current + new candidates
+    logger.info("  ↳ loading current newsletter-paper hashes…")
+    current = get_pubsub_papers_for_project(project_id)
+    logger.info(f"    ✓ {len(current)} existing newsletter entries")
+    potential = []
+    for h in current:
+        potential.append(get_paper_by_hash(h[0]))
+    for rid, _score in top_results:
+        potential.append(get_paper_by_hash(rid))
+    logger.info(f"    ✓ total candidates: {len(potential)}")
+
+    # 9. Call agent
+    logger.info("  ↳ calling LLM agent to pick+summarize…")
+    agent_out = calL_temp_agent(str(potential), project_prompt, str(k)).content
+    logger.info(f"    ✓ raw agent output: {agent_out}")
+    agent_response = ast.literal_eval(agent_out)
+
+    recommendation_hashes = []
+    summaries = []
+
+    # 10. Persist newsletter tags
+    logger.info("  ↳ resetting old tags…")
+    reset_newsletter_tags(project_id)
+    logger.info("  ↳ setting new newsletter tags…")
+    
+    for item in agent_response:
+        recommendation_hashes.append(item["paper_hash"])
+        summaries.append(item["summary"])
+        logger.info(f"      ▪ picked {item['paper_hash']}: {item['summary'][:40]}…")
+
+    if not recommendation_hashes:
+        logger.info(f"[update_newsletter_papers] No new recommendations for project {project_id}, skipping tag update")
+        return  # <-- without error, shows 200 OK
+    set_newsletter_tags_for_project(project_id, paper_hashes=recommendation_hashes, summaries=summaries)
+    logger.info(f"[update_newsletter_papers] DONE for project {project_id}")
+
+#def update_newsletter_papers(project_id: str):
+    #k = 3
+    # Get queries for project
+    #queries_str = get_queries_for_project(project_id)[0]
+    #queries = ast.literal_eval(queries_str)
 
     # Get papers from last week
-    papers, _ = fetch_works_multiple_queries(queries, from_publication_date="2020-01-01")
+    #papers, _ = fetch_works_multiple_queries(queries, from_publication_date="2020-01-01")
 
     # Insert papers in postgres
-    insert_papers(papers)
+    #insert_papers(papers)
 
     # Get the paper's hashes (we dont use the deduplication from insert_papers as the latest papers may already be in the table
     # and would thus be ignored)
-    papers_w_hash = []
-    for paper in papers:
-        papers_w_hash.append(get_papers_by_original_id(paper['id'])[0])  # For now, we only use a single version of the paper
-    papers_w_hash = _remove_duplicate_dicts(papers_w_hash)
+    #papers_w_hash = []
+    #for paper in papers:
+    #    papers_w_hash.append(get_papers_by_original_id(paper['id'])[0])  # For now, we only use a single version of the paper
+    #papers_w_hash = _remove_duplicate_dicts(papers_w_hash)
     # Insert papers in chroma
-    _embed_and_store(papers_w_hash)
+    #_embed_and_store(papers_w_hash)
 
     # Get project prompt
-    project_prompt = get_project_prompt(project_id)[0]
+    #project_prompt = get_project_prompt(project_id)[0]
 
     # todo store project prompt embedding together with project
     # Embed project prompt
-    embedded_prompt = embed_user_profile(project_prompt)
+    #embedded_prompt = embed_user_profile(project_prompt)
     # Perform similarity search between latest papers and user query, get top k
-    sorted_sims = _sim_search(papers_w_hash, embedded_prompt)
-    top_results = sorted_sims[:k]
+    #sorted_sims = _sim_search(papers_w_hash, embedded_prompt)
+    #top_results = sorted_sims[:k]
     # Get current papers with newsletter tag and unseen tag
-    current_newsletter_papers = get_pubsub_papers_for_project(project_id)  # This is a list of lists btw
+    #current_newsletter_papers = get_pubsub_papers_for_project(project_id)  # This is a list of lists btw
     # Link hashes to actual papers
-    potential_newsletter_papers = []
-    for paper_hash in current_newsletter_papers:
-        paper = get_paper_by_hash(paper_hash[0])
-        potential_newsletter_papers.append(paper)
-    for result in top_results:
-        paper = get_paper_by_hash(result[0])
-        potential_newsletter_papers.append(paper)
+    #potential_newsletter_papers = []
+    #for paper_hash in current_newsletter_papers:
+    #    paper = get_paper_by_hash(paper_hash[0])
+    #    potential_newsletter_papers.append(paper)
+    #for result in top_results:
+    #    paper = get_paper_by_hash(result[0])
+    #   potential_newsletter_papers.append(paper)
     # Make agent decide a subset of top k latest papers and current news, set subset as new newsletter papers
 
-    print(potential_newsletter_papers)
+    #print(potential_newsletter_papers)
 
-    agent_response = ast.literal_eval(calL_temp_agent(str(potential_newsletter_papers), project_prompt, str(k)).content)
-    recommendation_hashes = []
-    summaries = []
-    for paper in agent_response:
-        print(paper)
-        recommendation_hashes.append(paper['paper_hash'])
-        summaries.append(paper['summary'])
+    #agent_response = ast.literal_eval(calL_temp_agent(str(potential_newsletter_papers), project_prompt, str(k)).content)
+    #recommendation_hashes = []
+    #summaries = []
+    #for paper in agent_response:
+    #    print(paper)
+    #    recommendation_hashes.append(paper['paper_hash'])
+    #    summaries.append(paper['summary'])
     # Store new newsletter papers
-    reset_newsletter_tags()
-    set_newsletter_tags_for_project(project_id, paper_hashes=recommendation_hashes, summaries=summaries)
+    #reset_newsletter_tags()
+    #set_newsletter_tags_for_project(project_id, paper_hashes=recommendation_hashes, summaries=summaries)
     # Determine different papers between old newsletter papers and new newsletter papers
     # Send difference per mail
 
@@ -192,5 +281,5 @@ def _remove_duplicate_dicts(dict_list):
     return unique_list
 
 
-if __name__ == '__main__':
-    update_newsletter_papers("babbab43-0323-423e-ba29-f74ec07e2d57")
+#if __name__ == '__main__':
+    #update_newsletter_papers("babbab43-0323-423e-ba29-f74ec07e2d57")
