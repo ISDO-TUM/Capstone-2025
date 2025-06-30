@@ -321,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fadeOverlay.classList.toggle('visible', isCollapsed);
             controls.classList.add('visible');
             
-            expandText.textContent = isCollapsed ? 'Show full description' : 'Show less';
+            expandText.textContent = isCollapsed ? 'Show full description' : 'Hide full description';
             
             toggleButton.addEventListener('click', () => {
                 const currentlyCollapsed = descriptionDisplay.classList.contains('collapsed');
@@ -331,7 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 toggleButton.classList.toggle('expanded', currentlyCollapsed);
                 fadeOverlay.classList.toggle('visible', !currentlyCollapsed);
                 
-                expandText.textContent = !currentlyCollapsed ? 'Show full description' : 'Show less';
+                expandText.textContent = !currentlyCollapsed ? 'Show full description' : 'Hide full description';
             });
         } else {
             // Short description, no need to use expandable view
