@@ -3,14 +3,12 @@ import logging
 import os
 import sys
 import io
-import uuid
-from datetime import datetime
 
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context
 
 from database.papers_database_handler import get_paper_by_hash
 from database.projectpaper_database_handler import get_papers_for_project
-from database.projects_database_handler import add_new_project_to_db
+from database.projects_database_handler import add_new_project_to_db, get_project_data, get_all_projects
 from llm.Agent import trigger_agent_show_thoughts
 import PyPDF2
 
@@ -123,10 +121,11 @@ def project_overview_page(project_id):
 @app.route('/api/getProjects', methods=['GET'])
 def get_projects():
     """Get all projects with project_id and metadata."""
+    # todo update database to include project creation date
     try:
         return jsonify({
             "success": True,
-            "projects": MOCK_PROJECTS
+            "projects": get_all_projects()  # todo check that this function returns valid dicts, might need to modify it to make them have the right form
         })
     except Exception as e:
         logger.error(f"Error getting projects: {e}")
@@ -141,16 +140,7 @@ def create_project():
         if not data or 'title' not in data or 'prompt' not in data:
             return jsonify({"error": "Missing title or prompt"}), 400
 
-        project_id = f"proj_{str(uuid.uuid4())[:8]}"
-
-        new_project = {
-            "project_id": project_id,
-            "name": data['title'],
-            "description": data['prompt'],
-            "tags": [],
-            "date": datetime.now().strftime("%Y-%m-%d")
-        }
-        MOCK_PROJECTS.append(new_project)
+        project_id = add_new_project_to_db(data['title'], data['prompt'])
 
         return jsonify({
             "success": True,
@@ -224,17 +214,27 @@ def get_recommendations():
 
         # project_id validated above but currently unused in mock implementation
         update_recommendations = data.get('update_recommendations', False)
+        project = get_project_data(data['project_id'])  # todo check that this function returns a valid dictionary, you might need to format the output to make it usable
+        user_description, project_id = project['title'], project['description']
 
         def generate():
             try:
                 if update_recommendations:
-                    yield f"data: {json.dumps({'thought': 'Analyzing project requirements...'})}\n\n"
-                    yield f"data: {json.dumps({'thought': 'Searching for relevant papers...'})}\n\n"
-                    yield f"data: {json.dumps({'thought': 'Ranking and filtering results...'})}\n\n"
-                    yield f"data: {json.dumps({'thought': 'Generating final recommendations...'})}\n\n"
+                    for response_part in trigger_agent_show_thoughts(user_description + "project ID: " + project_id):
+                        yield f"data: {json.dumps({'thought': response_part['thought']})}\n\n"
 
-                yield f"data: {json.dumps({'recommendations': MOCK_RECOMMENDATIONS})}\n\n"
-
+                recs_basic_data = get_papers_for_project(data['project_id'])
+                recommendations = []
+                for rec in recs_basic_data:
+                    paper = get_paper_by_hash(rec['paper_hash'])
+                    paper_dict = {
+                        'title': paper.get("title", "N/A"),
+                        'link': paper.get("link", "N/A"),
+                        'description': paper.get("description", "Relevant based on user interest.")
+                    }
+                    recommendations.append(paper_dict)
+                print(recommendations)  # todo check that recommendations is a valid json
+                yield f"data: {json.dumps({'recommendations': recommendations})}\n\n"
             except Exception as e:
                 logger.error(f"Error in recommendations generation: {e}")
                 error_payload = json.dumps({"error": f"An internal error occurred: {str(e)}"})

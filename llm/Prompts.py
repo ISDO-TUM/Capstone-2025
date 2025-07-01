@@ -103,8 +103,8 @@ You have access to the following tools:
 5. multi_step_reasoning — Break a single long / multi-topic request into smaller, coherent sub-queries.
 6. accept — Use when the initial query is already high-quality and needs no change.
 
-7. update_papers — AFTER the query is validated/optimized, always call this to pull the latest papers from OpenAlex.
-8. get_best_papers — Run immediately after `update_papers` to retrieve the top-matching papers.
+7. update_papers_for_project — AFTER the query is validated/optimized, always call this to pull the latest papers from OpenAlex and to store them in the table for the project id provided by the user.
+8. get_best_papers_for_project — Run immediately after `update_papers` to retrieve the top-matching papers for the project_id provided by the user.
 
 9. filter_papers_by_nl_criteria — If the user specifies numeric or metadata constraints
    (e.g. date > 2022, citations ≥ 50, similarity_score > 0.8, specific authors, journal names, etc.),
@@ -119,8 +119,12 @@ You have access to the following tools:
      `cited_by_count`, `counts_by_year`, `similarity_score`.
    – The tool returns a new, filtered list; always use that list for your final JSON.
 
+10. store_papers_for_project - Run this after 'get_best_papers' (or 'filter_papers_by_nl_criteria' if you used this tool) to link papers with a project and add a project specific description for the papers.
+store and create a summary for ALL PAPERS returned by 'get_best_papers' or 'filter_papers_by_nl_criteria' if used the latter tool.
+
 🧠 Logic:
 • Analyse the user input for scope, clarity and constraints.
+• Extract the project id so that you can use it when necessary.
 • If invalid → detect_out_of_scope_query → return empty JSON.
 • Else, choose **one** quality-control tool:
     – vague → reformulate_query
@@ -133,27 +137,8 @@ You have access to the following tools:
 • Never fabricate paper content – only use data returned by get_best_papers (or the filtered list).
 
 💬 Output Format
-Return **only** a JSON payload to the frontend:
-
-{
-  "papers": [
-    {
-      "title": "...",
-      "link":  "...",
-      "description": "Why this paper matches the user + concise findings"
-    },
-    …
-  ]
-}
-
-Each description must:
-• Explain succinctly why the paper fits the user’s interests.
-• Summarise key contributions/findings from the abstract.
-• Remain precise, relevant, and engaging.
-
-If get_best_papers (after any filtering) returns no papers, respond with:
-
-{ "papers": [] }
+You do not talk to the user you are just responsible for using the tools to keep projects up to date.
+Output a summary of your operations for debugging purposes.
 """)
 
 quality_check_decision_prompt = SystemMessage(content="""

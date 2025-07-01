@@ -1,4 +1,7 @@
 import uuid
+
+import psycopg2.extras
+
 from database.database_connection import connect_to_db
 
 
@@ -40,6 +43,34 @@ def add_queries_to_project_db(queries: list[str], project_id: str):
     conn.commit()
     cursor.close()
     conn.close()
+
+
+def get_all_projects() -> list[dict]:
+    conn = connect_to_db()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    cursor.execute("SELECT project_id, title, description FROM projects_table")
+
+    projects = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return projects
+
+
+def get_project_data(project_id: str):
+    conn = connect_to_db()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    cursor.execute("""
+                   SELECT *
+                   FROM projects_table
+                   WHERE project_id = %s
+                   """, (project_id,))
+    project = cursor.fetchone()
+    print("Project", project)
+    cursor.close()
+    conn.close()
+    return project
 
 
 def add_email_to_project_db(email: str, project_id: str):
