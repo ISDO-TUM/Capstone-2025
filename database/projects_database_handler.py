@@ -51,7 +51,7 @@ def get_all_projects() -> list[dict]:
 
     cursor.execute("SELECT project_id, title, description FROM projects_table")
 
-    projects = cursor.fetchall()
+    projects = [dict(row) for row in cursor.fetchall()]
     cursor.close()
     conn.close()
     return projects
@@ -66,8 +66,7 @@ def get_project_data(project_id: str):
                    FROM projects_table
                    WHERE project_id = %s
                    """, (project_id,))
-    project = cursor.fetchone()
-    print("Project", project)
+    project = dict(cursor.fetchone())
     cursor.close()
     conn.close()
     return project
