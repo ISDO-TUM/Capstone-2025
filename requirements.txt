@@ -6,7 +6,7 @@ chromadb==1.0.12
 langchain-core==0.3.63
 langchain-openai==0.3.19
 langchain==0.3.25
-langgraph~=0.4.5
+langgraph==0.5.0
 openai==1.79.0
 psycopg2-binary==2.9.10
 pyalex==0.18
