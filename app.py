@@ -64,7 +64,7 @@ MOCK_RECOMMENDATIONS = [
     },
     {
         "title": "Transformer Models for Healthcare Data",
-        "link": "https://arxiv.org/abs/2301.67890", 
+        "link": "https://arxiv.org/abs/2301.67890",
         "description": "Novel transformer architectures adapted for healthcare applications."
     },
     {
@@ -87,10 +87,11 @@ MOCK_NEWSLETTER = [
     },
     {
         "title": "Real-world Clinical AI Implementation Case Studies",
-        "link": "https://arxiv.org/abs/2301.44444", 
+        "link": "https://arxiv.org/abs/2301.44444",
         "description": "Practical insights from successful clinical AI integrations."
     }
 ]
+
 
 @app.errorhandler(413)
 def request_entity_too_large(error):
@@ -127,6 +128,7 @@ def get_projects():
         logger.error(f"Error getting projects: {e}")
         return jsonify({"error": f"Failed to get projects: {str(e)}"}), 500
 
+
 @app.route('/api/createProject', methods=['POST'])
 def create_project():
     """Create a new project and return project_id."""
@@ -136,7 +138,7 @@ def create_project():
             return jsonify({"error": "Missing title or prompt"}), 400
 
         project_id = f"proj_{str(uuid.uuid4())[:8]}"
-        
+
         new_project = {
             "project_id": project_id,
             "name": data['title'],
@@ -145,7 +147,7 @@ def create_project():
             "date": datetime.now().strftime("%Y-%m-%d")
         }
         MOCK_PROJECTS.append(new_project)
-        
+
         return jsonify({
             "success": True,
             "project_id": project_id
@@ -153,6 +155,7 @@ def create_project():
     except Exception as e:
         logger.error(f"Error creating project: {e}")
         return jsonify({"error": f"Failed to create project: {str(e)}"}), 500
+
 
 @app.route('/api/old_recommendations', methods=['POST'])
 def get_old_recommendations():
@@ -195,6 +198,7 @@ def get_old_recommendations():
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
+
 @app.route('/api/recommendations', methods=['POST'])
 def get_recommendations():
     """Get recommendations for a project. Updated to use project_id and update_recommendations flag."""
@@ -203,7 +207,7 @@ def get_recommendations():
         if not data or 'project_id' not in data:
             return jsonify({"error": "Missing project_id"}), 400
 
-        project_id = data['project_id']
+        # project_id validated above but currently unused in mock implementation
         update_recommendations = data.get('update_recommendations', False)
 
         def generate():
@@ -213,19 +217,20 @@ def get_recommendations():
                     yield f"data: {json.dumps({'thought': 'Searching for relevant papers...'})}\n\n"
                     yield f"data: {json.dumps({'thought': 'Ranking and filtering results...'})}\n\n"
                     yield f"data: {json.dumps({'thought': 'Generating final recommendations...'})}\n\n"
-                
+
                 yield f"data: {json.dumps({'recommendations': MOCK_RECOMMENDATIONS})}\n\n"
-                
+
             except Exception as e:
                 logger.error(f"Error in recommendations generation: {e}")
                 error_payload = json.dumps({"error": f"An internal error occurred: {str(e)}"})
                 yield f"data: {error_payload}\n\n"
 
         return Response(stream_with_context(generate()), mimetype='text/event-stream')
-    
+
     except Exception as e:
         logger.error(f"Error in /api/recommendations: {e}")
         return jsonify({"error": f"Failed to get recommendations: {str(e)}"}), 500
+
 
 @app.route('/api/getNewsletter', methods=['POST'])
 def get_newsletter():
@@ -235,7 +240,7 @@ def get_newsletter():
         if not data or 'project_id' not in data:
             return jsonify({"error": "Missing project_id"}), 400
 
-        project_id = data['project_id']
+        # project_id validated above but currently unused in mock implementation
         update_newsletter = data.get('update_newsletter', False)
 
         def generate():
@@ -244,19 +249,20 @@ def get_newsletter():
                     yield f"data: {json.dumps({'thought': 'Fetching latest publications...'})}\n\n"
                     yield f"data: {json.dumps({'thought': 'Filtering relevant content...'})}\n\n"
                     yield f"data: {json.dumps({'thought': 'Preparing newsletter digest...'})}\n\n"
-                
+
                 yield f"data: {json.dumps({'recommendations': MOCK_NEWSLETTER})}\n\n"
-                
+
             except Exception as e:
                 logger.error(f"Error in newsletter generation: {e}")
                 error_payload = json.dumps({"error": f"An internal error occurred: {str(e)}"})
                 yield f"data: {error_payload}\n\n"
 
         return Response(stream_with_context(generate()), mimetype='text/event-stream')
-    
+
     except Exception as e:
         logger.error(f"Error in /api/getNewsletter: {e}")
         return jsonify({"error": f"Failed to get newsletter: {str(e)}"}), 500
+
 
 @app.route('/api/extract-pdf-text', methods=['POST'])
 def extract_pdf_text():
