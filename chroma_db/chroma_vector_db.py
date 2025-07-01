@@ -18,12 +18,22 @@ class PaperData(TypedDict):
     hash: str
 
 
+# When locally testing application and files this will allow us to set a localhost connection
+# since otherwise the application will try to connect to the Docker container, which the file
+# is running outside of and hence does not have access to.
+# In production, the Docker container will set these env-vars to the correct values.
+# For testing run like this:
+# docker compose up -d chromadb
+# CHROMA_HOST=localhost python -m llm.tools.paper_handling_tools
+CHROMA_HOST = os.getenv("CHROMA_HOST", "chromadb")   # default for Docker
+CHROMA_PORT = int(os.getenv("CHROMA_PORT", 8000))
+
+
 class ChromaVectorDB:
+
     def __init__(self, collection_name: str = "research-papers") -> None:
-        # UNCOMMENT THIS FOR LOCAL TESTING ONLY;
-        # self.client = chromadb.HttpClient(host="localhost", port=8000)
-        # THIS SHOULD BE USED IN PRODUCTION
-        self.client = chromadb.HttpClient(host="chromadb", port=8000)
+        # single code-path, host decided by env-var
+        self.client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
         self.collection: Collection = self.client.get_or_create_collection(collection_name)
 
     def store_embeddings(self, data: List[PaperData]) -> int:
