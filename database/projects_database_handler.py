@@ -3,7 +3,7 @@ import psycopg2.extras
 from database.database_connection import connect_to_db
 
 
-def add_new_project_to_db(title: str, description: str, queries: str = '[]') -> str:
+def add_new_project_to_db(title: str, description: str) -> str:
     project_id = str(uuid.uuid4())
     conn = connect_to_db()
     cursor = conn.cursor()
@@ -12,15 +12,14 @@ def add_new_project_to_db(title: str, description: str, queries: str = '[]') -> 
         project_id = str(uuid.uuid4())
 
     sql_insert = """
-    INSERT INTO projects_table (project_id, title, description, queries)
-        VALUES (%s, %s, %s, %s)
+    INSERT INTO projects_table (project_id, title, description)
+        VALUES (%s, %s, %s)
     """
 
     cursor.execute(sql_insert,
                    (project_id,
                     title,
                     description,
-                    queries,
                     ))
     conn.commit()
     cursor.close()
@@ -44,7 +43,7 @@ def add_queries_to_project_db(queries: list[str], project_id: str):
     conn.close()
 
 def get_queries_for_project(project_id: str):
-    #conn = connect_to_db(outside_chroma=True)
+    # conn = connect_to_db(outside_chroma=True)
     conn = connect_to_db()
     cursor = conn.cursor()
 
@@ -55,7 +54,7 @@ def get_queries_for_project(project_id: str):
 
 def get_project_prompt(project_id: str):
     conn = connect_to_db()
-    #conn = connect_to_db(outside_chroma=True)
+    # conn = connect_to_db(outside_chroma=True)
     cursor = conn.cursor()
 
     cursor.execute(""" SELECT description

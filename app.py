@@ -17,6 +17,7 @@ from pubsub.pubsub_main import update_newsletter_papers
 from database.projectpaper_database_handler import get_pubsub_papers_for_project
 
 
+
 logger = logging.getLogger(__name__)
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
@@ -122,17 +123,16 @@ def create_project_page():
 def project_overview_page(project_id):
     return render_template('project_overview.html', project_id=project_id)
 
+
 @app.route('/api/projects', methods=['POST'])
 def api_create_project():
     data = request.get_json() or {}
     title = data.get('title')
-    desc  = data.get('description')
-    queries = data.get('queries', [])
+    desc = data.get('description')
     if not title or not desc:
-        return jsonify({ "error": "Missing title or description" }), 400
-    queries_str = json.dumps(queries)
-    project_id = add_new_project_to_db(title, desc, queries_str)
-    return jsonify({ "projectId": project_id }), 201
+        return jsonify({"error": "Missing title or description"}), 400
+    project_id = add_new_project_to_db(title, desc)
+    return jsonify({"projectId": project_id}), 201
 
 @app.route('/api/getProjects', methods=['GET'])
 def get_projects():
@@ -203,7 +203,7 @@ def get_old_recommendations():
                                 "description": rec.get("description", "Relevant based on user interest.")
                             })
                         print(final_recommendations)
-                        #updates table with project_id
+                        # updates table with project_id
                         update_newsletter_papers(project_id)
 
                         yield f"data: {json.dumps({'recommendations': final_recommendations})}\n\n"
@@ -332,19 +332,21 @@ def extract_pdf_text():
         logger.error(f"Error extracting PDF text: {e}")
         return jsonify({"error": f"Failed to process PDF: {str(e)}"}), 500
 
-#Triggers server-side logic (update_newsletter_papers) to fetch new papers, run agent, and update newsletter/seen flags in database.
-#call this from front-end to “refresh” which papers should be marked for the newsletter.
+# Triggers server-side logic (update_newsletter_papers) to fetch new papers, run agent, and update newsletter/seen flags in database.
+# call this from front-end to “refresh” which papers should be marked for the newsletter.
+
+
 @app.route('/api/pubsub/update_newsletter_papers', methods=['POST'])
 def api_update_newsletter():
     payload = request.get_json() or {}
     project_id = payload.get('projectId')
     if not project_id:
         return jsonify({"error": "Missing projectId"}), 400
-    
-    #first read queries
+
+    # first read queries
     queries = get_queries_for_project(project_id)
     if not queries:
-        #no queries: return ok but without doing anything
+        # no queries: return ok but without doing anything
         return jsonify({'status': 'no-queries'}), 200
 
     try:
@@ -352,20 +354,20 @@ def api_update_newsletter():
         return jsonify({'status': 'ok'}), 200
     except ValueError as e:
         msg = str(e)
-        #Chroma sends ValueError with this text when there are no IDs
+        # Chroma sends ValueError with this text when there are no IDs
         if "Expected IDs to be a non-empty list" in msg:
-            #return 200 so frontend continues and reads get_newsletter_papers
+            # return 200 so frontend continues and reads get_newsletter_papers
             return jsonify({'status': 'no-results'}), 200
-        #if there is another ValueError, we make it fall down
+        # if there is another ValueError, we make it fall down
         return jsonify({'error': msg}), 500
     except Exception as e:
-        #rest of exceptions
+        # rest of exceptions
         logger.exception("Error to update newsletters")
         return jsonify({'error': str(e)}), 500
 
 
-#Returns current set of (paper_hash, summary) tuples that are both newsletter = TRUE and seen = FALSE for a given project.
-#JS then looks up the full paper details via get_paper_by_hash and renders them.
+# Returns current set of (paper_hash, summary) tuples that are both newsletter = TRUE and seen = FALSE for a given project.
+# JS then looks up the full paper details via get_paper_by_hash and renders them.
 @app.route('/api/pubsub/get_newsletter_papers', methods=['GET'])
 def api_get_newsletter():
     project_id = request.args.get('projectId') or request.args.get('project_id')
@@ -377,15 +379,17 @@ def api_get_newsletter():
     for paper_hash, summary in rows:
         paper = get_paper_by_hash(paper_hash)
         papers.append({
-            "title":       paper.get("title", "Untitled"),
-            "link":        paper.get("landing_page_url", "#"),
+            "title": paper.get("title", "Untitled"),
+            "link": paper.get("landing_page_url", "#"),
             "description": summary
         })
     return jsonify(papers), 200
 
-#Gives front-end the project’s metadata (title, description, queries, email).
-#need this on page load to fill in the header (project title/description)
-#and to know which project_id to pass into the other two endpoints.
+# Gives front-end the project’s metadata (title, description, queries, email).
+# need this on page load to fill in the header (project title/description)
+# and to know which project_id to pass into the other two endpoints.
+
+
 @app.route('/api/project/<project_id>')
 def api_get_project(project_id):
     proj = get_project_by_id(project_id)
@@ -399,6 +403,7 @@ def api_get_project(project_id):
         "email": proj["email"],
         # etc
     }), 200
+
 
 if __name__ == '__main__':
 

@@ -1,34 +1,3 @@
-// ←← MOCK DATA PARA DEMO PUBSUB
-const dummyPubSubPapers = [
-    {
-        title: "Learner Motivation and Language Attitudes: A Meta-Analysis",
-        description: "A review of studies exploring the relationship between student motivation and their attitudes toward learning English in EFL contexts worldwide.",
-        link: "https://arxiv.org/abs/2101.06547"
-    },
-    {
-        title: "Classroom Environment and English Language Learning Attitudes",
-        description: "Examines how the physical and social design of the classroom influences students’ attitudes toward English as a foreign language in secondary schools across Asia and Europe.",
-        link: "https://arxiv.org/abs/2009.05235"
-    },
-    {
-        title: "Peer Influence on EFL Learner Attitudes: A Longitudinal Study",
-        description: "A longitudinal study analyzing how peer interactions affect students’ perceptions and interest in learning English at Latin American high schools.",
-        link: "https://arxiv.org/abs/1905.12345"
-    },
-    {
-        title: "Impact of Teaching Materials on EFL Student Motivation",
-        description: "Investigates the effect of different types of teaching materials (videos, authentic texts, interactive activities) on the motivation and attitude of EFL students in European institutes.",
-        link: "https://arxiv.org/abs/2203.08765"
-    },
-    {
-        title: "Technology Integration and EFL Learner Engagement",
-        description: "Analyzes how technological tools (online platforms, mobile apps) enhance students’ attitudes and engagement with English as a foreign language in secondary education settings.",
-        link: "https://arxiv.org/abs/2304.01234"
-    }
-];
-
-
-
 // ←← PUBSUB UI HELPERS: Definitions first ←←
 //renderPubSubSection clears out the <div id="pubsubPapersContainer">
 function renderPubSubSection() {
@@ -53,21 +22,21 @@ function renderPubSubPapers(papers, container) {
       // 1) create card's div
       const card = document.createElement('div');
       card.classList.add('recommendation-card');
-  
+
       // 2) create and fill out h4 from title
       const titleEl = document.createElement('h4');
       titleEl.textContent = paper.title;
-  
+
       // 3) creates link
       const linkEl = document.createElement('a');
       linkEl.href = paper.link;
       linkEl.textContent = "Read Paper";
       linkEl.target = "_blank";
-  
+
       // 4) creates paragraph for description
       const descriptionEl = document.createElement('p');
       descriptionEl.textContent = paper.description;
-  
+
       // 5) ensambles all in card
       card.appendChild(titleEl);
       card.appendChild(linkEl);
@@ -88,7 +57,6 @@ function renderPubSubPapers(papers, container) {
             event.preventDefault();
             const title       = document.getElementById('projectTitle').value;
             const description = document.getElementById('projectDescription').value;
-            const queries = [];
 
             // POST to real endpoint instead of localStorage
             const res = await fetch('/api/projects', {
