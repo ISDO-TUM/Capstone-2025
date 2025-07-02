@@ -97,6 +97,7 @@ function renderPubSubPapers(papers, container) {
 
             // tell backend to update newsletter papers. Try to update but not break UI if fails
         try {
+            //todo update newsletter papers only on project creation or once a week
             const updateRes = await fetch('/api/pubsub/update_newsletter_papers', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -288,12 +289,12 @@ function renderPubSubPapers(papers, container) {
         thoughtsContainer.innerHTML = ''; // Clear for new thoughts
 
         try {
-            const response = await fetch('/api/old_recommendations', {
+            const response = await fetch('/api/recommendations', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     projectId: projectId,
-                    projectDescription: projectDescription,
+                    update_recommendations : true //todo set this to true only if new project or if future 'refresh recommendations' button pressed
                 }),
             });
 
@@ -454,7 +455,7 @@ function renderPubSubPapers(papers, container) {
             card.className = 'project-card';
             card.style.animationDelay = `${idx * 0.04 + 0.1}s`;
             card.innerHTML = `
-                <div class="project-title">${project.name}</div>
+                <div class="project-title">${project.title}</div>
                 <div class="project-description">${project.description}</div>
                 <div class="project-tags">
                     ${project.tags.map(tag => `<span class="project-tag">${tag}</span>`).join(' ')}

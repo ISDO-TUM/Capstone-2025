@@ -26,7 +26,7 @@ class PaperData(TypedDict):
 
 class ChromaVectorDB:
     def __init__(self, collection_name: str = "research-papers") -> None:
-        # Read Chroma host from ENV variables 
+        # Read Chroma host from ENV variables
         CHROMA_HOST = os.environ.get("CHROMA_HOST", "chromadb")
         CHROMA_PORT = int(os.environ.get("CHROMA_PORT", 8000))
         self.client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
@@ -60,11 +60,11 @@ class ChromaVectorDB:
         return Status.FAILURE if any_failure else Status.SUCCESS
 
 
-chroma_db = ChromaVectorDB()#outside_docker=True)
+chroma_db = ChromaVectorDB()  # outside_docker=True)
 
 
 def start_pubsub():
-    # todo call update newsletter papers periodically
+    # todo call update newsletter papers once a week, right now they are updated always when a project page is opened
     pass
 
 
@@ -72,7 +72,8 @@ def _one_week_ago_date():
     one_week_ago = datetime.today() - timedelta(weeks=1)
     return one_week_ago.strftime("%Y-%m-%d")
 
-#debugging for update_newsletter_papers
+# debugging for update_newsletter_papers
+
 
 def update_newsletter_papers(project_id: str):
     k = 3
@@ -90,7 +91,7 @@ def update_newsletter_papers(project_id: str):
 
     # 2. Fetch works
     logger.info("  ↳ fetching works from API…")
-    papers, _ = fetch_works_multiple_queries(queries, from_publication_date="2020-01-01")
+    papers, _ = fetch_works_multiple_queries(queries, from_publication_date="2020-01-01")  # todo change from_publication_date to one week ago date. If there are no papers from the last week say 'no new papers found' or smth in the frontend
     logger.info(f"    ✓ fetched {len(papers)} papers")
 
     # 3. Insert into Postgres
@@ -158,7 +159,7 @@ def update_newsletter_papers(project_id: str):
     logger.info("  ↳ resetting old tags…")
     reset_newsletter_tags(project_id)
     logger.info("  ↳ setting new newsletter tags…")
-    
+
     for item in agent_response:
         recommendation_hashes.append(item["paper_hash"])
         summaries.append(item["summary"])
@@ -169,6 +170,7 @@ def update_newsletter_papers(project_id: str):
         return  # <-- without error, shows 200 OK
     set_newsletter_tags_for_project(project_id, paper_hashes=recommendation_hashes, summaries=summaries)
     logger.info(f"[update_newsletter_papers] DONE for project {project_id}")
+
 
 def _embed_and_store(papers):
     embedded_papers = []
@@ -223,5 +225,5 @@ def _remove_duplicate_dicts(dict_list):
     return unique_list
 
 
-#if __name__ == '__main__':
-    #update_newsletter_papers("babbab43-0323-423e-ba29-f74ec07e2d57")
+# if __name__ == '__main__':
+    # update_newsletter_papers("babbab43-0323-423e-ba29-f74ec07e2d57")

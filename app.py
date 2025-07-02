@@ -17,7 +17,6 @@ from pubsub.pubsub_main import update_newsletter_papers
 from database.projectpaper_database_handler import get_pubsub_papers_for_project
 
 
-
 logger = logging.getLogger(__name__)
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
@@ -134,14 +133,23 @@ def api_create_project():
     project_id = add_new_project_to_db(title, desc)
     return jsonify({"projectId": project_id}), 201
 
+
 @app.route('/api/getProjects', methods=['GET'])
 def get_projects():
     """Get all projects with project_id and metadata."""
-    # todo update database to include project creation date
+
+    print(get_all_projects())
+    projects = get_all_projects()
+    complete_projects = []
+    # todo update database to include project creation date, remove tags from frontend cause we dont really have time for that feature
+    for project in projects:
+        project['tags'] = []
+        project['date'] = "2025-07-16"
+        complete_projects.append(project)
     try:
         return jsonify({
             "success": True,
-            "projects": get_all_projects()  # todo check that this function returns valid dicts, might need to modify it to make them have the right form
+            "projects": complete_projects
         })
     except Exception as e:
         logger.error(f"Error getting projects: {e}")
@@ -225,16 +233,18 @@ def get_old_recommendations():
 
 @app.route('/api/recommendations', methods=['POST'])
 def get_recommendations():
+    print("Attempting to get recommendations")
     """Get recommendations for a project. Updated to use project_id and update_recommendations flag."""
     try:
         data = request.get_json()
-        if not data or 'project_id' not in data:
+        if not data or 'projectId' not in data:
+            print(f"Failed getting recs with data: {data}")
             return jsonify({"error": "Missing project_id"}), 400
 
         # project_id validated above but currently unused in mock implementation
         update_recommendations = data.get('update_recommendations', False)
-        project = get_project_data(data['project_id'])  # todo check that this function returns a valid dictionary, you might need to format the output to make it usable
-        user_description, project_id = project['title'], project['description']
+        project = get_project_data(data['projectId'])
+        user_description, project_id = project['description'], project['project_id']
 
         def generate():
             try:
@@ -242,17 +252,16 @@ def get_recommendations():
                     for response_part in trigger_agent_show_thoughts(user_description + "project ID: " + project_id):
                         yield f"data: {json.dumps({'thought': response_part['thought']})}\n\n"
 
-                recs_basic_data = get_papers_for_project(data['project_id'])
+                recs_basic_data = get_papers_for_project(project_id)
                 recommendations = []
                 for rec in recs_basic_data:
                     paper = get_paper_by_hash(rec['paper_hash'])
                     paper_dict = {
                         'title': paper.get("title", "N/A"),
                         'link': paper.get("link", "N/A"),
-                        'description': paper.get("description", "Relevant based on user interest.")
+                        'description': rec.get("summary", "Relevant based on user interest.")
                     }
                     recommendations.append(paper_dict)
-                print(recommendations)  # todo check that recommendations is a valid json
                 yield f"data: {json.dumps({'recommendations': recommendations})}\n\n"
             except Exception as e:
                 logger.error(f"Error in recommendations generation: {e}")
