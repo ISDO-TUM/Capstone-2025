@@ -22,22 +22,22 @@ function renderPubSubPapers(papers, container) {
       // 1) create card's div
       const card = document.createElement('div');
       card.classList.add('recommendation-card');
-  
+
       // 2) create and fill out h4 from title
       const titleEl = document.createElement('h4');
       titleEl.textContent = paper.title;
-  
+
       // 3) creates link
       const linkEl = document.createElement('a');
       linkEl.href = paper.link;
       linkEl.textContent = "Read Paper";
       linkEl.target = "_blank";
-  
+
       // 4) creates paragraph for description
       const descriptionEl = document.createElement('p');
       descriptionEl.textContent = paper.description;
-  
-      // 5) ensambles all in card 
+
+      // 5) ensambles all in card
       card.appendChild(titleEl);
       card.appendChild(linkEl);
       card.appendChild(descriptionEl);
@@ -51,14 +51,13 @@ function renderPubSubPapers(papers, container) {
 
         if (path === '/create-project') {
            setupPDFUpload();
-           
+
            const createProjectForm = document.getElementById('createProjectForm');
            createProjectForm?.addEventListener('submit', async(event) => {
             event.preventDefault();
             const title       = document.getElementById('projectTitle').value;
             const description = document.getElementById('projectDescription').value;
-            const queries = [];
-      
+
             // POST to real endpoint instead of localStorage
             const res = await fetch('/api/projects', {
               method: 'POST',
@@ -71,7 +70,7 @@ function renderPubSubPapers(papers, container) {
             const { projectId } = await res.json();
             window.location.href = `/project/${projectId}`;
           });
-        
+
 
         } else if (path.startsWith('/project/')) {
             const projectId = path.split('/').pop();
@@ -83,7 +82,7 @@ function renderPubSubPapers(papers, container) {
                 return;
             }
             const project = await projectRes.json();
-            // Populate header 
+            // Populate header
             document.getElementById('projectTitleDisplay').textContent = project.title;
             document.getElementById('projectDescriptionDisplay').textContent = project.description;
             //To not depending on localStorage for title and description:
@@ -93,7 +92,7 @@ function renderPubSubPapers(papers, container) {
             const container = document.getElementById('pubsubPapersContainer');
 
             // clear and wire up form
-            renderPubSubSection();               // 
+            renderPubSubSection();               //
             setupPubSubForm();                   //
 
             // tell backend to update newsletter papers. Try to update but not break UI if fails
@@ -127,7 +126,7 @@ function renderPubSubPapers(papers, container) {
             console.log('📬 Rendering real PubSub papers:', papers);
             renderPubSubPapers(papers, container);
         }
-        
+
             //5. Load rest of UI
             loadProjectOverviewData(projectId, project.description);
 
