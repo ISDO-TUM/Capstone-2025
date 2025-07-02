@@ -1,9 +1,11 @@
 import psycopg2
-import psycopg2.extras
+from psycopg2 import extras
 import os
 from dotenv import load_dotenv
 import hashlib
 from utils.status import Status
+import json
+from database.database_connection import connect_to_db
 
 load_dotenv()
 
@@ -34,121 +36,113 @@ def _generate_paper_hash(paper_data_dict):
     return hashlib.sha256(data_string.encode('utf-8')).hexdigest()
 
 
-def connect_to_db():
-    """
-    Establishes a connection to the PostgreSQL database.
-    Reads connection parameters from environment variables.
-    """
-    db_host = os.getenv("DB_HOST")
-    db_name = os.getenv("DB_NAME", "papers")
-    db_user = os.getenv("DB_USER")
-    db_password = os.getenv("DB_PASSWORD")
-    db_port = os.getenv("DB_PORT", "5432")
-
-    try:
-        conn = psycopg2.connect(host=db_host, dbname=db_name,
-                                user=db_user, password=db_password, port=db_port)
-        return conn
-    except psycopg2.Error as e:
-        print(f"Error connecting to the database: {e}")
-        return None
-
-
 def insert_papers(papers_data_list):
     """
-    Inserts one or more new papers into the papers_table.
-    'papers_data_list' should be a list of dictionaries. Each dictionary requires:
-    'id' (string, original identifier), 'title' (string). Optional fields:
-    'abstract', 'authors', 'publication_date' ('YYYY-MM-DD'), 'landing_page_url', 'pdf_url'.
+    Insert one or more paper records into public.papers_table, including
+    the extra metrics (similarity_score, fwci, citation_normalized_percentile,
+    cited_by_count, counts_by_year).
 
-    A hash is generated from all paper fields and used as the primary key.
-    If a paper with the exact same content (and thus same hash) already exists,
-    it's skipped due to ON CONFLICT (paper_hash) DO NOTHING.
+    Args
+    ----
+    papers_data_list : list[dict]
+        • Required keys:  id, title
+        • Optional keys:  abstract, authors, publication_date,
+                          landing_page_url, pdf_url,
+                          similarity_score, fwci,
+                          citation_normalized_percentile, cited_by_count,
+                          counts_by_year (list/obj → JSONB)
 
-    Returns a tuple: (status_code, list_of_inserted_paper_info).
-    status_code: 1 if at least one paper was successfully inserted, 0 otherwise (or on error).
-    list_of_inserted_paper_info: List of dicts [{"title": str, "abstract": str, "hash": str}]
-                                 for each newly inserted paper.
+    Returns
+    -------
+    (status_code, inserted_details)
+
+    status_code          : Status.SUCCESS if at least one row inserted,
+                           Status.FAILURE otherwise.
+    inserted_details     : list of {"title": str, "abstract": str, "hash": str}
+                           describing every newly inserted row.
     """
+    # ---------------- upfront checks -----------------
     if not isinstance(papers_data_list, list):
-        print("Error: Input must be a list of paper dictionaries.")
-        return (Status.SUCCESS, [])
-    if not papers_data_list:
-        print("No papers provided for insertion.")
-        return (Status.SUCCESS, [])
+        print("insert_papers expects a list of dicts.")
+        return Status.FAILURE, []
 
-    conn = connect_to_db()
-    if not conn:
+    if not papers_data_list:
         return Status.SUCCESS, []
 
-    inserted_papers_details = []
-    cur = conn.cursor()
-    sql_insert = """
-        INSERT INTO papers_table (paper_hash, id, title, abstract, authors, publication_date, landing_page_url, pdf_url)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    # ---------------- DB connection ------------------
+    conn = connect_to_db()
+    if conn is None:
+        return Status.FAILURE, []
+
+    cur = conn.cursor(cursor_factory=extras.DictCursor)
+
+    SQL = """
+        INSERT INTO public.papers_table (
+            paper_hash, id, title, abstract, authors,
+            publication_date, landing_page_url, pdf_url,
+            similarity_score, fwci, citation_normalized_percentile,
+            cited_by_count, counts_by_year
+        )
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         ON CONFLICT (paper_hash) DO NOTHING;
     """
 
-    for paper_data in papers_data_list:
-        if not paper_data or not isinstance(paper_data, dict) or \
-                paper_data.get("id") is None or paper_data.get("title") is None:
-            print(
-                f"Error: Missing required fields (id, title) or invalid data for a paper. Skipping: {str(paper_data)[:100]}")
+    inserted_details = []
+
+    # ---------------- main loop ----------------------
+    for p in papers_data_list:
+        if not isinstance(p, dict) or "id" not in p or "title" not in p:
+            print(f"Skipping malformed record: {p!r}")
             continue
 
         try:
-            current_hash = _generate_paper_hash(paper_data)
+            p_hash = _generate_paper_hash(p)
 
-            abstract = paper_data.get("abstract")
-            authors = paper_data.get("authors")
-            publication_date_str = paper_data.get("publication_date")
-            publication_date = publication_date_str if publication_date_str and str(
-                publication_date_str).strip() else None
-            landing_page_url = paper_data.get("landing_page_url")
-            pdf_url = paper_data.get("pdf_url")
+            abstract = p.get("abstract")
+            authors = p.get("authors")
+            pub_date = p.get("publication_date")
+            landing_url = p.get("landing_page_url")
+            pdf_url = p.get("pdf_url")
 
-            cur.execute(sql_insert, (
-                current_hash,
-                paper_data["id"],
-                paper_data["title"],
-                abstract,
-                authors,
-                publication_date,
-                landing_page_url,
-                pdf_url
-            ))
+            sim_score = _to_float(p.get("similarity_score"))
+            fwci = _to_float(p.get("fwci"))
 
-            if cur.rowcount > 0:
-                inserted_papers_details.append({
-                    "title": paper_data["title"],
-                    "abstract": str(abstract) if abstract is not None else "",
-                    "hash": current_hash
-                })
-        except psycopg2.Error as e:
-            print(
-                f"Database error inserting paper with original ID {paper_data.get('id', 'N/A')}: {e}")
+            # ---------- NEW: pull only the numeric percentile ----------
+            cit_norm_raw = p.get("citation_normalized_percentile")
+            cit_norm_pct = _to_float(cit_norm_raw["value"]) if isinstance(cit_norm_raw, dict) else None
+
+            cited_count = _to_int(p.get("cited_by_count"))
+
+            counts_years = p.get("counts_by_year")
+            if counts_years is not None:
+                counts_years = json.dumps(counts_years)          # -> JSONB text
+
+            cur.execute(
+                SQL,
+                (
+                    p_hash, p["id"], p["title"], abstract, authors,
+                    pub_date, landing_url, pdf_url,
+                    sim_score, fwci, cit_norm_pct,
+                    cited_count, counts_years
+                ),
+            )
+
+            if cur.rowcount:
+                inserted_details.append(
+                    {"title": p["title"], "abstract": abstract or "", "hash": p_hash}
+                )
+
+        except psycopg2.Error as db_err:
+            print(f"[DB] error inserting {p.get('id')}: {db_err.diag.message_primary}")
             conn.rollback()
-            cur.close()
-            conn.close()
-            return (Status.SUCCESS, [])
-        except Exception as ex:
-            print(
-                f"An unexpected error occurred processing paper ID {paper_data.get('id', 'N/A')}: {ex}")
-            conn.rollback()
-            cur.close()
-            conn.close()
-            return (Status.SUCCESS, [])
 
-    if not inserted_papers_details:
-        conn.commit()
-        status_code = Status.SUCCESS
-    else:
-        conn.commit()
-        status_code = Status.FAILURE
-
+    # --------------- finalise ------------------------
+    conn.commit()
     cur.close()
     conn.close()
-    return (status_code, inserted_papers_details)
+
+    status_code = Status.SUCCESS if inserted_details else Status.FAILURE
+    return status_code, inserted_details
 
 
 def get_all_papers():
@@ -222,9 +216,31 @@ def get_paper_by_hash(paper_hash_to_find):
 
 def get_papers_by_hash(paper_hashes_to_find):
     """
-    Retrieves multiple paper versions from the papers_table by their unique hashes.
-    'paper_hashes_to_find' should be a list of hashes.
-    Returns a list of dictionaries representing the papers, or an empty list if none found.
+    Retrieve one or more papers from papers_table by their unique hashes.
+
+    Parameters
+    ----------
+    paper_hashes_to_find : list[str]
+        A non-empty list of paper_hash strings.
+
+    Returns
+    -------
+    list[dict]
+        A list of dictionaries (one per paper) with keys:
+        - paper_hash
+        - id
+        - title
+        - abstract
+        - authors
+        - publication_date
+        - landing_page_url
+        - pdf_url
+        - similarity_score
+        - fwci
+        - citation_normalized_percentile
+        - cited_by_count
+        - counts_by_year
+        Returns an empty list if nothing is found or on error.
     """
     if not isinstance(paper_hashes_to_find, list) or not paper_hashes_to_find:
         print("Error: Input must be a non-empty list of paper hashes.")
@@ -235,7 +251,25 @@ def get_papers_by_hash(paper_hashes_to_find):
         return []
 
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    sql = "SELECT paper_hash, id, title, abstract, authors, publication_date, landing_page_url, pdf_url FROM papers_table WHERE paper_hash = ANY(%s);"
+    sql = """
+        SELECT
+            paper_hash,
+            id,
+            title,
+            abstract,
+            authors,
+            publication_date,
+            landing_page_url,
+            pdf_url,
+            similarity_score,
+            fwci,
+            citation_normalized_percentile,
+            cited_by_count,
+            counts_by_year
+        FROM papers_table
+        WHERE paper_hash = ANY(%s);
+    """
+
     try:
         cur.execute(sql, (paper_hashes_to_find,))
         papers = [dict(row) for row in cur.fetchall()]
@@ -455,6 +489,21 @@ def list_tables_and_columns():
     finally:
         cur.close()
         conn.close()
+
+
+# HELPER functions
+def _to_float(val):
+    try:
+        return float(val) if val is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _to_int(val):
+    try:
+        return int(val) if val is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 if __name__ == '__main__':

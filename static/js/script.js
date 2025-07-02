@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-
+            
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 handleFileSelection(files[0]);
@@ -95,32 +95,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function displayFileInfo(file) {
             const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
-
+            
             fileName.textContent = file.name;
             fileSize.textContent = `${sizeInMB} MB`;
-
+            
             uploadArea.style.display = 'none';
             fileInfo.style.display = 'flex';
-            
+
             extractPDFText(file);
         }
 
         async function extractPDFText(file) {
             const projectDescription = document.getElementById('projectDescription');
             if (!projectDescription) return;
-            
+
             const formData = new FormData();
             formData.append('file', file);
-            
+
             try {
                 const originalValue = projectDescription.value;
                 projectDescription.value = originalValue + '\n\n[Extracting PDF text...]';
-                
+
                 const response = await fetch('/api/extract-pdf-text', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 if (!response.ok) {
                     try {
                         const result = await response.json();
@@ -131,13 +131,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     projectDescription.value = originalValue;
                     return;
                 }
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     const currentText = originalValue.trim();
-                    const newText = currentText ? 
-                        `${currentText}\n\n${result.extracted_text}` : 
+                    const newText = currentText ?
+                        `${currentText}\n\n${result.extracted_text}` :
                         result.extracted_text;
                     projectDescription.value = newText;
                 } else {
@@ -152,10 +152,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function removeFile() {
             fileInput.value = '';
-
+            
             fileInfo.style.display = 'none';
             uploadArea.style.display = 'block';
-
+            
             fileName.textContent = '';
             fileSize.textContent = '';
         }
@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
         thoughtsContainer.innerHTML = ''; // Clear for new thoughts
 
         try {
-            const response = await fetch('/api/recommendations', {
+            const response = await fetch('/api/old_recommendations', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ projectDescription }),
@@ -321,31 +321,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const fadeOverlay = document.getElementById('descriptionFadeOverlay');
         const controls = document.getElementById('descriptionControls');
         const expandText = toggleButton?.querySelector('.expand-text');
-        
+
         if (!descriptionDisplay || !descriptionWrapper || !toggleButton || !fadeOverlay || !controls || !expandText) return;
 
         const wordCount = description.trim().split(/\s+/).length;
 
         if (wordCount > 500) {
             const isCollapsed = true;
-            
+
             descriptionDisplay.classList.toggle('collapsed', isCollapsed);
             descriptionDisplay.classList.toggle('expanded', !isCollapsed);
             toggleButton.classList.toggle('expanded', !isCollapsed);
             fadeOverlay.classList.toggle('visible', isCollapsed);
             controls.classList.add('visible');
-            
-            expandText.textContent = isCollapsed ? 'Show full description' : 'Show less';
-            
+
+            expandText.textContent = isCollapsed ? 'Show full description' : 'Hide full description';
+
             toggleButton.addEventListener('click', () => {
                 const currentlyCollapsed = descriptionDisplay.classList.contains('collapsed');
-                
+
                 descriptionDisplay.classList.toggle('collapsed', !currentlyCollapsed);
                 descriptionDisplay.classList.toggle('expanded', currentlyCollapsed);
                 toggleButton.classList.toggle('expanded', currentlyCollapsed);
                 fadeOverlay.classList.toggle('visible', !currentlyCollapsed);
-                
-                expandText.textContent = !currentlyCollapsed ? 'Show full description' : 'Show less';
+
+                expandText.textContent = !currentlyCollapsed ? 'Show full description' : 'Hide full description';
             });
         } else {
             // Short description, no need to use expandable view
@@ -356,195 +356,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- HOMEPAGE PROJECTS & SEARCH ---
-    const hardcodedProjects = [
-        // 30 example projects with name, description, tags, and creation date
-        {
-            name: "AI for Drug Discovery",
-            description: "Leveraging deep learning to accelerate the identification of novel drug candidates for rare diseases.",
-            tags: ["AI", "Drug Discovery", "Deep Learning", "Healthcare"],
-            date: "2024-01-15"
-        },
-        {
-            name: "Climate Change Impact Analysis",
-            description: "Analyzing satellite data to predict the long-term effects of climate change on coastal regions.",
-            tags: ["Climate", "Satellite", "Prediction", "Environment"],
-            date: "2024-02-02"
-        },
-        {
-            name: "Quantum Computing Algorithms",
-            description: "Developing new quantum algorithms for optimization problems in logistics.",
-            tags: ["Quantum", "Algorithms", "Optimization", "Logistics"],
-            date: "2024-01-28"
-        },
-        {
-            name: "Cancer Genomics",
-            description: "Integrating multi-omics data to identify biomarkers for early cancer detection.",
-            tags: ["Genomics", "Cancer", "Biomarkers", "Multi-omics"],
-            date: "2024-03-10"
-        },
-        {
-            name: "Renewable Energy Forecasting",
-            description: "Machine learning models for predicting solar and wind energy production.",
-            tags: ["Renewable", "Energy", "Forecasting", "Machine Learning"],
-            date: "2024-02-18"
-        },
-        {
-            name: "Social Network Analysis",
-            description: "Studying the spread of information and influence in online social networks.",
-            tags: ["Social Network", "Influence", "Information Spread", "Data Science"],
-            date: "2024-01-22"
-        },
-        {
-            name: "Autonomous Vehicles Safety",
-            description: "Evaluating safety protocols and AI decision-making in self-driving cars.",
-            tags: ["Autonomous", "Vehicles", "Safety", "AI"],
-            date: "2024-03-01"
-        },
-        {
-            name: "Brain-Computer Interfaces",
-            description: "Exploring non-invasive methods for direct communication between brain and computer systems.",
-            tags: ["Brain", "BCI", "Neuroscience", "Interfaces"],
-            date: "2024-02-25"
-        },
-        {
-            name: "Smart Agriculture",
-            description: "IoT and AI for precision farming and crop yield optimization.",
-            tags: ["Agriculture", "IoT", "AI", "Precision Farming"],
-            date: "2024-01-30"
-        },
-        {
-            name: "Natural Language Understanding",
-            description: "Advancing NLP models for better comprehension of scientific literature.",
-            tags: ["NLP", "Language", "AI", "Literature"],
-            date: "2024-02-12"
-        },
-        {
-            name: "Materials Discovery",
-            description: "AI-driven search for new materials with unique electronic properties.",
-            tags: ["Materials", "AI", "Discovery", "Electronics"],
-            date: "2024-03-05"
-        },
-        {
-            name: "Urban Mobility Planning",
-            description: "Simulation and optimization of public transport systems in megacities.",
-            tags: ["Urban", "Mobility", "Transport", "Simulation"],
-            date: "2024-01-18"
-        },
-        {
-            name: "Protein Structure Prediction",
-            description: "Deep learning for accurate prediction of protein folding and structure.",
-            tags: ["Protein", "Structure", "Deep Learning", "Biology"],
-            date: "2024-02-20"
-        },
-        {
-            name: "Digital Humanities",
-            description: "Text mining and visualization for historical document analysis.",
-            tags: ["Humanities", "Text Mining", "Visualization", "History"],
-            date: "2024-03-08"
-        },
-        {
-            name: "Robotics in Surgery",
-            description: "Evaluating the precision and outcomes of robot-assisted surgical procedures.",
-            tags: ["Robotics", "Surgery", "Precision", "Healthcare"],
-            date: "2024-01-25"
-        },
-        {
-            name: "Wildlife Conservation AI",
-            description: "Using AI to monitor endangered species and prevent poaching.",
-            tags: ["Wildlife", "Conservation", "AI", "Monitoring"],
-            date: "2024-02-28"
-        },
-        {
-            name: "Blockchain for Science",
-            description: "Decentralized data sharing and reproducibility in scientific research.",
-            tags: ["Blockchain", "Reproducibility", "Data Sharing", "Science"],
-            date: "2024-03-12"
-        },
-        {
-            name: "Personalized Medicine",
-            description: "Genetic and lifestyle data for tailored healthcare solutions.",
-            tags: ["Personalized", "Medicine", "Genetics", "Healthcare"],
-            date: "2024-01-27"
-        },
-        {
-            name: "Astrophysics Simulations",
-            description: "High-performance computing for simulating galaxy formation.",
-            tags: ["Astrophysics", "Simulation", "Galaxy", "HPC"],
-            date: "2024-02-15"
-        },
-        {
-            name: "Emotion Recognition",
-            description: "AI models for detecting emotions in speech and facial expressions.",
-            tags: ["Emotion", "Recognition", "AI", "Speech"],
-            date: "2024-03-03"
-        },
-        {
-            name: "Smart Grids",
-            description: "Optimizing energy distribution using real-time data and AI.",
-            tags: ["Smart Grid", "Energy", "AI", "Optimization"],
-            date: "2024-01-19"
-        },
-        {
-            name: "Microbiome Analysis",
-            description: "Studying the human microbiome's role in health and disease.",
-            tags: ["Microbiome", "Health", "Disease", "Biology"],
-            date: "2024-02-22"
-        },
-        {
-            name: "Edge Computing for IoT",
-            description: "Low-latency data processing at the edge for IoT devices.",
-            tags: ["Edge", "IoT", "Computing", "Data"],
-            date: "2024-03-07"
-        },
-        {
-            name: "Virtual Reality in Education",
-            description: "Immersive VR experiences for interactive science learning.",
-            tags: ["VR", "Education", "Immersive", "Science"],
-            date: "2024-01-23"
-        },
-        {
-            name: "Gene Editing Ethics",
-            description: "Exploring the ethical implications of CRISPR and gene editing.",
-            tags: ["Gene Editing", "Ethics", "CRISPR", "Biotech"],
-            date: "2024-02-27"
-        },
-        {
-            name: "Financial Market Prediction",
-            description: "AI and statistical models for stock and crypto market forecasting.",
-            tags: ["Finance", "Prediction", "AI", "Markets"],
-            date: "2024-03-11"
-        },
-        {
-            name: "Speech Synthesis",
-            description: "Neural networks for natural-sounding text-to-speech systems.",
-            tags: ["Speech", "Synthesis", "Neural Networks", "Audio"],
-            date: "2024-01-29"
-        },
-        {
-            name: "Food Security Monitoring",
-            description: "Remote sensing and AI for global food supply chain monitoring.",
-            tags: ["Food", "Security", "Remote Sensing", "AI"],
-            date: "2024-02-24"
-        },
-        {
-            name: "Exoplanet Detection",
-            description: "Machine learning for identifying exoplanets in telescope data.",
-            tags: ["Exoplanet", "Detection", "Machine Learning", "Astronomy"],
-            date: "2024-03-09"
-        },
-        {
-            name: "Digital Twin Manufacturing",
-            description: "Simulating and optimizing manufacturing processes with digital twins.",
-            tags: ["Digital Twin", "Manufacturing", "Simulation", "Optimization"],
-            date: "2024-01-31"
-        },
-        {
-            name: "Mental Health Chatbots",
-            description: "Conversational AI for mental health support and early intervention.",
-            tags: ["Mental Health", "Chatbot", "AI", "Support"],
-            date: "2024-02-26"
+    async function loadProjectsFromAPI() {
+        try {
+            const response = await fetch('/api/getProjects');
+            const data = await response.json();
+            if (data.success && data.projects) {
+                return data.projects;
+            } else {
+                console.error('Failed to load projects:', data.error);
+                return [];
+            }
+        } catch (error) {
+            console.error('Error fetching projects:', error);
+            return [];
         }
-    ];
+    }
 
     function renderProjects(projects) {
         const projectsList = document.getElementById('projectsList');
@@ -562,11 +388,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="project-date">Created: ${project.date}</div>
             `;
-            // Optionally, add click event for future navigation or toast
+            // Navigate to project page on click
             card.addEventListener('click', () => {
-                // For now, just a simple animation or toast
-                card.classList.add('card-clicked');
-                setTimeout(() => card.classList.remove('card-clicked'), 400);
+                if (project.project_id) {
+                    window.location.href = `/project/${project.project_id}`;
+                } else {
+                    // Fallback animation if no project_id
+                    card.classList.add('card-clicked');
+                    setTimeout(() => card.classList.remove('card-clicked'), 400);
+                }
             });
             projectsList.appendChild(card);
         });
@@ -602,11 +432,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // On DOMContentLoaded, render projects and set up search
     if (window.location.pathname === '/') {
-        renderProjects(hardcodedProjects);
+        let allProjects = [];
+
+        // Load projects from API
+        loadProjectsFromAPI().then(projects => {
+            allProjects = projects;
+            renderProjects(allProjects);
+        });
+
         const searchInput = document.getElementById('projectSearchInput');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
-                const filtered = filterProjectsBySearch(hardcodedProjects, e.target.value);
+                const filtered = filterProjectsBySearch(allProjects, e.target.value);
                 renderProjects(filtered);
             });
         }
