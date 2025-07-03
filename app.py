@@ -9,6 +9,7 @@ from flask import Flask, request, jsonify, render_template, Response, stream_wit
 from database.papers_database_handler import get_paper_by_hash
 from database.projectpaper_database_handler import get_papers_for_project
 from database.projects_database_handler import add_new_project_to_db, get_project_data, get_all_projects
+from database.database_connection import connect_to_db
 from llm.Agent import trigger_agent_show_thoughts
 import PyPDF2
 
@@ -95,12 +96,6 @@ MOCK_NEWSLETTER = [
 ]
 
 
-@app.errorhandler(413)
-def request_entity_too_large(error):
-    logger.error(f"HTTP Error 413 - Request rejected. Request content length exceeds 50MB limit. Request Content Length: {request.content_length}")
-    return jsonify({
-        "error": "File size exceeds maximum allowed size (50MB)"
-    }), 413
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 
 
@@ -294,7 +289,7 @@ def extract_pdf_text():
         return jsonify({"error": "No file provided"}), 400
 
     file = request.files['file']
-    if file.filename == '':
+    if not file.filename or file.filename == '':
         return jsonify({"error": "No file selected"}), 400
 
     if not file.filename.lower().endswith('.pdf'):
@@ -358,46 +353,6 @@ def rate_paper():
     finally:
         cur.close()
         conn.close()
-
-
-@app.route('/api/extract-pdf-text', methods=['POST'])
-def extract_pdf_text():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file provided"}), 400
-
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No file selected"}), 400
-
-    if not file.filename.lower().endswith('.pdf'):
-        return jsonify({"error": "File must be a PDF"}), 400
-
-    try:
-        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file.read()))
-
-        text_content = ""
-        for page in pdf_reader.pages:
-            text_content += page.extract_text() + "\n"
-
-        text_content = " ".join(text_content.split())
-
-        if not text_content.strip():
-            return jsonify({"error": "Could not extract text from PDF"}), 400
-
-        formatted_text = f"""MESSAGE TO THE AI AGENT SYSTEM: THE USER PROVIDED A RESEARCH PAPER SO YOU CAN UNDERSTAND THEIR RESEARCH INTERESTS.\n THE FULL TEXT OF THIS PAPER IS HERE:\n\n{text_content}\n\n MESSAGE TO THE AI AGENT SYSTEM: END OF FULL PAPER TEXT"""
-
-
-        formatted_text = f"User provided this paper:\n\n{text_content}"
-
-        formatted_text = f"User provided this paper: \n{text_content}"
-        return jsonify({
-            "success": True,
-            "extracted_text": formatted_text
-        })
-
-    except Exception as e:
-        logger.error(f"Error extracting PDF text: {e}")
-        return jsonify({"error": f"Failed to process PDF: {str(e)}"}), 500
 
 
 if __name__ == '__main__':

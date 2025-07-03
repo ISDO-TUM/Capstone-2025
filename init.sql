@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS public.papers_table (
     fwci                            REAL,
     citation_normalized_percentile  REAL,
     cited_by_count                  INTEGER,
-    counts_by_year                  JSONB
+    counts_by_year                  JSONB,
+    rating                          INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS public.projects_table (
