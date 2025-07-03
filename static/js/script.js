@@ -6,7 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
            setupPDFUpload();
         } else if (path.startsWith('/project/')) {
             const projectId = path.split('/').pop();
-            loadProjectOverviewData(projectId);
+            loadProjectOverviewData(projectId).catch(error => {
+                console.error("Error loading project overview:", error);
+            });
         } else if (path === '/') {
             const createProjectBtn = document.getElementById('createProjectBtn');
             if (createProjectBtn) {
@@ -23,13 +25,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 const title = document.getElementById('projectTitle').value;
                 const description = document.getElementById('projectDescription').value;
 
-                // TODO: For now in local storage, in the future will be sent to Flask backend
-                const projectId = `project_${Date.now()}`;
-                const projectData = { id: projectId, title, description };
-                localStorage.setItem(projectId, JSON.stringify(projectData));
+                try {
+                    const response = await fetch('/api/createProject', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title, prompt: description }),
+                    });
 
-                // TODO: For now simulate this, in the future redirect and URL by backend
-                window.location.href = `/project/${projectId}`;
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        alert(`Error creating project: ${errorData.error}`);
+                        return;
+                    }
+
+                    const result = await response.json();
+                    if (result.success) {
+                        const projectId = result.project_id;
+                        const projectData = { id: projectId, title, description };
+                        localStorage.setItem(projectId, JSON.stringify(projectData));
+                        window.location.href = `/project/${projectId}`;
+                    } else {
+                        alert('Failed to create project');
+                    }
+                } catch (error) {
+                    console.error('Error creating project:', error);
+                    alert('Failed to create project. Please try again.');
+                }
             });
         }
     };
@@ -161,55 +182,83 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    const loadProjectOverviewData = (projectId) => {
-        // TODO: For now use localStorage for the project data
-        const projectDataString = localStorage.getItem(projectId);
-        if (!projectDataString) {
-            console.error("Project data not found for ID:", projectId);
-            if (document.getElementById('projectTitleDisplay')) {
-                 document.getElementById('projectTitleDisplay').textContent = "Project Not Found";
-                 document.getElementById('projectDescriptionDisplay').textContent = "The project data could not be loaded.";
+    const loadProjectOverviewData = async (projectId) => {
+        try {
+            // Try to get project data from backend first
+            const response = await fetch('/api/getProjects');
+            const data = await response.json();
+            
+            let projectData = null;
+            if (data.success && data.projects) {
+                projectData = data.projects.find(p => p.project_id === projectId);
             }
-            return;
-        }
-
-        const projectData = JSON.parse(projectDataString);
+            
+            // Turn to localStorage if not found in backend
+            if (!projectData) {
+                const projectDataString = localStorage.getItem(projectId);
+                if (projectDataString) {
+                    projectData = JSON.parse(projectDataString);
+                }
+            }
+            
+            if (!projectData) {
+                console.error("Project data not found for ID:", projectId);
+                if (document.getElementById('projectTitleDisplay')) {
+                     document.getElementById('projectTitleDisplay').textContent = "Project Not Found";
+                     document.getElementById('projectDescriptionDisplay').textContent = "The project data could not be loaded.";
+                }
+                return;
+            }
 
         const titleDisplay = document.getElementById('projectTitleDisplay');
         const descriptionDisplay = document.getElementById('projectDescriptionDisplay');
         const recommendationsContainer = document.getElementById('recommendationsContainer');
         const agentThoughtsContainer = document.getElementById('agentThoughtsContainer');
 
-        if (titleDisplay) titleDisplay.textContent = projectData.title;
+        // Handle both backend and localStorage data structures
+        const title = projectData.title || projectData.name || 'Untitled Project';
+        const description = projectData.description || 'No description available';
+
+        if (titleDisplay) titleDisplay.textContent = title;
         if (descriptionDisplay) {
-            descriptionDisplay.textContent = projectData.description;
-            setupCollapsibleDescription(projectData.description);
+            descriptionDisplay.textContent = description;
+            setupCollapsibleDescription(description);
         }
-        if (document.title && titleDisplay) document.title = `Project: ${projectData.title}`;
+        if (document.title && titleDisplay) document.title = `Project: ${title}`;
 
         if (recommendationsContainer && agentThoughtsContainer) {
             // Set initial state messages
             agentThoughtsContainer.innerHTML = '<p>🧠 Agent is thinking...</p>';
             recommendationsContainer.innerHTML = '<p>⌛ Waiting for agent to provide recommendations...</p>';
 
-            fetchRecommendationsStream(projectData.description, agentThoughtsContainer, recommendationsContainer)
+            fetchRecommendationsStream(projectId, agentThoughtsContainer, recommendationsContainer)
                 .catch(error => {
                     console.error("Error fetching recommendations stream:", error);
                     agentThoughtsContainer.innerHTML += '<p>❌ Error communicating with the agent.</p>';
                     recommendationsContainer.innerHTML = '<p>Could not load recommendations at this time.</p>';
                 });
         }
-    };
+    } catch (error) {
+        console.error("Error loading project data:", error);
+        if (document.getElementById('projectTitleDisplay')) {
+            document.getElementById('projectTitleDisplay').textContent = "Error Loading Project";
+            document.getElementById('projectDescriptionDisplay').textContent = "There was an error loading the project data.";
+        }
+    }
+};
 
-    async function fetchRecommendationsStream(projectDescription, thoughtsContainer, recommendationsContainer) {
-        console.log(`Starting to stream recommendations based on project description...`);
+    async function fetchRecommendationsStream(projectId, thoughtsContainer, recommendationsContainer) {
+        console.log(`Starting to stream recommendations for project ID: ${projectId}`);
         thoughtsContainer.innerHTML = ''; // Clear for new thoughts
 
         try {
-            const response = await fetch('/api/old_recommendations', {
+            const response = await fetch('/api/recommendations', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ projectDescription }),
+                body: JSON.stringify({ 
+                    project_id: projectId,
+                    update_recommendations: true  // Always fetch papers for new projects
+                }),
             });
 
             if (!response.ok) {
@@ -490,11 +539,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Get paper hash (you should include it when rendering each recommendation card)
         const paperHash = clickedStar.closest('.recommendation-card').dataset.paperHash;
+        const currentProjectId = window.location.pathname.split('/').pop();
+
+        console.log(`Sending rating - paperHash: ${paperHash}, projectId: ${currentProjectId}, rating: ${value}`);
 
         fetch('/api/rate_paper', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paper_hash: paperHash, rating: value })
+            body: JSON.stringify({ paper_hash: paperHash, rating: value, project_id: currentProjectId  })
         })
         .then(res => res.json())
         .then(data => {

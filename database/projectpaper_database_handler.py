@@ -19,9 +19,9 @@ def get_papers_for_project(project_id: str):
     connection = connect_to_db()
     cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
     cursor.execute("""
-                   SELECT papers_table.*
+                   SELECT papers_table.*, paperprojects_table.rating
                    FROM papers_table
-                            JOIN paperprojects_table ON papers_table.paper_hash = paperprojects_table.paper_hash
+                   JOIN paperprojects_table ON papers_table.paper_hash = paperprojects_table.paper_hash
                    WHERE paperprojects_table.project_id = %s
                    """, (project_id,))
     papers = cursor.fetchall()
@@ -37,9 +37,12 @@ def get_papers_for_project(project_id: str):
 
         summary_row = cursor.fetchone()
         paper_dict['paper_hash'] = dict(paper)['paper_hash']
+        paper_dict['rating'] = paper['rating']
         if summary_row:
             paper_dict['summary'] = summary_row[0]
         print(paper_dict)
         results.append(paper_dict)
     print("Successfully converted papers to dict")
+    cursor.close()
+    connection.close()
     return results

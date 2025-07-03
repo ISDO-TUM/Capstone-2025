@@ -12,8 +12,7 @@ CREATE TABLE IF NOT EXISTS public.papers_table (
     fwci                            REAL,
     citation_normalized_percentile  REAL,
     cited_by_count                  INTEGER,
-    counts_by_year                  JSONB,
-    rating                          INTEGER
+    counts_by_year                  JSONB
 );
 
 CREATE TABLE IF NOT EXISTS public.projects_table (
@@ -29,6 +28,7 @@ CREATE TABLE IF NOT EXISTS public.paperprojects_table (
     paper_hash TEXT NOT NULL,
     summary TEXT NOT NULL,
     newsletter BOOLEAN,
+    rating INTEGER,
     PRIMARY KEY (project_id, paper_hash),
     FOREIGN KEY (project_id) REFERENCES projects_table(project_id) ON DELETE CASCADE,
     FOREIGN KEY (paper_hash) REFERENCES papers_table(paper_hash) ON DELETE CASCADE

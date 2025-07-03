@@ -181,14 +181,15 @@ def get_old_recommendations():
                         for rec in recs_basic_data:
                             paper = get_paper_by_hash(rec['paper_hash'])
                             paper_dict = {'title': paper['title'], 'link': paper['landing_page_url'],
-                                          'description': rec['summary']}
+                                          'description': rec['summary'], 'hash': rec['paper_hash']}
                             recommendations.append(paper_dict)
                         final_recommendations = []
                         for rec in recommendations:
                             final_recommendations.append({
                                 "title": rec.get("title", "N/A"),
                                 "link": rec.get("link", "N/A"),
-                                "description": rec.get("description", "Relevant based on user interest.")
+                                "description": rec.get("description", "Relevant based on user interest."),
+                                "hash": rec.get("hash", "")
                             })
                         print(final_recommendations)
                         yield f"data: {json.dumps({'recommendations': final_recommendations})}\n\n"
@@ -216,27 +217,44 @@ def get_recommendations():
         if not data or 'project_id' not in data:
             return jsonify({"error": "Missing project_id"}), 400
 
-        # project_id validated above but currently unused in mock implementation
+        project_id = data['project_id']
         update_recommendations = data.get('update_recommendations', False)
-        project = get_project_data(data['project_id'])  # todo check that this function returns a valid dictionary, you might need to format the output to make it usable
-        user_description, project_id = project['title'], project['description']
+        project = get_project_data(project_id)
+        
+        if not project:
+            return jsonify({"error": "Project not found"}), 404
+            
+        user_description = str(project.get('description', '')) if hasattr(project, 'get') else ''
 
         def generate():
             try:
-                if update_recommendations:
+                # First check if we have existing papers
+                recs_basic_data = get_papers_for_project(project_id)
+                print(f"Found {len(recs_basic_data)} papers for project {project_id}")
+                
+                # If no papers exist or update_recommendations is True, fetch new papers
+                if len(recs_basic_data) == 0 or update_recommendations:
+                    print(f"Fetching new papers for project {project_id}")
                     for response_part in trigger_agent_show_thoughts(user_description + "project ID: " + project_id):
                         yield f"data: {json.dumps({'thought': response_part['thought']})}\n\n"
-
-                recs_basic_data = get_papers_for_project(data['project_id'])
+                    
+                    # After fetching, get the papers again
+                    recs_basic_data = get_papers_for_project(project_id)
+                    print(f"fter fetching, found {len(recs_basic_data)} papers for project {project_id}")
+                
+                print(f"Paper data: {recs_basic_data}")
                 recommendations = []
                 for rec in recs_basic_data:
                     paper = get_paper_by_hash(rec['paper_hash'])
-                    paper_dict = {
-                        'title': paper.get("title", "N/A"),
-                        'link': paper.get("link", "N/A"),
-                        'description': paper.get("description", "Relevant based on user interest.")
-                    }
-                    recommendations.append(paper_dict)
+                    if paper:  # Add null check
+                        paper_dict = {
+                            'title': paper.get("title", "N/A"),
+                            'link': paper.get("landing_page_url", "N/A"),
+                            'description': rec.get("summary", "Relevant based on user interest."),
+                            'hash': rec['paper_hash']
+                        }
+                        print(f"Created paper_dict: {paper_dict}")
+                        recommendations.append(paper_dict)
                 print(recommendations)  # todo check that recommendations is a valid json
                 yield f"data: {json.dumps({'recommendations': recommendations})}\n\n"
             except Exception as e:
@@ -325,10 +343,13 @@ def rate_paper():
         return jsonify({"status": "error", "message": "No data provided"}), 400
 
     paper_hash = data.get("paper_hash")
+    project_id = data.get("project_id")
     rating = data.get("rating")
 
-    if not paper_hash or not isinstance(rating, int) or rating < 1 or rating > 5:
-        return jsonify({"status": "error", "message": "Invalid paper_hash or rating"}), 400
+    print(f"Rating - paper_hash: {paper_hash}, project_id: {project_id}, rating: {rating}")
+
+    if not paper_hash or not project_id or not isinstance(rating, int) or rating < 1 or rating > 5:
+        return jsonify({"status": "error", "message": "Invalid paper_hash, project_id, or rating"}), 400
 
     conn = connect_to_db()
     if not conn:
@@ -336,10 +357,11 @@ def rate_paper():
 
     try:
         cur = conn.cursor()
-        cur.execute(
-            "UPDATE papers_table SET rating = %s WHERE paper_hash = %s;",
-            (rating, paper_hash)
-        )
+        cur.execute("""
+                    UPDATE paperprojects_table
+                    SET rating = %s
+                    WHERE paper_hash = %s AND project_id = %s;
+                """, (rating, paper_hash, project_id))
         conn.commit()
 
         if cur.rowcount == 0:
