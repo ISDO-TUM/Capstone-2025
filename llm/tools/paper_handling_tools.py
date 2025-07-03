@@ -63,20 +63,52 @@ def update_papers_for_project(queries: list[str], project_id: str) -> str:
         Use this tool when you want to refresh the paper database with the latest research and ensure
         that all relevant papers have updated embeddings for ranking or similarity comparison tasks.
     Input:
-        queries (list[str]): A list of strings corresponding to the user's interests to search for relevant papers.
-        When generating search queries based on the user's interests, make sure to preserve meaningful multi-word expressions as single, coherent search terms. For example, if the user mentions "ice cream," do not split this into "ice" and "cream" — treat it as a unified concept: "ice cream."
-        Generate search queries that reflect the actual intent of the user's interest, emphasizing quality over quantity. Avoid breaking compound phrases into individual words unless they are clearly independent concepts.
-        Use concise and targeted queries that represent whole ideas, domains, or research topics. Only split input into multiple queries if doing so improves the relevance or diversity of the results without losing semantic meaning.
+        queries (list[str]): A list of *distinct, focused search queries* corresponding to the user's interests.
+        When creating these queries:
+
+        1. Each query should represent **one meaningful research topic, domain, or concept**.
+
+        2. Avoid combining unrelated or loosely related topics into a single query.
+        For example, do **not** use:
+            "algorithmic pricing Gaussian Process Bandits"
+        Instead, split into:
+            "algorithmic pricing"
+            "Gaussian Process Bandits"
+
+        3. Keep **multi-word expressions intact** when they form a single concept (e.g., "Bayesian optimization",
+        "Gaussian Process", "Bertrand markets").
+
+        4. Prioritize clarity and focus over quantity — a smaller set of clean queries works better than many mixed queries.
 
         Examples:
             - User: "I'm interested in machine learning and neural networks"
-            queries: ["machine learning", "neural networks"]
+              Good queries:
+                ["machine learning", "neural networks"]
 
             - User: "I like ice cream and computer vision"
-            queries: ["ice cream", "computer vision"]
+              Good queries:
+                ["ice cream", "computer vision"]
+              Bad queries:
+                ["ice", "cream", "computer", "vision"]
 
-        Avoid:
-            - ["ice", "cream", "computer", "vision"]
+            - User: "I'm interested in papers on algorithmic pricing using Gaussian Process Bandits,
+                     including Bayesian optimization in Bertrand markets, the impact of acquisition functions
+                     (e.g., GP-UCB, GP-EI), the role of GP kernels and hyperparameters in shaping market outcomes,
+                     and memory loss strategies for computational efficiency."
+              Good queries:
+                ["algorithmic pricing",
+                 "Gaussian Process Bandits",
+                 "Bayesian optimization",
+                 "Bertrand markets",
+                 "GP-UCB",
+                 "GP-EI",
+                 "Gaussian Process kernels",
+                 "GP hyperparameters",
+                 "memory loss strategies"]
+              Bad queries:
+                ["algorithmic pricing Gaussian Process Bandits",
+                 "Bayesian optimization Bertrand markets",
+                 "acquisition functions GP-UCB GP-EI pricing"]
 
         project_id (str): The project ID provided by the user
     Output:

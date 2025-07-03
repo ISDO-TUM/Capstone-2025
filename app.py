@@ -180,9 +180,10 @@ def get_old_recommendations():
                         recommendations = []
                         for rec in recs_basic_data:
                             paper = get_paper_by_hash(rec['paper_hash'])
-                            paper_dict = {'title': paper['title'], 'link': paper['landing_page_url'],
-                                          'description': rec['summary'], 'hash': rec['paper_hash']}
-                            recommendations.append(paper_dict)
+                            if paper:  # null check
+                                paper_dict = {'title': paper['title'], 'link': paper['landing_page_url'],
+                                              'description': rec['summary'], 'hash': rec['paper_hash']}
+                                recommendations.append(paper_dict)
                         final_recommendations = []
                         for rec in recommendations:
                             final_recommendations.append({

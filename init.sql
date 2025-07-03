@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS public.projects_table (
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     email TEXT,
-    queries TEXT
+    queries TEXT,
+    user_profile_embedding JSONB
 );
 
 CREATE TABLE IF NOT EXISTS public.paperprojects_table (
