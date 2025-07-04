@@ -93,6 +93,36 @@ class ChromaVectorDB:
     def count_documents(self) -> int:
         return self.collection.count()
 
+    def get_embedding_by_hash(self, paper_hash: str) -> Optional[List[float]]:
+        """
+        Get embedding for a specific paper hash from ChromaDB.
+        
+        Args:
+            paper_hash (str): The paper hash to look up
+            
+        Returns:
+            List[float]: The embedding vector for the paper, or None if not found
+        """
+        try:
+            results = self.collection.get(
+                ids=[paper_hash],
+                include=["embeddings"]
+            )
+            
+            if results["embeddings"] and len(results["embeddings"]) > 0:
+                embedding = results["embeddings"][0]
+                # Convert to List[float] to match the return type
+                if embedding is not None:
+                    return [float(x) for x in embedding]
+                return None
+            else:
+                logger.warning(f"No embedding found for paper hash: {paper_hash}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error getting embedding for paper hash {paper_hash}: {e}")
+            return None
+
 
 # Instantiate singleton
 # todo find a better approach for this

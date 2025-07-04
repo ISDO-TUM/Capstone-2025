@@ -249,7 +249,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchRecommendationsStream(projectId, thoughtsContainer, recommendationsContainer) {
         console.log(`Starting to stream recommendations for project ID: ${projectId}`);
-        thoughtsContainer.innerHTML = ''; // Clear for new thoughts
+        if (thoughtsContainer) {
+            thoughtsContainer.innerHTML = ''; // Clear for new thoughts
+        }
 
         try {
             const response = await fetch('/api/recommendations', {
@@ -301,14 +303,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
 
                             thoughtEl.innerHTML = `${icon} ${content}`;
-                            thoughtsContainer.appendChild(thoughtEl);
-                            thoughtsContainer.scrollTop = thoughtsContainer.scrollHeight;
+                            if (thoughtsContainer) {
+                                thoughtsContainer.appendChild(thoughtEl);
+                                thoughtsContainer.scrollTop = thoughtsContainer.scrollHeight;
+                            }
                         } else if (data.recommendations) {
                             renderRecommendations(data.recommendations, recommendationsContainer);
                         } else if (data.error) {
                             console.error('Server-side error:', data.error);
                             recommendationsContainer.innerHTML = `<p>Error: ${data.error}</p>`;
-                            thoughtsContainer.innerHTML += `<p>❌ An error occurred.</p>`;
+                            if (thoughtsContainer) {
+                                thoughtsContainer.innerHTML += `<p>❌ An error occurred.</p>`;
+                            }
                         }
                     }
                 }
@@ -327,9 +333,18 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        recommendations.forEach(paper => {
+        recommendations.forEach((paper, index) => {
             const card = document.createElement('div');
             card.classList.add('recommendation-card');
+
+            // Add temporary highlight for replacement papers
+            if (paper.is_replacement) {
+                card.classList.add('new-replacement');
+                // Remove the highlight after 5 seconds
+                setTimeout(() => {
+                    card.classList.remove('new-replacement');
+                }, 5000);
+            }
 
             const titleEl = document.createElement('h3');
             titleEl.textContent = paper.title;
@@ -543,6 +558,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log(`Sending rating - paperHash: ${paperHash}, projectId: ${currentProjectId}, rating: ${value}`);
 
+        // For low ratings, remember the card position for replacement
+        let cardToReplace = null;
+        let cardIndex = -1;
+        if (value <= 2) {
+            cardToReplace = clickedStar.closest('.recommendation-card');
+            const allCards = Array.from(document.querySelectorAll('.recommendation-card'));
+            cardIndex = allCards.indexOf(cardToReplace);
+            
+            // Keep the space occupied but make it invisible
+            cardToReplace.style.opacity = '0';
+            cardToReplace.style.visibility = 'hidden';
+            // Use position absolute to take it out of flow but keep space with a placeholder
+            const originalHeight = cardToReplace.offsetHeight;
+            cardToReplace.style.position = 'absolute';
+            cardToReplace.style.zIndex = '-1';
+            
+            // Create a placeholder div to maintain the space
+            const placeholder = document.createElement('div');
+            placeholder.style.height = originalHeight + 'px';
+            placeholder.style.width = '100%';
+            placeholder.style.flexShrink = '0';
+            placeholder.classList.add('replacement-placeholder');
+            cardToReplace.parentNode.insertBefore(placeholder, cardToReplace);
+        }
+
+        // Save the rating
         fetch('/api/rate_paper', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -552,15 +593,127 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             if (data.status === 'success') {
                 console.log("Rating saved!");
+                
+                // Check if a replacement was performed
+                if (data.replacement && data.replacement.status === 'success') {
+                    console.log("Paper replaced successfully:", data.replacement);
+                    
+                    // Show popup notification with the new paper name
+                    const replacementDetails = data.replacement;
+                    if (replacementDetails.replacement_title) {
+                        showReplacementNotification(replacementDetails.replacement_title);
+                    }
+                    
+                    // Insert the replacement paper at the exact same position
+                    if (cardIndex >= 0 && replacementDetails.replacement_title) {
+                        insertReplacementPaper(replacementDetails, cardIndex, recommendationsContainer);
+                    } else {
+                        // Fallback: refresh all recommendations
+                        refreshRecommendations(recommendationsContainer, currentProjectId);
+                    }
+                } else if (value <= 2) {
+                    console.log("Low rating detected but no replacement was performed.");
+                }
             } else {
                 console.error("Failed to save rating:", data.message);
             }
         })
         .catch(err => {
-            console.error("Error sending rating:", err);
+            console.error("Error in rating process:", err);
+            // Show the card again on error
+            if (cardToReplace) {
+                cardToReplace.style.opacity = '1';
+                cardToReplace.style.transform = 'scale(1)';
+                cardToReplace.style.display = 'block';
+            }
         });
     }
 });
 
     }
 });
+
+
+// Function to show replacement notification popup
+function showReplacementNotification(newPaperTitle) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = 'replacement-notification';
+    notification.innerHTML = `
+        <div class="notification-content">
+            <div class="notification-icon">🔄</div>
+            <div class="notification-text">
+                <div class="notification-title">Paper Replaced!</div>
+                <div class="notification-message">Added: "${newPaperTitle}"</div>
+            </div>
+        </div>
+    `;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Trigger animation
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+    
+    // Remove after 4 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 4000);
+}
+
+// Function to insert replacement paper at specific position
+function insertReplacementPaper(replacementDetails, position, container) {
+    // Find the invisible card at the specified position
+    const allCards = Array.from(container.querySelectorAll('.recommendation-card'));
+    const invisibleCard = allCards[position];
+    
+    if (invisibleCard && invisibleCard.style.visibility === 'hidden') {
+        // Remove the placeholder first
+        const placeholder = container.querySelector('.replacement-placeholder');
+        if (placeholder) {
+            placeholder.remove();
+        }
+        
+        // Replace the invisible card's content
+        invisibleCard.dataset.paperHash = replacementDetails.replacement_paper_hash;
+        invisibleCard.classList.add('new-replacement');
+        
+        invisibleCard.innerHTML = `
+            <h3>${replacementDetails.replacement_title}</h3>
+            <a href="N/A" target="_blank">Read Paper</a>
+            <p>${replacementDetails.replacement_summary}</p>
+            <div class="star-rating">
+                <span class="star" data-value="1">&#9733;</span>
+                <span class="star" data-value="2">&#9733;</span>
+                <span class="star" data-value="3">&#9733;</span>
+                <span class="star" data-value="4">&#9733;</span>
+                <span class="star" data-value="5">&#9733;</span>
+            </div>
+        `;
+        
+        // Reset the card's styling and animate it in
+        invisibleCard.style.visibility = 'visible';
+        invisibleCard.style.opacity = '0';
+        invisibleCard.style.transform = 'scale(0.8)';
+        invisibleCard.style.position = '';
+        invisibleCard.style.zIndex = '';
+        
+        setTimeout(() => {
+            invisibleCard.style.opacity = '1';
+            invisibleCard.style.transform = 'scale(1)';
+        }, 100);
+        
+        // Remove highlight after 3 seconds
+        setTimeout(() => {
+            invisibleCard.classList.remove('new-replacement');
+        }, 3000);
+    }
+}
+

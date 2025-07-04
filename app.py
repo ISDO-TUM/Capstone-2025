@@ -11,6 +11,8 @@ from database.projectpaper_database_handler import get_papers_for_project
 from database.projects_database_handler import add_new_project_to_db, get_project_data, get_all_projects
 from database.database_connection import connect_to_db
 from llm.Agent import trigger_agent_show_thoughts
+from llm.feedback import update_user_profile_embedding_from_rating
+from llm.tools.paper_handling_tools import replace_low_rated_paper
 import PyPDF2
 
 logger = logging.getLogger(__name__)
@@ -252,7 +254,8 @@ def get_recommendations():
                             'title': paper.get("title", "N/A"),
                             'link': paper.get("landing_page_url", "N/A"),
                             'description': rec.get("summary", "Relevant based on user interest."),
-                            'hash': rec['paper_hash']
+                            'hash': rec['paper_hash'],
+                            'is_replacement': rec.get('is_replacement', False)
                         }
                         print(f"Created paper_dict: {paper_dict}")
                         recommendations.append(paper_dict)
@@ -368,7 +371,36 @@ def rate_paper():
         if cur.rowcount == 0:
             return jsonify({"status": "error", "message": "Paper not found"}), 404
 
-        return jsonify({"status": "success", "message": "Rating saved"})
+        # Update user profile embedding based on the rating
+        update_user_profile_embedding_from_rating(project_id, paper_hash, rating)
+
+        # If rating is low (1-2 stars), automatically replace the paper
+        replacement_result = None
+        if rating <= 2:
+            try:
+                print(f"Low rating ({rating}) detected, attempting to replace paper {paper_hash}")
+
+                # Call the replacement tool directly
+                result = replace_low_rated_paper.invoke({
+                    "project_id": project_id,
+                    "low_rated_paper_hash": paper_hash
+                })
+                
+                # Parse the JSON result
+                import json
+                replacement_result = json.loads(result)
+                print(f"Replacement result: {replacement_result}")
+                
+            except Exception as replacement_error:
+                logger.warning(f"Failed to replace low-rated paper: {replacement_error}")
+                replacement_result = None
+
+        # Return response with replacement info
+        response_data = {"status": "success", "message": "Rating saved"}
+        if replacement_result and replacement_result.get("status") == "success":
+            response_data["replacement"] = replacement_result
+            
+        return jsonify(response_data)
     except Exception as e:
         conn.rollback()
         logger.error(f"Error updating rating: {e}")

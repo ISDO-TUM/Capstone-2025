@@ -782,3 +782,107 @@ body {
 .star.hovered {
     color: #ffc107;
 }
+
+.replacing-paper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    color: #1a237e;
+    font-weight: 500;
+    font-size: 14px;
+    border: 1px solid rgba(26, 35, 126, 0.1);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.02);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Temporary highlight for new replacement papers */
+.new-replacement {
+    animation: newReplacementHighlight 3s ease-out forwards;
+    border: 2px solid #007bff;
+    box-shadow: 0 0 20px rgba(0, 123, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+@keyframes newReplacementHighlight {
+    0% {
+        background: linear-gradient(135deg, rgba(0, 123, 255, 0.1) 0%, rgba(0, 123, 255, 0.1) 100%);
+        border-color: #007bff;
+        box-shadow: 0 0 30px rgba(0, 123, 255, 0.5);
+    }
+    50% {
+        background: linear-gradient(135deg, rgba(0, 123, 255, 0.05) 0%, rgba(0, 123, 255, 0.05) 100%);
+        border-color: #007bff;
+        box-shadow: 0 0 15px rgba(0, 123, 255, 0.3);
+    }
+    100% {
+        background: rgba(255, 255, 255, 0.8);
+        border-color: rgba(255, 255, 255, 0.3);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+}
+
+/* Make recommendation cards relative positioned for animations */
+.recommendation-card {
+    position: relative;
+}
+
+/* Replacement notification popup */
+.replacement-notification {
+    position: fixed;
+    top: 32px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.95);
+    background: linear-gradient(90deg, #007bff 60%, #4f8cff 100%);
+    color: white;
+    padding: 18px 32px;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0, 123, 255, 0.18);
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+    font-size: 1.08rem;
+    display: flex;
+    align-items: center;
+}
+.replacement-notification.show {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+    pointer-events: auto;
+}
+.notification-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.notification-icon {
+    font-size: 1.6rem;
+    margin-right: 8px;
+}
+.notification-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 2px;
+}
+.notification-message {
+    font-size: 1rem;
+    opacity: 0.95;
+}
