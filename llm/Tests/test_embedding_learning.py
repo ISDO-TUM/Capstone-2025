@@ -163,6 +163,7 @@ if __name__ == "__main__":
 
         if learning_success:
             pass
+            print("All tests passed!")
         else:
             pass
     else:
