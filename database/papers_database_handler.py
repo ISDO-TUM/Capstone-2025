@@ -1,6 +1,5 @@
 import psycopg2
 from psycopg2 import extras
-import os
 from dotenv import load_dotenv
 import hashlib
 from utils.status import Status
@@ -178,7 +177,8 @@ def get_papers_by_original_id(original_id):
         return []
 
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    sql = "SELECT paper_hash, id, title, abstract, authors, publication_date, landing_page_url, pdf_url FROM papers_table WHERE id = %s;"
+    sql = ("SELECT paper_hash, id, title, abstract, authors, publication_date, landing_page_url, pdf_url "
+           "FROM papers_table WHERE id = %s;")
     try:
         cur.execute(sql, (original_id,))
         papers = [dict(row) for row in cur.fetchall()]
@@ -201,7 +201,8 @@ def get_paper_by_hash(paper_hash_to_find):
         return None
 
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    sql = "SELECT paper_hash, id, title, abstract, authors, publication_date, landing_page_url, pdf_url FROM papers_table WHERE paper_hash = %s;"
+    sql = ("SELECT paper_hash, id, title, abstract, authors, publication_date, landing_page_url, pdf_url "
+           "FROM papers_table WHERE paper_hash = %s;")
     try:
         cur.execute(sql, (paper_hash_to_find,))
         paper = cur.fetchone()
@@ -304,7 +305,8 @@ def update_paper(old_paper_hash, update_data):
     try:
 
         cur.execute(
-            "SELECT id, title, abstract, authors, publication_date, landing_page_url, pdf_url FROM papers_table WHERE paper_hash = %s;",
+            "SELECT id, title, abstract, authors, publication_date, landing_page_url, pdf_url "
+            "FROM papers_table WHERE paper_hash = %s;",
             (old_paper_hash,))
         current_paper_tuple = cur.fetchone()
 
@@ -364,15 +366,15 @@ def update_paper(old_paper_hash, update_data):
 
         rows_inserted = cur.rowcount
         if rows_inserted == 0 and new_hash != old_paper_hash:
-            print(
-                f"Updated state for paper (old hash {old_paper_hash}) results in new hash {new_hash}, which already exists in the DB.")
+            print(f"Updated state for paper (old hash {old_paper_hash}) results in new hash {
+                new_hash}, which already exists in the DB.")
 
         delete_sql = "DELETE FROM papers_table WHERE paper_hash = %s;"
         cur.execute(delete_sql, (old_paper_hash,))
 
         if cur.rowcount == 0:
-            print(
-                f"Warning: Paper with old hash {old_paper_hash} was not found for deletion after update attempt. This might be okay if the new state's hash ({new_hash}) was identical and already existed.")
+            print(f"Warning: Paper with old hash {old_paper_hash} was not found for deletion after update attempt. "
+                  f"This might be okay if the new state's hash ({new_hash}) was identical and already existed.")
 
         conn.commit()
         print(
@@ -628,7 +630,8 @@ if __name__ == '__main__':
     #             paper_1_hash = new_paper_1_hash
     #         else:
     #             print(
-    #                 f"  Could not retrieve paper by new hash {new_paper_1_hash}. Update might have failed silently or hash mismatch.")
+    #                 f"  Could not retrieve paper by new hash {new_paper_1_hash}. Update might have failed
+    #                 silently or hash mismatch.")
     #     else:
     #         print("  Update failed.")
     #     print("-" * 40)

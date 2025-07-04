@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            
+
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 handleFileSelection(files[0]);
@@ -116,10 +116,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function displayFileInfo(file) {
             const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
-            
+
             fileName.textContent = file.name;
             fileSize.textContent = `${sizeInMB} MB`;
-            
+
             uploadArea.style.display = 'none';
             fileInfo.style.display = 'flex';
 
@@ -173,10 +173,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function removeFile() {
             fileInput.value = '';
-            
+
             fileInfo.style.display = 'none';
             uploadArea.style.display = 'block';
-            
+
             fileName.textContent = '';
             fileSize.textContent = '';
         }
@@ -187,12 +187,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // Try to get project data from backend first
             const response = await fetch('/api/getProjects');
             const data = await response.json();
-            
+
             let projectData = null;
             if (data.success && data.projects) {
                 projectData = data.projects.find(p => p.project_id === projectId);
             }
-            
+
             // Turn to localStorage if not found in backend
             if (!projectData) {
                 const projectDataString = localStorage.getItem(projectId);
@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     projectData = JSON.parse(projectDataString);
                 }
             }
-            
+
             if (!projectData) {
                 console.error("Project data not found for ID:", projectId);
                 if (document.getElementById('projectTitleDisplay')) {
@@ -257,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/recommendations', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     project_id: projectId,
                     update_recommendations: true  // Always fetch papers for new projects
                 }),
@@ -565,7 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cardToReplace = clickedStar.closest('.recommendation-card');
             const allCards = Array.from(document.querySelectorAll('.recommendation-card'));
             cardIndex = allCards.indexOf(cardToReplace);
-            
+
             // Keep the space occupied but make it invisible
             cardToReplace.style.opacity = '0';
             cardToReplace.style.visibility = 'hidden';
@@ -573,7 +573,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalHeight = cardToReplace.offsetHeight;
             cardToReplace.style.position = 'absolute';
             cardToReplace.style.zIndex = '-1';
-            
+
             // Create a placeholder div to maintain the space
             const placeholder = document.createElement('div');
             placeholder.style.height = originalHeight + 'px';
@@ -593,17 +593,17 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             if (data.status === 'success') {
                 console.log("Rating saved!");
-                
+
                 // Check if a replacement was performed
                 if (data.replacement && data.replacement.status === 'success') {
                     console.log("Paper replaced successfully:", data.replacement);
-                    
+
                     // Show popup notification with the new paper name
                     const replacementDetails = data.replacement;
                     if (replacementDetails.replacement_title) {
                         showReplacementNotification(replacementDetails.replacement_title);
                     }
-                    
+
                     // Insert the replacement paper at the exact same position
                     if (cardIndex >= 0 && replacementDetails.replacement_title) {
                         insertReplacementPaper(replacementDetails, cardIndex, recommendationsContainer);
@@ -648,15 +648,15 @@ function showReplacementNotification(newPaperTitle) {
             </div>
         </div>
     `;
-    
+
     // Add to page
     document.body.appendChild(notification);
-    
+
     // Trigger animation
     setTimeout(() => {
         notification.classList.add('show');
     }, 100);
-    
+
     // Remove after 4 seconds
     setTimeout(() => {
         notification.classList.remove('show');
@@ -673,18 +673,18 @@ function insertReplacementPaper(replacementDetails, position, container) {
     // Find the invisible card at the specified position
     const allCards = Array.from(container.querySelectorAll('.recommendation-card'));
     const invisibleCard = allCards[position];
-    
+
     if (invisibleCard && invisibleCard.style.visibility === 'hidden') {
         // Remove the placeholder first
         const placeholder = container.querySelector('.replacement-placeholder');
         if (placeholder) {
             placeholder.remove();
         }
-        
+
         // Replace the invisible card's content
         invisibleCard.dataset.paperHash = replacementDetails.replacement_paper_hash;
         invisibleCard.classList.add('new-replacement');
-        
+
         invisibleCard.innerHTML = `
             <h3>${replacementDetails.replacement_title}</h3>
             <a href="N/A" target="_blank">Read Paper</a>
@@ -697,23 +697,22 @@ function insertReplacementPaper(replacementDetails, position, container) {
                 <span class="star" data-value="5">&#9733;</span>
             </div>
         `;
-        
+
         // Reset the card's styling and animate it in
         invisibleCard.style.visibility = 'visible';
         invisibleCard.style.opacity = '0';
         invisibleCard.style.transform = 'scale(0.8)';
         invisibleCard.style.position = '';
         invisibleCard.style.zIndex = '';
-        
+
         setTimeout(() => {
             invisibleCard.style.opacity = '1';
             invisibleCard.style.transform = 'scale(1)';
         }, 100);
-        
+
         // Remove highlight after 3 seconds
         setTimeout(() => {
             invisibleCard.classList.remove('new-replacement');
         }, 3000);
     }
 }
-

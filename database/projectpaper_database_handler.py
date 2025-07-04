@@ -8,15 +8,15 @@ def assign_paper_to_project(paper_hash: str, project_id: str, summary: str, is_r
     connection = connect_to_db()
     if not connection:
         raise Exception("Failed to connect to database")
-    
+
     cursor = connection.cursor()
 
     try:
         # Use INSERT ... ON CONFLICT to handle duplicates
         cursor.execute("""
-            INSERT INTO paperprojects_table (project_id, paper_hash, summary, is_replacement) 
+            INSERT INTO paperprojects_table (project_id, paper_hash, summary, is_replacement)
             VALUES (%s, %s, %s, %s)
-            ON CONFLICT (project_id, paper_hash) 
+            ON CONFLICT (project_id, paper_hash)
             DO UPDATE SET summary = EXCLUDED.summary, is_replacement = EXCLUDED.is_replacement
         """, (project_id, paper_hash, summary, is_replacement))
         connection.commit()
@@ -32,7 +32,7 @@ def get_papers_for_project(project_id: str):
     connection = connect_to_db()
     if not connection:
         raise Exception("Failed to connect to database")
-    
+
     cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
     cursor.execute("""
                    SELECT papers_table.*, paperprojects_table.rating, paperprojects_table.is_replacement

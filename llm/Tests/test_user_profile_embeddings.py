@@ -1,17 +1,16 @@
-import sys
-import os
-import json
-
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
+from llm.tools.paper_ranker import get_best_papers
+from llm.Embeddings import embed_user_profile
 from database.projects_database_handler import (
     add_new_project_to_db,
     add_user_profile_embedding,
     get_user_profile_embedding,
     get_project_data
 )
-from llm.Embeddings import embed_user_profile
-from llm.tools.paper_ranker import get_best_papers
+import sys
+import os
+import json
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 
 def test_embedding_storage_and_retrieval():

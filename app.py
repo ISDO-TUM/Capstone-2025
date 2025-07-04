@@ -23,43 +23,48 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 
-MOCK_PROJECTS = [
-    {
-        "project_id": "proj_001",
-        "name": "AI for Drug Discovery",
-        "description": "Leveraging deep learning to accelerate the identification of novel drug candidates for rare diseases.",
-        "tags": ["AI", "Drug Discovery", "Deep Learning", "Healthcare"],
-        "date": "2024-01-15"
-    },
-    {
-        "project_id": "proj_002",
-        "name": "Quantum Computing Algorithms",
-        "description": "Developing new quantum algorithms for optimization problems in logistics.",
-        "tags": ["Quantum", "Algorithms", "Optimization", "Logistics"],
-        "date": "2024-01-28"
-    },
-    {
-        "project_id": "proj_003",
-        "name": "Climate Change Impact Analysis",
-        "description": "Analyzing satellite data to predict the long-term effects of climate change on coastal regions.",
-        "tags": ["Climate", "Satellite", "Prediction", "Environment"],
-        "date": "2024-02-02"
-    },
-    {
-        "project_id": "proj_004",
-        "name": "Cancer Genomics",
-        "description": "Integrating multi-omics data to identify biomarkers for early cancer detection.",
-        "tags": ["Genomics", "Cancer", "Biomarkers", "Multi-omics"],
-        "date": "2024-03-10"
-    },
-    {
-        "project_id": "proj_005",
-        "name": "Renewable Energy Forecasting",
-        "description": "Machine learning models for predicting solar and wind energy production.",
-        "tags": ["Renewable", "Energy", "Forecasting", "Machine Learning"],
-        "date": "2024-02-18"
-    }
-]
+MOCK_PROJECTS = [{"project_id": "proj_001",
+                  "name": "AI for Drug Discovery",
+                  "description": "Leveraging deep learning to accelerate the identification of novel drug candidates "
+                                 "for rare diseases.",
+                  "tags": ["AI",
+                           "Drug Discovery",
+                           "Deep Learning",
+                           "Healthcare"],
+                  "date": "2024-01-15"},
+                 {"project_id": "proj_002",
+                  "name": "Quantum Computing Algorithms",
+                  "description": "Developing new quantum algorithms for optimization problems in logistics.",
+                  "tags": ["Quantum",
+                           "Algorithms",
+                           "Optimization",
+                           "Logistics"],
+                  "date": "2024-01-28"},
+                 {"project_id": "proj_003",
+                  "name": "Climate Change Impact Analysis",
+                  "description": "Analyzing satellite data to predict the long-term effects of climate change on "
+                                 "coastal regions.",
+                  "tags": ["Climate",
+                           "Satellite",
+                           "Prediction",
+                           "Environment"],
+                  "date": "2024-02-02"},
+                 {"project_id": "proj_004",
+                  "name": "Cancer Genomics",
+                  "description": "Integrating multi-omics data to identify biomarkers for early cancer detection.",
+                  "tags": ["Genomics",
+                           "Cancer",
+                           "Biomarkers",
+                           "Multi-omics"],
+                  "date": "2024-03-10"},
+                 {"project_id": "proj_005",
+                  "name": "Renewable Energy Forecasting",
+                  "description": "Machine learning models for predicting solar and wind energy production.",
+                  "tags": ["Renewable",
+                           "Energy",
+                           "Forecasting",
+                           "Machine Learning"],
+                  "date": "2024-02-18"}]
 
 MOCK_RECOMMENDATIONS = [
     {
@@ -103,7 +108,9 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 
 @app.errorhandler(413)
 def request_entity_too_large(error):
-    logger.error(f"HTTP Error 413 - Request rejected. Request content length exceeds 50MB limit. Request Content Length: {request.content_length}")
+    logger.error(
+        f"HTTP Error 413 - Request rejected. Request content length exceeds 50MB limit. Request Content Length: "
+        f"{request.content_length}")
     return jsonify({
         "error": "File size exceeds maximum allowed size (50MB)"
     }), 413
@@ -131,7 +138,8 @@ def get_projects():
     try:
         return jsonify({
             "success": True,
-            "projects": get_all_projects()  # todo check that this function returns valid dicts, might need to modify it to make them have the right form
+            "projects": get_all_projects()  # todo check that this function returns valid dicts, might need to modify
+            # it to make them have the right form
         })
     except Exception as e:
         logger.error(f"Error getting projects: {e}")
@@ -223,10 +231,10 @@ def get_recommendations():
         project_id = data['project_id']
         update_recommendations = data.get('update_recommendations', False)
         project = get_project_data(project_id)
-        
+
         if not project:
             return jsonify({"error": "Project not found"}), 404
-            
+
         user_description = str(project.get('description', '')) if hasattr(project, 'get') else ''
 
         def generate():
@@ -234,17 +242,17 @@ def get_recommendations():
                 # First check if we have existing papers
                 recs_basic_data = get_papers_for_project(project_id)
                 print(f"Found {len(recs_basic_data)} papers for project {project_id}")
-                
+
                 # If no papers exist or update_recommendations is True, fetch new papers
                 if len(recs_basic_data) == 0 or update_recommendations:
                     print(f"Fetching new papers for project {project_id}")
                     for response_part in trigger_agent_show_thoughts(user_description + "project ID: " + project_id):
                         yield f"data: {json.dumps({'thought': response_part['thought']})}\n\n"
-                    
+
                     # After fetching, get the papers again
                     recs_basic_data = get_papers_for_project(project_id)
                     print(f"fter fetching, found {len(recs_basic_data)} papers for project {project_id}")
-                
+
                 print(f"Paper data: {recs_basic_data}")
                 recommendations = []
                 for rec in recs_basic_data:
@@ -385,12 +393,12 @@ def rate_paper():
                     "project_id": project_id,
                     "low_rated_paper_hash": paper_hash
                 })
-                
+
                 # Parse the JSON result
                 import json
                 replacement_result = json.loads(result)
                 print(f"Replacement result: {replacement_result}")
-                
+
             except Exception as replacement_error:
                 logger.warning(f"Failed to replace low-rated paper: {replacement_error}")
                 replacement_result = None
@@ -399,7 +407,7 @@ def rate_paper():
         response_data = {"status": "success", "message": "Rating saved"}
         if replacement_result and replacement_result.get("status") == "success":
             response_data["replacement"] = replacement_result
-            
+
         return jsonify(response_data)
     except Exception as e:
         conn.rollback()

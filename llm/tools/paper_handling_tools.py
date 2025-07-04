@@ -452,7 +452,8 @@ def reformulate_query(keywords: list[str], query_description: str = "") -> str:
     - Suggest only **2 to 4** highly relevant keywords
     - Prefer keywords that match academic fields, subdisciplines, or research methods
     - Avoid filler words, overly generic terms, or keyword duplication
-    - Assume the keywords will be used in a strict **AND** filter (i.e. all must be present), so select carefully to **maximize relevance while maintaining sufficient recall**
+    - Assume the keywords will be used in a strict **AND** filter (i.e. all must be present), so select carefully to
+     **maximize relevance while maintaining sufficient recall**
 
     💡 Your goal is **focus**, not breadth. Do not add unrelated or tangential concepts.
 
@@ -813,15 +814,15 @@ def filter_papers_by_nl_criteria(
 def replace_low_rated_paper(project_id: str, low_rated_paper_hash: str) -> str:
     """
     Tool Name: replace_low_rated_paper
-    
+
     This tool replaces a low-rated paper (1 or 2 stars) with a better alternative paper.
     It uses the latest user_profile_embedding from the projects_table to perform similarity search
     and find a paper that's not already displayed in the project dashboard.
-    
+
     Args:
         project_id (str): The project ID where the paper should be replaced
         low_rated_paper_hash (str): The hash of the low-rated paper to replace
-        
+
     Returns:
         str: JSON string with status and details about the replacement operation
     """
@@ -833,7 +834,7 @@ def replace_low_rated_paper(project_id: str, low_rated_paper_hash: str) -> str:
                 "status": "error",
                 "message": "No user profile embedding found for this project. Cannot perform similarity search."
             })
-        
+
         # Get current papers and excluded papers
         connection = connect_to_db()
         if not connection:
@@ -841,59 +842,59 @@ def replace_low_rated_paper(project_id: str, low_rated_paper_hash: str) -> str:
                 "status": "error",
                 "message": "Database connection failed"
             })
-        
+
         try:
             cursor = connection.cursor()
-            
+
             # Get current papers in the project
             current_papers = get_papers_for_project(project_id)
             current_paper_hashes = {paper['paper_hash'] for paper in current_papers}
-            
+
             # Verify the low-rated paper exists in the project
             if low_rated_paper_hash not in current_paper_hashes:
                 return json.dumps({
-                    "status": "error", 
+                    "status": "error",
                     "message": f"Paper with hash {low_rated_paper_hash} not found in project {project_id}"
                 })
-            
+
             # Get excluded papers for this project
             cursor.execute("""
-                SELECT paper_hash FROM paperprojects_table 
+                SELECT paper_hash FROM paperprojects_table
                 WHERE project_id = %s AND excluded = TRUE
             """, (project_id,))
             excluded_papers = {row[0] for row in cursor.fetchall()}
-            
+
             logger.info(f"Current papers: {len(current_paper_hashes)}, Excluded papers: {len(excluded_papers)}")
-            
+
         finally:
             cursor.close()
             connection.close()
-        
+
         # Get candidate papers using get_best_papers
         candidate_papers = get_best_papers(project_id)
-        
+
         if not candidate_papers:
             return json.dumps({
                 "status": "error",
                 "message": "No similar papers found in the database"
             })
-        
+
         # Extract and filter candidate hashes
         candidate_hashes = [paper.get('paper_hash', '') for paper in candidate_papers if paper.get('paper_hash')]
-        available_hashes = [hash_val for hash_val in candidate_hashes 
-                           if hash_val not in current_paper_hashes 
-                           and hash_val not in excluded_papers]
-        
+        available_hashes = [hash_val for hash_val in candidate_hashes
+                            if hash_val not in current_paper_hashes
+                            and hash_val not in excluded_papers]
+
         logger.info(f"Found {len(available_hashes)} available papers after filtering")
-        
+
         # If no papers available, try broader search
         if not available_hashes:
             logger.info("No papers available, trying broader search...")
             more_candidate_hashes = chroma_db.perform_similarity_search(50, user_profile_embedding)
             if more_candidate_hashes:
-                available_hashes = [hash_val for hash_val in more_candidate_hashes 
-                                   if hash_val not in current_paper_hashes 
-                                   and hash_val not in excluded_papers][:10]
+                available_hashes = [hash_val for hash_val in more_candidate_hashes
+                                    if hash_val not in current_paper_hashes
+                                    and hash_val not in excluded_papers][:10]
                 logger.info(f"Found {len(available_hashes)} papers in broader search")
 
         if not available_hashes:
@@ -901,38 +902,39 @@ def replace_low_rated_paper(project_id: str, low_rated_paper_hash: str) -> str:
                 "status": "error",
                 "message": "No papers available to replace the low-rated paper. Consider adding more papers to the database."
             })
-        
+
         # Get replacement paper metadata
         replacement_papers = get_papers_by_hash([available_hashes[0]])
-        
+
         if not replacement_papers:
             return json.dumps({
                 "status": "error",
                 "message": "Failed to retrieve metadata for replacement paper"
             })
-        
+
         replacement_paper = replacement_papers[0]
-        
+
         # Generate summary for the replacement paper
         project_data = get_project_data(project_id)
         project_description = project_data.get('description', '') if project_data else ''
-        
+
         summary_prompt = f"""
         Generate a concise summary explaining why this paper is relevant to the user's research interests.
-        
+
         User's research interests: {project_description}
-        
+
         Paper title: {replacement_paper.get('title', 'Unknown')}
         Paper abstract: {replacement_paper.get('abstract', 'No abstract available')}
-        
-        Write a brief summary (2 short sentences) that explains the key details of why this paper is relevant to the user without being overly verbose.
+
+        Write a brief summary (2 short sentences) that explains the key details of why this paper is relevant to the
+        user without being overly verbose.
         Focus on the key contributions and relevance. Be concise and clear.
         Do not include any prefixes like "Summary:" or "Relevance:" - just write the summary directly.
         """
-        
+
         summary_response = LLM.invoke(summary_prompt)
         replacement_summary = summary_response.content.strip()
-        
+
         # Perform the replacement in one database transaction
         connection = connect_to_db()
         if not connection:
@@ -940,22 +942,22 @@ def replace_low_rated_paper(project_id: str, low_rated_paper_hash: str) -> str:
                 "status": "error",
                 "message": "Database connection failed"
             })
-        
+
         try:
             cursor = connection.cursor()
-            
+
             # Mark the low-rated paper as excluded
             cursor.execute("""
-                UPDATE paperprojects_table 
+                UPDATE paperprojects_table
                 SET excluded = TRUE
                 WHERE project_id = %s AND paper_hash = %s
             """, (project_id, low_rated_paper_hash))
-            
+
             # Add the replacement paper
             assign_paper_to_project(available_hashes[0], project_id, replacement_summary, is_replacement=True)
-            
+
             connection.commit()
-            
+
         except Exception as db_error:
             connection.rollback()
             logger.error(f"Database error during paper replacement: {db_error}")
@@ -968,16 +970,16 @@ def replace_low_rated_paper(project_id: str, low_rated_paper_hash: str) -> str:
                 cursor.close()
             if connection:
                 connection.close()
-        
+
         return json.dumps({
             "status": "success",
-            "message": f"Successfully replaced low-rated paper with better alternative",
+            "message": "Successfully replaced low-rated paper with better alternative",
             "replaced_paper_hash": low_rated_paper_hash,
             "replacement_paper_hash": available_hashes[0],
             "replacement_title": replacement_paper.get('title', 'Unknown'),
             "replacement_summary": replacement_summary
         })
-        
+
     except Exception as e:
         logger.error(f"Error replacing low-rated paper: {e}")
         return json.dumps({
@@ -997,13 +999,18 @@ def main():
 
     tool_inputs = {
         "retry_broaden": [
-            {"query_description": "My research is about yeast metabolism under moonlight.", "keywords": ["yeast", "metabolism", "moonlight"]},
-            {"query_description": "Low citation results on a very specific variant of quantum Hall effects.", "keywords": ["quantum hall", "edge states", "low temperature"]},
-            {"query_description": "I only got one result for 'subtypes of algae in Norwegian fjords' — can you expand that?", "keywords": ["algae", "Norwegian fjords", "taxonomy"]}
+            {"query_description": "My research is about yeast metabolism under moonlight.",
+             "keywords": ["yeast", "metabolism", "moonlight"]},
+            {"query_description": "Low citation results on a very specific variant of quantum Hall effects.",
+             "keywords": ["quantum hall", "edge states", "low temperature"]},
+            {"query_description": "I only got one result for 'subtypes of algae in Norwegian fjords' — can you expand "
+                                  "that?", "keywords": ["algae", "Norwegian fjords", "taxonomy"]}
         ],
         "reformulate_query": [
-            {"query_description": "biotech bio something cancer cell therapy general stuff", "keywords": ["biotech", "cancer", "cell therapy"]},
-            {"query_description": "fuzzy logic relevance matching NLP graphs paper recommendation system vague idea", "keywords": ["fuzzy logic", "NLP", "recommendation"]}
+            {"query_description": "biotech bio something cancer cell therapy general stuff",
+             "keywords": ["biotech", "cancer", "cell therapy"]},
+            {"query_description": "fuzzy logic relevance matching NLP graphs paper recommendation system vague idea",
+             "keywords": ["fuzzy logic", "NLP", "recommendation"]}
         ],
         "accept": [
             {"confirmation": "yes"},

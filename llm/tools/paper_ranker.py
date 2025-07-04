@@ -4,6 +4,7 @@ from llm.Embeddings import embed_user_profile
 from langchain_core.tools import tool
 from chroma_db.chroma_vector_db import chroma_db
 from database.papers_database_handler import get_papers_by_hash
+from database.projects_database_handler import get_user_profile_embedding, add_user_profile_embedding, get_project_data
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +24,10 @@ def get_best_papers(user_profile: str) -> list[dict]:
     # Check if input is a project_id (UUID format)
     import re
     uuid_pattern = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
-    
+
     if uuid_pattern.match(user_profile):
         # Input is a project_id, get embedding from database
         try:
-            from database.projects_database_handler import get_user_profile_embedding, add_user_profile_embedding, get_project_data
             embedded_profile = get_user_profile_embedding(user_profile)
             if embedded_profile is None:
                 # No embedding found, create one from project description

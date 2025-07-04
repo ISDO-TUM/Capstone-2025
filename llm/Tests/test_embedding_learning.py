@@ -1,34 +1,33 @@
 """
 Tests that the system learns from user ratings and uses updated embeddings for replacements.
 """
-import sys
-import os
-import json
-import numpy as np
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
+from database.database_connection import connect_to_db
+from llm.feedback import update_user_vector
+from llm.Embeddings import embed_user_profile, embed_papers
+from database.projectpaper_database_handler import assign_paper_to_project
 from database.projects_database_handler import (
     add_new_project_to_db,
     get_user_profile_embedding,
     add_user_profile_embedding
 )
-from database.projectpaper_database_handler import assign_paper_to_project, get_papers_for_project
-from llm.Embeddings import embed_user_profile, embed_papers
-from llm.feedback import update_user_vector
-from llm.tools.paper_ranker import get_best_papers
-from database.database_connection import connect_to_db
+import sys
+import os
+import numpy as np
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 
 def cosine_similarity(vec1, vec2):
     vec1_np = np.array(vec1)
     vec2_np = np.array(vec2)
-    
+
     norm1 = np.linalg.norm(vec1_np)
     norm2 = np.linalg.norm(vec2_np)
-    
+
     if norm1 == 0 or norm2 == 0:
         return 0
-    
+
     return np.dot(vec1_np, vec2_np) / (norm1 * norm2)
+
 
 def test_embedding_learning():
     # Create a test project
@@ -36,17 +35,24 @@ def test_embedding_learning():
         "Test Learning Project",
         "Research on machine learning and artificial intelligence"
     )
-    
+
     # Create initial user profile embedding
     initial_embedding = embed_user_profile("Research on machine learning and artificial intelligence")
     add_user_profile_embedding(project_id, initial_embedding)
 
     # Create test papers
-    test_papers = [
-        {"title": "Deep Learning for Computer Vision", "abstract": "This paper presents novel deep learning approaches for computer vision tasks including image classification and object detection.", "rating": 1},
-        {"title": "Natural Language Processing with Transformers", "abstract": "This paper explores transformer architectures for natural language processing tasks including text generation and translation.", "rating": 5},
-        {"title": "Reinforcement Learning in Robotics", "abstract": "This paper discusses reinforcement learning applications in robotics for autonomous navigation and manipulation.", "rating": 1}
-    ]
+    test_papers = [{"title": "Deep Learning for Computer Vision",
+                    "abstract": "This paper presents novel deep learning approaches for computer vision tasks "
+                                "including image classification and object detection.",
+                    "rating": 1},
+                   {"title": "Natural Language Processing with Transformers",
+                    "abstract": "This paper explores transformer architectures for natural language processing tasks "
+                                "including text generation and translation.",
+                    "rating": 5},
+                   {"title": "Reinforcement Learning in Robotics",
+                    "abstract": "This paper discusses reinforcement learning applications in robotics for autonomous "
+                                "navigation and manipulation.",
+                    "rating": 1}]
 
     # Create embeddings for test papers
     paper_embeddings = {}
@@ -100,27 +106,19 @@ def test_embedding_learning():
             if existing_papers:
                 # Add a few existing papers to the project for testing
                 for i, (paper_hash, title) in enumerate(existing_papers[:3]):
-                    assign_paper_to_project(paper_hash, project_id, f"Test paper {i+1}: {title[:50]}...")
+                    assign_paper_to_project(paper_hash, project_id, f"Test paper {i + 1}: {title[:50]}...")
 
-                # Test the replacement mechanism
-                current_papers = get_papers_for_project(project_id)
-                if current_papers:
-                    first_paper = current_papers[0]
-                    paper_hash = first_paper.get('paper_hash', '')
-
-                    if paper_hash:
-                        # Get replacement candidates using updated embedding
-                        replacement_candidates = get_best_papers(project_id)
     except Exception as e:
         print(f"Error testing replacement mechanism: {e}")
 
     # Verify embedding evolution
     for i in range(1, len(embedding_history)):
-        similarity = cosine_similarity(embedding_history[i-1], embedding_history[i])
+        similarity = cosine_similarity(embedding_history[i - 1], embedding_history[i])
         if similarity < 0.999:  # Allow for small numerical differences
             pass  # Embedding changed between steps
 
     return True
+
 
 def test_embedding_persistence():
     """Test that embeddings are properly persisted in the database."""
@@ -155,6 +153,7 @@ def test_embedding_persistence():
             pass  # Updated embedding properly stored and retrieved
 
     return True
+
 
 if __name__ == "__main__":
     persistence_success = test_embedding_persistence()

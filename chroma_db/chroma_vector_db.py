@@ -4,7 +4,7 @@ from typing import List, Optional, TypedDict
 import chromadb
 from chromadb.api.models.Collection import Collection
 from utils.status import Status
-
+import traceback
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -96,10 +96,10 @@ class ChromaVectorDB:
     def get_embedding_by_hash(self, paper_hash: str) -> Optional[List[float]]:
         """
         Get embedding for a specific paper hash from ChromaDB.
-        
+
         Args:
             paper_hash (str): The paper hash to look up
-            
+
         Returns:
             List[float]: The embedding vector for the paper, or None if not found
         """
@@ -108,19 +108,36 @@ class ChromaVectorDB:
                 ids=[paper_hash],
                 include=["embeddings"]
             )
-            
-            if results["embeddings"] and len(results["embeddings"]) > 0:
-                embedding = results["embeddings"][0]
-                # Convert to List[float] to match the return type
+
+            embeddings = results.get("embeddings", [])
+            logger.debug(
+                f"Raw embeddings result for {paper_hash}: {
+                    type(embeddings)}, length: {
+                    len(embeddings) if embeddings is not None else 'None'}")
+
+            if embeddings is not None and len(embeddings) > 0:
+                embedding = embeddings[0]
+                # Handle both numpy arrays and regular lists
                 if embedding is not None:
-                    return [float(x) for x in embedding]
+                    # Convert to List[float] - handle both numpy arrays and regular lists
+                    if isinstance(embedding, (list, tuple)):
+                        return [float(x) for x in embedding]
+                    else:
+                        # Try to convert numpy array or other types
+                        try:
+                            return [float(x) for x in embedding]
+                        except (TypeError, ValueError):
+                            logger.warning(f"Unexpected embedding type for paper hash {paper_hash}: {type(embedding)}")
+                            return None
                 return None
             else:
                 logger.warning(f"No embedding found for paper hash: {paper_hash}")
                 return None
-                
+
         except Exception as e:
             logger.error(f"Error getting embedding for paper hash {paper_hash}: {e}")
+            logger.error(f"Exception type: {type(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return None
 
 
