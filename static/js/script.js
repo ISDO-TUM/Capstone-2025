@@ -6,7 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
            setupPDFUpload();
         } else if (path.startsWith('/project/')) {
             const projectId = path.split('/').pop();
-            loadProjectOverviewData(projectId);
+            loadProjectOverviewData(projectId).catch(error => {
+                console.error("Error loading project overview:", error);
+            });
         } else if (path === '/') {
             const createProjectBtn = document.getElementById('createProjectBtn');
             if (createProjectBtn) {
@@ -23,13 +25,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 const title = document.getElementById('projectTitle').value;
                 const description = document.getElementById('projectDescription').value;
 
-                // TODO: For now in local storage, in the future will be sent to Flask backend
-                const projectId = `project_${Date.now()}`;
-                const projectData = { id: projectId, title, description };
-                localStorage.setItem(projectId, JSON.stringify(projectData));
+                try {
+                    const response = await fetch('/api/createProject', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title, prompt: description }),
+                    });
 
-                // TODO: For now simulate this, in the future redirect and URL by backend
-                window.location.href = `/project/${projectId}`;
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        alert(`Error creating project: ${errorData.error}`);
+                        return;
+                    }
+
+                    const result = await response.json();
+                    if (result.success) {
+                        const projectId = result.project_id;
+                        const projectData = { id: projectId, title, description };
+                        localStorage.setItem(projectId, JSON.stringify(projectData));
+                        window.location.href = `/project/${projectId}`;
+                    } else {
+                        alert('Failed to create project');
+                    }
+                } catch (error) {
+                    console.error('Error creating project:', error);
+                    alert('Failed to create project. Please try again.');
+                }
             });
         }
     };
@@ -60,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            
+
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 handleFileSelection(files[0]);
@@ -95,32 +116,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function displayFileInfo(file) {
             const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
-            
+
             fileName.textContent = file.name;
             fileSize.textContent = `${sizeInMB} MB`;
-            
+
             uploadArea.style.display = 'none';
             fileInfo.style.display = 'flex';
-            
+
             extractPDFText(file);
         }
 
         async function extractPDFText(file) {
             const projectDescription = document.getElementById('projectDescription');
             if (!projectDescription) return;
-            
+
             const formData = new FormData();
             formData.append('file', file);
-            
+
             try {
                 const originalValue = projectDescription.value;
                 projectDescription.value = originalValue + '\n\n[Extracting PDF text...]';
-                
+
                 const response = await fetch('/api/extract-pdf-text', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 if (!response.ok) {
                     try {
                         const result = await response.json();
@@ -131,13 +152,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     projectDescription.value = originalValue;
                     return;
                 }
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     const currentText = originalValue.trim();
-                    const newText = currentText ? 
-                        `${currentText}\n\n${result.extracted_text}` : 
+                    const newText = currentText ?
+                        `${currentText}\n\n${result.extracted_text}` :
                         result.extracted_text;
                     projectDescription.value = newText;
                 } else {
@@ -152,64 +173,94 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function removeFile() {
             fileInput.value = '';
-            
+
             fileInfo.style.display = 'none';
             uploadArea.style.display = 'block';
-            
+
             fileName.textContent = '';
             fileSize.textContent = '';
         }
     }
 
-    const loadProjectOverviewData = (projectId) => {
-        // TODO: For now use localStorage for the project data
-        const projectDataString = localStorage.getItem(projectId);
-        if (!projectDataString) {
-            console.error("Project data not found for ID:", projectId);
-            if (document.getElementById('projectTitleDisplay')) {
-                 document.getElementById('projectTitleDisplay').textContent = "Project Not Found";
-                 document.getElementById('projectDescriptionDisplay').textContent = "The project data could not be loaded.";
-            }
-            return;
-        }
+    const loadProjectOverviewData = async (projectId) => {
+        try {
+            // Try to get project data from backend first
+            const response = await fetch('/api/getProjects');
+            const data = await response.json();
 
-        const projectData = JSON.parse(projectDataString);
+            let projectData = null;
+            if (data.success && data.projects) {
+                projectData = data.projects.find(p => p.project_id === projectId);
+            }
+
+            // Turn to localStorage if not found in backend
+            if (!projectData) {
+                const projectDataString = localStorage.getItem(projectId);
+                if (projectDataString) {
+                    projectData = JSON.parse(projectDataString);
+                }
+            }
+
+            if (!projectData) {
+                console.error("Project data not found for ID:", projectId);
+                if (document.getElementById('projectTitleDisplay')) {
+                     document.getElementById('projectTitleDisplay').textContent = "Project Not Found";
+                     document.getElementById('projectDescriptionDisplay').textContent = "The project data could not be loaded.";
+                }
+                return;
+            }
 
         const titleDisplay = document.getElementById('projectTitleDisplay');
         const descriptionDisplay = document.getElementById('projectDescriptionDisplay');
         const recommendationsContainer = document.getElementById('recommendationsContainer');
         const agentThoughtsContainer = document.getElementById('agentThoughtsContainer');
 
-        if (titleDisplay) titleDisplay.textContent = projectData.title;
+        // Handle both backend and localStorage data structures
+        const title = projectData.title || projectData.name || 'Untitled Project';
+        const description = projectData.description || 'No description available';
+
+        if (titleDisplay) titleDisplay.textContent = title;
         if (descriptionDisplay) {
-            descriptionDisplay.textContent = projectData.description;
-            setupCollapsibleDescription(projectData.description);
+            descriptionDisplay.textContent = description;
+            setupCollapsibleDescription(description);
         }
-        if (document.title && titleDisplay) document.title = `Project: ${projectData.title}`;
+        if (document.title && titleDisplay) document.title = `Project: ${title}`;
 
         if (recommendationsContainer && agentThoughtsContainer) {
             // Set initial state messages
             agentThoughtsContainer.innerHTML = '<p>🧠 Agent is thinking...</p>';
             recommendationsContainer.innerHTML = '<p>⌛ Waiting for agent to provide recommendations...</p>';
 
-            fetchRecommendationsStream(projectData.description, agentThoughtsContainer, recommendationsContainer)
+            fetchRecommendationsStream(projectId, agentThoughtsContainer, recommendationsContainer)
                 .catch(error => {
                     console.error("Error fetching recommendations stream:", error);
                     agentThoughtsContainer.innerHTML += '<p>❌ Error communicating with the agent.</p>';
                     recommendationsContainer.innerHTML = '<p>Could not load recommendations at this time.</p>';
                 });
         }
-    };
+    } catch (error) {
+        console.error("Error loading project data:", error);
+        if (document.getElementById('projectTitleDisplay')) {
+            document.getElementById('projectTitleDisplay').textContent = "Error Loading Project";
+            document.getElementById('projectDescriptionDisplay').textContent = "There was an error loading the project data.";
+        }
+    }
+};
 
-    async function fetchRecommendationsStream(projectDescription, thoughtsContainer, recommendationsContainer) {
-        console.log(`Starting to stream recommendations based on project description...`);
-        thoughtsContainer.innerHTML = ''; // Clear for new thoughts
+    async function fetchRecommendationsStream(projectId, thoughtsContainer, recommendationsContainer) {
+        console.log(`Starting to stream recommendations for project ID: ${projectId}`);
+        if (thoughtsContainer) {
+            thoughtsContainer.innerHTML = ''; // Clear for new thoughts
+        }
 
         try {
             const response = await fetch('/api/recommendations', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ projectDescription }),
+                body: JSON.stringify({
+                    project_id: projectId,
+                    update_recommendations: true  // Always fetch papers for new projects
+                }),
             });
 
             if (!response.ok) {
@@ -252,14 +303,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
 
                             thoughtEl.innerHTML = `${icon} ${content}`;
-                            thoughtsContainer.appendChild(thoughtEl);
-                            thoughtsContainer.scrollTop = thoughtsContainer.scrollHeight;
+                            if (thoughtsContainer) {
+                                thoughtsContainer.appendChild(thoughtEl);
+                                thoughtsContainer.scrollTop = thoughtsContainer.scrollHeight;
+                            }
                         } else if (data.recommendations) {
                             renderRecommendations(data.recommendations, recommendationsContainer);
                         } else if (data.error) {
                             console.error('Server-side error:', data.error);
                             recommendationsContainer.innerHTML = `<p>Error: ${data.error}</p>`;
-                            thoughtsContainer.innerHTML += `<p>❌ An error occurred.</p>`;
+                            if (thoughtsContainer) {
+                                thoughtsContainer.innerHTML += `<p>❌ An error occurred.</p>`;
+                            }
                         }
                     }
                 }
@@ -278,9 +333,18 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        recommendations.forEach(paper => {
+        recommendations.forEach((paper, index) => {
             const card = document.createElement('div');
             card.classList.add('recommendation-card');
+
+            // Add temporary highlight for replacement papers
+            if (paper.is_replacement) {
+                card.classList.add('new-replacement');
+                // Remove the highlight after 5 seconds
+                setTimeout(() => {
+                    card.classList.remove('new-replacement');
+                }, 5000);
+            }
 
             const titleEl = document.createElement('h3');
             titleEl.textContent = paper.title;
@@ -293,9 +357,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const descriptionEl = document.createElement('p');
             descriptionEl.textContent = paper.description;
 
+            const starRatingEl = document.createElement('div');
+            starRatingEl.classList.add('star-rating');
+            starRatingEl.innerHTML = `
+                <span class="star" data-value="1">&#9733;</span>
+                <span class="star" data-value="2">&#9733;</span>
+                <span class="star" data-value="3">&#9733;</span>
+                <span class="star" data-value="4">&#9733;</span>
+                <span class="star" data-value="5">&#9733;</span>
+            `;
+
+            card.dataset.paperHash = paper.hash;
+
             card.appendChild(titleEl);
             card.appendChild(linkEl);
             card.appendChild(descriptionEl);
+            card.appendChild(starRatingEl);
+
             container.appendChild(card);
         });
     }
@@ -307,30 +385,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const fadeOverlay = document.getElementById('descriptionFadeOverlay');
         const controls = document.getElementById('descriptionControls');
         const expandText = toggleButton?.querySelector('.expand-text');
-        
+
         if (!descriptionDisplay || !descriptionWrapper || !toggleButton || !fadeOverlay || !controls || !expandText) return;
 
         const wordCount = description.trim().split(/\s+/).length;
 
         if (wordCount > 500) {
             const isCollapsed = true;
-            
+
             descriptionDisplay.classList.toggle('collapsed', isCollapsed);
             descriptionDisplay.classList.toggle('expanded', !isCollapsed);
             toggleButton.classList.toggle('expanded', !isCollapsed);
             fadeOverlay.classList.toggle('visible', isCollapsed);
             controls.classList.add('visible');
-            
+
             expandText.textContent = isCollapsed ? 'Show full description' : 'Hide full description';
-            
+
             toggleButton.addEventListener('click', () => {
                 const currentlyCollapsed = descriptionDisplay.classList.contains('collapsed');
-                
+
                 descriptionDisplay.classList.toggle('collapsed', !currentlyCollapsed);
                 descriptionDisplay.classList.toggle('expanded', currentlyCollapsed);
                 toggleButton.classList.toggle('expanded', currentlyCollapsed);
                 fadeOverlay.classList.toggle('visible', !currentlyCollapsed);
-                
+
                 expandText.textContent = !currentlyCollapsed ? 'Show full description' : 'Hide full description';
             });
         } else {
@@ -342,195 +420,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- HOMEPAGE PROJECTS & SEARCH ---
-    const hardcodedProjects = [
-        // 30 example projects with name, description, tags, and creation date
-        {
-            name: "AI for Drug Discovery",
-            description: "Leveraging deep learning to accelerate the identification of novel drug candidates for rare diseases.",
-            tags: ["AI", "Drug Discovery", "Deep Learning", "Healthcare"],
-            date: "2024-01-15"
-        },
-        {
-            name: "Climate Change Impact Analysis",
-            description: "Analyzing satellite data to predict the long-term effects of climate change on coastal regions.",
-            tags: ["Climate", "Satellite", "Prediction", "Environment"],
-            date: "2024-02-02"
-        },
-        {
-            name: "Quantum Computing Algorithms",
-            description: "Developing new quantum algorithms for optimization problems in logistics.",
-            tags: ["Quantum", "Algorithms", "Optimization", "Logistics"],
-            date: "2024-01-28"
-        },
-        {
-            name: "Cancer Genomics",
-            description: "Integrating multi-omics data to identify biomarkers for early cancer detection.",
-            tags: ["Genomics", "Cancer", "Biomarkers", "Multi-omics"],
-            date: "2024-03-10"
-        },
-        {
-            name: "Renewable Energy Forecasting",
-            description: "Machine learning models for predicting solar and wind energy production.",
-            tags: ["Renewable", "Energy", "Forecasting", "Machine Learning"],
-            date: "2024-02-18"
-        },
-        {
-            name: "Social Network Analysis",
-            description: "Studying the spread of information and influence in online social networks.",
-            tags: ["Social Network", "Influence", "Information Spread", "Data Science"],
-            date: "2024-01-22"
-        },
-        {
-            name: "Autonomous Vehicles Safety",
-            description: "Evaluating safety protocols and AI decision-making in self-driving cars.",
-            tags: ["Autonomous", "Vehicles", "Safety", "AI"],
-            date: "2024-03-01"
-        },
-        {
-            name: "Brain-Computer Interfaces",
-            description: "Exploring non-invasive methods for direct communication between brain and computer systems.",
-            tags: ["Brain", "BCI", "Neuroscience", "Interfaces"],
-            date: "2024-02-25"
-        },
-        {
-            name: "Smart Agriculture",
-            description: "IoT and AI for precision farming and crop yield optimization.",
-            tags: ["Agriculture", "IoT", "AI", "Precision Farming"],
-            date: "2024-01-30"
-        },
-        {
-            name: "Natural Language Understanding",
-            description: "Advancing NLP models for better comprehension of scientific literature.",
-            tags: ["NLP", "Language", "AI", "Literature"],
-            date: "2024-02-12"
-        },
-        {
-            name: "Materials Discovery",
-            description: "AI-driven search for new materials with unique electronic properties.",
-            tags: ["Materials", "AI", "Discovery", "Electronics"],
-            date: "2024-03-05"
-        },
-        {
-            name: "Urban Mobility Planning",
-            description: "Simulation and optimization of public transport systems in megacities.",
-            tags: ["Urban", "Mobility", "Transport", "Simulation"],
-            date: "2024-01-18"
-        },
-        {
-            name: "Protein Structure Prediction",
-            description: "Deep learning for accurate prediction of protein folding and structure.",
-            tags: ["Protein", "Structure", "Deep Learning", "Biology"],
-            date: "2024-02-20"
-        },
-        {
-            name: "Digital Humanities",
-            description: "Text mining and visualization for historical document analysis.",
-            tags: ["Humanities", "Text Mining", "Visualization", "History"],
-            date: "2024-03-08"
-        },
-        {
-            name: "Robotics in Surgery",
-            description: "Evaluating the precision and outcomes of robot-assisted surgical procedures.",
-            tags: ["Robotics", "Surgery", "Precision", "Healthcare"],
-            date: "2024-01-25"
-        },
-        {
-            name: "Wildlife Conservation AI",
-            description: "Using AI to monitor endangered species and prevent poaching.",
-            tags: ["Wildlife", "Conservation", "AI", "Monitoring"],
-            date: "2024-02-28"
-        },
-        {
-            name: "Blockchain for Science",
-            description: "Decentralized data sharing and reproducibility in scientific research.",
-            tags: ["Blockchain", "Reproducibility", "Data Sharing", "Science"],
-            date: "2024-03-12"
-        },
-        {
-            name: "Personalized Medicine",
-            description: "Genetic and lifestyle data for tailored healthcare solutions.",
-            tags: ["Personalized", "Medicine", "Genetics", "Healthcare"],
-            date: "2024-01-27"
-        },
-        {
-            name: "Astrophysics Simulations",
-            description: "High-performance computing for simulating galaxy formation.",
-            tags: ["Astrophysics", "Simulation", "Galaxy", "HPC"],
-            date: "2024-02-15"
-        },
-        {
-            name: "Emotion Recognition",
-            description: "AI models for detecting emotions in speech and facial expressions.",
-            tags: ["Emotion", "Recognition", "AI", "Speech"],
-            date: "2024-03-03"
-        },
-        {
-            name: "Smart Grids",
-            description: "Optimizing energy distribution using real-time data and AI.",
-            tags: ["Smart Grid", "Energy", "AI", "Optimization"],
-            date: "2024-01-19"
-        },
-        {
-            name: "Microbiome Analysis",
-            description: "Studying the human microbiome's role in health and disease.",
-            tags: ["Microbiome", "Health", "Disease", "Biology"],
-            date: "2024-02-22"
-        },
-        {
-            name: "Edge Computing for IoT",
-            description: "Low-latency data processing at the edge for IoT devices.",
-            tags: ["Edge", "IoT", "Computing", "Data"],
-            date: "2024-03-07"
-        },
-        {
-            name: "Virtual Reality in Education",
-            description: "Immersive VR experiences for interactive science learning.",
-            tags: ["VR", "Education", "Immersive", "Science"],
-            date: "2024-01-23"
-        },
-        {
-            name: "Gene Editing Ethics",
-            description: "Exploring the ethical implications of CRISPR and gene editing.",
-            tags: ["Gene Editing", "Ethics", "CRISPR", "Biotech"],
-            date: "2024-02-27"
-        },
-        {
-            name: "Financial Market Prediction",
-            description: "AI and statistical models for stock and crypto market forecasting.",
-            tags: ["Finance", "Prediction", "AI", "Markets"],
-            date: "2024-03-11"
-        },
-        {
-            name: "Speech Synthesis",
-            description: "Neural networks for natural-sounding text-to-speech systems.",
-            tags: ["Speech", "Synthesis", "Neural Networks", "Audio"],
-            date: "2024-01-29"
-        },
-        {
-            name: "Food Security Monitoring",
-            description: "Remote sensing and AI for global food supply chain monitoring.",
-            tags: ["Food", "Security", "Remote Sensing", "AI"],
-            date: "2024-02-24"
-        },
-        {
-            name: "Exoplanet Detection",
-            description: "Machine learning for identifying exoplanets in telescope data.",
-            tags: ["Exoplanet", "Detection", "Machine Learning", "Astronomy"],
-            date: "2024-03-09"
-        },
-        {
-            name: "Digital Twin Manufacturing",
-            description: "Simulating and optimizing manufacturing processes with digital twins.",
-            tags: ["Digital Twin", "Manufacturing", "Simulation", "Optimization"],
-            date: "2024-01-31"
-        },
-        {
-            name: "Mental Health Chatbots",
-            description: "Conversational AI for mental health support and early intervention.",
-            tags: ["Mental Health", "Chatbot", "AI", "Support"],
-            date: "2024-02-26"
+    async function loadProjectsFromAPI() {
+        try {
+            const response = await fetch('/api/getProjects');
+            const data = await response.json();
+            if (data.success && data.projects) {
+                return data.projects;
+            } else {
+                console.error('Failed to load projects:', data.error);
+                return [];
+            }
+        } catch (error) {
+            console.error('Error fetching projects:', error);
+            return [];
         }
-    ];
+    }
 
     function renderProjects(projects) {
         const projectsList = document.getElementById('projectsList');
@@ -548,11 +452,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="project-date">Created: ${project.date}</div>
             `;
-            // Optionally, add click event for future navigation or toast
+            // Navigate to project page on click
             card.addEventListener('click', () => {
-                // For now, just a simple animation or toast
-                card.classList.add('card-clicked');
-                setTimeout(() => card.classList.remove('card-clicked'), 400);
+                if (project.project_id) {
+                    window.location.href = `/project/${project.project_id}`;
+                } else {
+                    // Fallback animation if no project_id
+                    card.classList.add('card-clicked');
+                    setTimeout(() => card.classList.remove('card-clicked'), 400);
+                }
             });
             projectsList.appendChild(card);
         });
@@ -588,11 +496,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // On DOMContentLoaded, render projects and set up search
     if (window.location.pathname === '/') {
-        renderProjects(hardcodedProjects);
+        let allProjects = [];
+
+        // Load projects from API
+        loadProjectsFromAPI().then(projects => {
+            allProjects = projects;
+            renderProjects(allProjects);
+        });
+
         const searchInput = document.getElementById('projectSearchInput');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
-                const filtered = filterProjectsBySearch(hardcodedProjects, e.target.value);
+                const filtered = filterProjectsBySearch(allProjects, e.target.value);
                 renderProjects(filtered);
             });
         }
@@ -602,4 +517,202 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     handleRouting();
+
+    // Star rating handlers
+    const recommendationsContainer = document.getElementById('recommendationsContainer');
+    if (recommendationsContainer) {
+        recommendationsContainer.addEventListener('mouseover', function (e) {
+            if (e.target.classList.contains('star')) {
+                const value = parseInt(e.target.dataset.value);
+                const stars = Array.from(e.target.parentNode.querySelectorAll('.star'));
+                stars.forEach(star => {
+                    star.classList.toggle('hovered', parseInt(star.dataset.value) <= value);
+                });
+            }
+        });
+
+        recommendationsContainer.addEventListener('mouseout', function (e) {
+            if (e.target.classList.contains('star')) {
+                const stars = Array.from(e.target.parentNode.querySelectorAll('.star'));
+                stars.forEach(star => {
+                    star.classList.remove('hovered');
+                });
+            }
+        });
+
+       recommendationsContainer.addEventListener('click', function (e) {
+    if (e.target.classList.contains('star')) {
+        const clickedStar = e.target;
+        const stars = Array.from(clickedStar.parentNode.querySelectorAll('.star'));
+        const value = parseInt(clickedStar.dataset.value);
+
+        stars.forEach(star => {
+            star.classList.toggle('selected', parseInt(star.dataset.value) <= value);
+        });
+
+        console.log(`Rated ${value} star(s)`);
+
+        // Get paper hash (you should include it when rendering each recommendation card)
+        const paperHash = clickedStar.closest('.recommendation-card').dataset.paperHash;
+        const currentProjectId = window.location.pathname.split('/').pop();
+
+        console.log(`Sending rating - paperHash: ${paperHash}, projectId: ${currentProjectId}, rating: ${value}`);
+
+        // For low ratings, remember the card position for replacement
+        let cardToReplace = null;
+        let cardIndex = -1;
+        if (value <= 2) {
+            cardToReplace = clickedStar.closest('.recommendation-card');
+            const allCards = Array.from(document.querySelectorAll('.recommendation-card'));
+            cardIndex = allCards.indexOf(cardToReplace);
+
+            // Keep the space occupied but make it invisible
+            cardToReplace.style.opacity = '0';
+            cardToReplace.style.visibility = 'hidden';
+            // Use position absolute to take it out of flow but keep space with a placeholder
+            const originalHeight = cardToReplace.offsetHeight;
+            cardToReplace.style.position = 'absolute';
+            cardToReplace.style.zIndex = '-1';
+
+            // Create a placeholder div to maintain the space
+            const placeholder = document.createElement('div');
+            placeholder.style.height = originalHeight + 'px';
+            placeholder.style.width = '100%';
+            placeholder.style.flexShrink = '0';
+            placeholder.classList.add('replacement-placeholder');
+            cardToReplace.parentNode.insertBefore(placeholder, cardToReplace);
+        }
+
+        // Save the rating
+        fetch('/api/rate_paper', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paper_hash: paperHash, rating: value, project_id: currentProjectId  })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                console.log("Rating saved!");
+
+                // Check if a replacement was performed
+                if (data.replacement && data.replacement.status === 'success') {
+                    console.log("Paper replaced successfully:", data.replacement);
+
+                    // Show popup notification with the new paper name
+                    const replacementDetails = data.replacement;
+                    if (replacementDetails.replacement_title) {
+                        showReplacementNotification(replacementDetails.replacement_title);
+                    }
+
+                    // Insert the replacement paper at the exact same position
+                    if (cardIndex >= 0 && replacementDetails.replacement_title) {
+                        insertReplacementPaper(replacementDetails, cardIndex, recommendationsContainer);
+                    } else {
+                        // Fallback: refresh all recommendations
+                        refreshRecommendations(recommendationsContainer, currentProjectId);
+                    }
+                } else if (value <= 2) {
+                    console.log("Low rating detected but no replacement was performed.");
+                }
+            } else {
+                console.error("Failed to save rating:", data.message);
+            }
+        })
+        .catch(err => {
+            console.error("Error in rating process:", err);
+            // Show the card again on error
+            if (cardToReplace) {
+                cardToReplace.style.opacity = '1';
+                cardToReplace.style.transform = 'scale(1)';
+                cardToReplace.style.display = 'block';
+            }
+        });
+    }
 });
+
+    }
+});
+
+
+// Function to show replacement notification popup
+function showReplacementNotification(newPaperTitle) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = 'replacement-notification';
+    notification.innerHTML = `
+        <div class="notification-content">
+            <div class="notification-icon">🔄</div>
+            <div class="notification-text">
+                <div class="notification-title">Paper Replaced!</div>
+                <div class="notification-message">Added: "${newPaperTitle}"</div>
+            </div>
+        </div>
+    `;
+
+    // Add to page
+    document.body.appendChild(notification);
+
+    // Trigger animation
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+
+    // Remove after 4 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 4000);
+}
+
+// Function to insert replacement paper at specific position
+function insertReplacementPaper(replacementDetails, position, container) {
+    // Find the invisible card at the specified position
+    const allCards = Array.from(container.querySelectorAll('.recommendation-card'));
+    const invisibleCard = allCards[position];
+
+    if (invisibleCard && invisibleCard.style.visibility === 'hidden') {
+        // Remove the placeholder first
+        const placeholder = container.querySelector('.replacement-placeholder');
+        if (placeholder) {
+            placeholder.remove();
+        }
+
+        // Replace the invisible card's content
+        invisibleCard.dataset.paperHash = replacementDetails.replacement_paper_hash;
+        invisibleCard.classList.add('new-replacement');
+
+        invisibleCard.innerHTML = `
+            <h3>${replacementDetails.replacement_title}</h3>
+            <a href="N/A" target="_blank">Read Paper</a>
+            <p>${replacementDetails.replacement_summary}</p>
+            <div class="star-rating">
+                <span class="star" data-value="1">&#9733;</span>
+                <span class="star" data-value="2">&#9733;</span>
+                <span class="star" data-value="3">&#9733;</span>
+                <span class="star" data-value="4">&#9733;</span>
+                <span class="star" data-value="5">&#9733;</span>
+            </div>
+        `;
+
+        // Reset the card's styling and animate it in
+        invisibleCard.style.visibility = 'visible';
+        invisibleCard.style.opacity = '0';
+        invisibleCard.style.transform = 'scale(0.8)';
+        invisibleCard.style.position = '';
+        invisibleCard.style.zIndex = '';
+
+        setTimeout(() => {
+            invisibleCard.style.opacity = '1';
+            invisibleCard.style.transform = 'scale(1)';
+        }, 100);
+
+        // Remove highlight after 3 seconds
+        setTimeout(() => {
+            invisibleCard.classList.remove('new-replacement');
+        }, 3000);
+    }
+}

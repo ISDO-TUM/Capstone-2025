@@ -63,7 +63,8 @@ def main():
              "keywords": ["transformer", "biology", "deep learning", "protein folding", "drug discovery"]},
         ],
         "multi_step_reasoning": [
-            {"query_description": "LLMs for adverse-event detection and transformer architectures for trial-protocol generation",
+            {"query_description": "LLMs for adverse-event detection and transformer architectures for trial-protocol "
+                                  "generation",
              "keywords": ["llm", "adverse events", "pharmacovigilance", "transformer", "clinical trials"]},
         ],
         "filter_by_user_defined_metrics": [

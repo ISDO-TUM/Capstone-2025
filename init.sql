@@ -15,5 +15,31 @@ CREATE TABLE IF NOT EXISTS public.papers_table (
     counts_by_year                  JSONB
 );
 
+CREATE TABLE IF NOT EXISTS public.projects_table (
+    project_id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    email TEXT,
+    queries TEXT,
+    user_profile_embedding JSONB
+);
+
+CREATE TABLE IF NOT EXISTS public.paperprojects_table (
+    project_id TEXT NOT NULL,
+    paper_hash TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    newsletter BOOLEAN,
+    rating INTEGER,
+    is_replacement BOOLEAN DEFAULT FALSE,
+    excluded BOOLEAN DEFAULT FALSE,
+    PRIMARY KEY (project_id, paper_hash),
+    FOREIGN KEY (project_id) REFERENCES projects_table(project_id) ON DELETE CASCADE,
+    FOREIGN KEY (paper_hash) REFERENCES papers_table(paper_hash) ON DELETE CASCADE
+);
+
 -- Clear all data from the table on every startup.
-TRUNCATE TABLE public.papers_table;
+TRUNCATE TABLE
+    public.paperprojects_table,
+    public.papers_table,
+    public.projects_table
+CASCADE;
