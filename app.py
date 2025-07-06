@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 import io
+import threading
 
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context
 
@@ -345,6 +346,8 @@ def extract_pdf_text():
 # call this from front-end to “refresh” which papers should be marked for the newsletter.
 
 
+import threading
+
 @app.route('/api/pubsub/update_newsletter_papers', methods=['POST'])
 def api_update_newsletter():
     payload = request.get_json() or {}
@@ -358,21 +361,28 @@ def api_update_newsletter():
         # no queries: return ok but without doing anything
         return jsonify({'status': 'no-queries'}), 200
 
-    try:
-        update_newsletter_papers(project_id)
-        return jsonify({'status': 'ok'}), 200
-    except ValueError as e:
-        msg = str(e)
-        # Chroma sends ValueError with this text when there are no IDs
-        if "Expected IDs to be a non-empty list" in msg:
-            # return 200 so frontend continues and reads get_newsletter_papers
-            return jsonify({'status': 'no-results'}), 200
-        # if there is another ValueError, we make it fall down
-        return jsonify({'error': msg}), 500
-    except Exception as e:
-        # rest of exceptions
-        logger.exception("Error to update newsletters")
-        return jsonify({'error': str(e)}), 500
+    # Start the update process in a background thread
+    def run_update():
+        try:
+            update_newsletter_papers(project_id)
+            print(f"Background update_newsletter_papers completed for project {project_id}")
+        except ValueError as e:
+            msg = str(e)
+            if "Expected IDs to be a non-empty list" in msg:
+                print(f"Background update_newsletter_papers: no results for project {project_id}")
+            else:
+                print(f"Background update_newsletter_papers ValueError for project {project_id}: {msg}")
+        except Exception as e:
+            print(f"Background update_newsletter_papers error for project {project_id}: {e}")
+            logger.exception("Error in background update_newsletter_papers")
+
+    # Start the background thread
+    thread = threading.Thread(target=run_update)
+    thread.daemon = True  # Thread will be terminated when main process exits
+    thread.start()
+    
+    # Return immediately - the update is running in the background
+    return jsonify({'status': 'started'}), 200
 
 
 # Returns current set of (paper_hash, summary) tuples that are both newsletter = TRUE and seen = FALSE for a given project.

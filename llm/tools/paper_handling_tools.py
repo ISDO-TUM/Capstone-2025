@@ -43,7 +43,7 @@ def store_papers_for_project(project_id: str, papers: list[dict]):
     """
 
     for paper in papers:
-        assign_paper_to_project(paper["paper_hash"], project_id, paper["summary"])
+        assign_paper_to_project(paper["paper_hash"], project_id, paper["summary"], newsletter=True, seen=False)
 
     return "Operation successful"
 

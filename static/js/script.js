@@ -45,6 +45,92 @@ function renderPubSubPapers(papers, container) {
     });
 }
 
+// Function to stream newest papers (similar to recommendations)
+async function fetchNewestPapersStream(projectId, container) {
+    console.log('Starting to stream newest papers for project:', projectId);
+    
+    // Note: Papers are now stored by the AI agent itself, so we just need to poll for them
+    
+    // Then start polling for papers with adaptive intervals
+    let attempts = 0;
+    const maxAttempts = 180; // Try for up to 6 minutes (180 attempts * 2 seconds average)
+    
+    const pollForPapers = async () => {
+        attempts++;
+        
+        // Calculate current polling interval based on attempts
+        let currentPollInterval;
+        if (attempts > 120) { // After 2 minutes, slow down to 3 seconds
+            currentPollInterval = 3000;
+        } else if (attempts > 60) { // After 1 minute, slow down to 2 seconds
+            currentPollInterval = 2000;
+        } else {
+            currentPollInterval = 500; // First minute: 0.5 second intervals (very aggressive)
+        }
+        
+        // Update loading message to show progress (every 10 attempts)
+        if (attempts % 10 === 0) {
+            // Calculate total elapsed time based on attempts and intervals
+            let totalSeconds = 0;
+            if (attempts <= 120) {
+                totalSeconds = attempts * 0.5; // 0.5 second intervals for first 2 minutes
+            } else if (attempts <= 180) {
+                totalSeconds = 120 * 0.5 + (attempts - 120) * 2; // 60s at 0.5s, rest at 2s
+            } else {
+                totalSeconds = 120 * 0.5 + 60 * 2 + (attempts - 180) * 3; // 60s at 0.5s, 60s at 2s, rest at 3s
+            }
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = Math.floor(totalSeconds % 60);
+            container.innerHTML = `<p>🔄 Loading newest papers... (${minutes}m ${seconds}s elapsed)</p>`;
+        }
+        
+        try {
+            console.log(`Attempt ${attempts}: Polling for papers (interval: ${currentPollInterval}ms)`);
+            const papers = await fetch(
+                `/api/pubsub/get_newsletter_papers?projectId=${projectId}`
+            ).then(r => r.json());
+            
+            console.log(`Attempt ${attempts}: PubSub papers fetched:`, papers);
+            
+            if (papers.length > 0) {
+                // Papers found! Display them
+                console.log(`🎉 SUCCESS! Found ${papers.length} papers after ${attempts} attempts`);
+                console.log('📬 Rendering real PubSub papers:', papers);
+                renderPubSubPapers(papers, container);
+                return; // Stop polling
+            } else if (attempts >= maxAttempts) {
+                // Timeout reached
+                console.log('No newest papers found after all attempts');
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <p>📭 No newest papers found after 6 minutes</p>
+                        <p style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                            The AI processing may still be in progress. Try refreshing the page in a few minutes.
+                        </p>
+                    </div>
+                `;
+                return; // Stop polling
+            } else {
+                // Continue polling
+                setTimeout(pollForPapers, currentPollInterval);
+            }
+        } catch (err) {
+            console.error(`Attempt ${attempts}: Error fetching papers:`, err);
+            if (attempts >= maxAttempts) {
+                container.innerHTML = '<p>❌ Error loading newest papers.</p>';
+                return; // Stop polling
+            } else {
+                // Continue polling even on error
+                setTimeout(pollForPapers, currentPollInterval);
+            }
+        }
+    };
+    
+    // Start polling
+    console.log('Starting to poll for newest papers...');
+    pollForPapers();
+}
+
 
     async function handleRouting () {
         const path = window.location.pathname;
@@ -94,39 +180,12 @@ function renderPubSubPapers(papers, container) {
             // clear and wire up form
             renderPubSubSection();               //
             setupPubSubForm();                   //
+            
+            // Show loading state for newest papers
+            container.innerHTML = '<p>🔄 Loading newest papers... (AI processing in progress)</p>';
 
-            // tell backend to update newsletter papers. Try to update but not break UI if fails
-        try {
-            //todo update newsletter papers only on project creation or once a week
-            const updateRes = await fetch('/api/pubsub/update_newsletter_papers', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ projectId })
-            });
-            const updateJson = await updateRes.json();
-            if (!updateRes.ok) {
-              console.warn('⚠️ update_newsletter_papers status failed:', updateRes.status, updateJson);
-            }
-          } catch (err) {
-            console.error('Error when calling update_newsletter_papers:', err);
-          }
-            // 3. fetch them back. Read papers even if update failed
-            const papers = await fetch(
-                `/api/pubsub/get_newsletter_papers?projectId=${projectId}`
-            ).then(r => r.json());
-            console.log('PubSub papers fetched:', papers);
-            console.log('pubsubPapersContainer is', container);
-            //4. render - first test if comes empty, then always shows the real ones
-        if (papers.length === 0) {
-            console.log('Render TEST cards because no papers came out');
-            renderPubSubPapers([
-                { title: 'Test A', link: '#', description: 'Test A: This is a card to test PubSub UI' },
-                { title: 'Test B', link: '#', description: 'Test B: This is a card to test PubSub UI' }
-            ], container);
-        } else {
-            console.log('📬 Rendering real PubSub papers:', papers);
-            renderPubSubPapers(papers, container);
-        }
+            // Start streaming newest papers (similar to recommendations)
+            fetchNewestPapersStream(projectId, container);
 
             //5. Load rest of UI
             loadProjectOverviewData(projectId, project.description);

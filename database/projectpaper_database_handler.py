@@ -10,11 +10,14 @@ def assign_paper_to_project(paper_hash: str, project_id: str, summary: str, news
     connection = connect_to_db()
     cursor = connection.cursor()
 
-    cursor.execute("""INSERT INTO paperprojects_table (project_id, paper_hash, summary) VALUES (%s, %s, %s)""",
-                   (project_id, paper_hash, summary))
+    cursor.execute("""INSERT INTO paperprojects_table (project_id, paper_hash, summary, newsletter, seen) VALUES (%s, %s, %s, %s, %s)""",
+                   (project_id, paper_hash, summary, newsletter, seen))
     connection.commit()
     cursor.close()
     connection.close()
+    
+    if newsletter:
+        print(f"[DB] Stored newsletter paper for project {project_id}: {paper_hash[:20]}...")
 
 
 def get_papers_for_project(project_id: str):
