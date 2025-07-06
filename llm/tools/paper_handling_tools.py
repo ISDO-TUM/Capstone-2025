@@ -259,9 +259,6 @@ def check_relevance_threshold(papers_with_relevance_scores: list[dict], threshol
     return all(paper.get("similarity_score", 0.0) >= threshold for paper in top_papers)
 
 
-logger = logging.getLogger(__name__)
-
-
 @tool
 def accept(confirmation: str) -> str:
     """
