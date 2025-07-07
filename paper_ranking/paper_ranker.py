@@ -9,13 +9,15 @@ logger = logging.getLogger(__name__)
 
 
 @tool
-def get_best_papers(user_profile: str) -> list[dict]:
+def get_best_papers(user_profile: str, num_candidates: int = 10) -> list[dict]:
     """
     Tool Name: get_best_papers
-    Returns a list of recommended papers based on the user profile.
+    Returns a list of recommended papers based on the user profile. If the agent want to apply filtering, the agent will increase the
+    number of candidates to a higher number, e.g. 100 or 1000. To ensure that the agent can still return a reasonable number of papers, the default is set to 10.
 
     Args:
         user_profile (str): The user's input or research interests.
+        num_candidates (int): The number of candidate papers to return. Default is 10.
 
     Returns:
         List[Dict]: A list of paper metadata dictionaries.
@@ -31,7 +33,10 @@ def get_best_papers(user_profile: str) -> list[dict]:
         return []
 
     try:
-        paper_hashes = chroma_db.perform_similarity_search(10, embedded_profile)
+        if num_candidates != 10:
+            logger.info(f"Agent requested {num_candidates} candidates, which is different than the default of 10. This will allow for more filtering.")
+
+        paper_hashes = chroma_db.perform_similarity_search(num_candidates, embedded_profile)
 
     except Exception as e:
         logger.error(f"Error performing similarity search: {e}")

@@ -105,6 +105,8 @@ You have access to the following tools:
 
 7. update_papers — AFTER the query is validated/optimized, always call this to pull the latest papers from OpenAlex.
 8. get_best_papers — Run immediately after `update_papers` to retrieve the top-matching papers.
+    If you intend to apply filtering in the next step, always call get_best_papers with num_candidates=100 to ensure a large enough sample size for filtering.
+    Otherwise, omit the num_candidates parameter.
 
 9. filter_papers_by_nl_criteria — If the user specifies numeric or metadata constraints
    (e.g. date > 2022, citations ≥ 50, similarity_score > 0.8, specific authors, journal names, etc.),
