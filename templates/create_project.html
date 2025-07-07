@@ -15,14 +15,30 @@
                 <input type="text" id="projectTitle" name="projectTitle" required>
             </div>
             <div class="form-group">
-                <label for="projectDescription">Project Prompt</label>
+                <label for="projectDescription">Project Prompt
+                    <span class="info-icon" tabindex="0">
+                        ℹ️
+                        <span class="tooltip">
+                            <strong>You can use natural language filters in your prompt:</strong><br>
+                            • authors<br>
+                            • publication_date<br>
+                            • fwci<br>
+                            • citation_normalized_percentile<br>
+                            • cited_by_count<br>
+                            • counts_by_year<br>
+                            • similarity_score<br><br>
+                            <em>Example:</em><br>
+                            "I am looking for papers in the field of machine learning in healthcare published after 2018."
+                        </span>
+                    </span>
+                </label>
                 <textarea id="projectDescription" name="projectDescription" rows="4" required></textarea>
             </div>
-            
+
             <div class="form-group">
                 <label for="paperUpload">Upload Reference Paper (Optional)</label>
                 <p class="upload-description">Upload a PDF to enhance your project recommendations</p>
-                
+
                 <div id="uploadArea" class="upload-area">
                     <div class="upload-content">
                         <div class="upload-icon">📄</div>
@@ -31,7 +47,7 @@
                     </div>
                     <input type="file" id="paperUpload" accept=".pdf" style="display: none;">
                 </div>
-                
+
                 <div id="fileInfo" class="file-info" style="display: none;">
                     <div class="file-details">
                         <div class="file-icon">📄</div>
@@ -43,7 +59,7 @@
                     <button type="button" id="removeFile" class="btn-remove">Remove</button>
                 </div>
             </div>
-            
+
             <button type="submit" class="btn btn-primary">Create Project</button>
         </form>
     </div>
