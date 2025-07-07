@@ -380,7 +380,7 @@ def api_update_newsletter():
     thread = threading.Thread(target=run_update)
     thread.daemon = True  # Thread will be terminated when main process exits
     thread.start()
-    
+
     # Return immediately - the update is running in the background
     return jsonify({'status': 'started'}), 200
 
@@ -425,5 +425,4 @@ def api_get_project(project_id):
 
 
 if __name__ == '__main__':
-
-    app.run(host='0.0.0.0', debug=True, port=7500)  # nosec B201, B104
+    app.run(host='0.0.0.0', debug=True, port=80)  # nosec B201, B104
