@@ -21,43 +21,33 @@ def get_best_papers(user_profile: str) -> list[dict]:
     Returns:
         List[Dict]: A list of paper metadata dictionaries.
     """
-    # Check if input is a project_id (UUID format)
-    import re
-    uuid_pattern = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
+    try:
+        embedded_profile = get_user_profile_embedding(user_profile)
 
-    if uuid_pattern.match(user_profile):
-        # Input is a project_id, get embedding from database
-        try:
-            embedded_profile = get_user_profile_embedding(user_profile)
-            if embedded_profile is None:
-                # No embedding found, create one from project description
-                logger.info(f"No user profile embedding found for project {user_profile}, creating one...")
-                project_data = get_project_data(user_profile)
-                if project_data and project_data.get('description'):
-                    embedded_profile = embed_user_profile(project_data['description'])
-                    if embedded_profile:
-                        add_user_profile_embedding(user_profile, embedded_profile)
-                        logger.info(f"Created and saved user profile embedding for project {user_profile}")
-                    else:
-                        logger.error(f"Failed to create embedding for project {user_profile}")
-                        return []
-                else:
-                    logger.error(f"No project description found for project {user_profile}")
-                    return []
-            else:
-                logger.info(f"Using stored embedding for project {user_profile}")
-        except Exception as e:
-            logger.error(f"Error getting user profile embedding for project {user_profile}: {e}")
-            return []
-    else:
-        # Input is text, create embedding from it
-        try:
-            embedded_profile = embed_user_profile(user_profile)
-        except Exception as e:
-            logger.error(f"User profile could not be embedded: {e}")
-            return []
+        if embedded_profile:
+            logger.info(f"Using stored embedding for project {user_profile}")
+        else:
+            logger.info(f"No embedding found for project {user_profile}, creating one...")
+            project_data = get_project_data(user_profile)
+            description = project_data.get('description') if project_data else None
 
-    if embedded_profile is None:
+            if not description:
+                logger.error(f"No project description found for project {user_profile}")
+                return []
+
+            embedded_profile = embed_user_profile(description)
+            if not embedded_profile:
+                logger.error(f"Failed to create embedding for project {user_profile}")
+                return []
+
+            add_user_profile_embedding(user_profile, embedded_profile)
+            logger.info(f"Created and saved embedding for project {user_profile}")
+
+    except Exception as e:
+        logger.error(f"Error getting or creating user profile embedding for project {user_profile}: {e}")
+        return []
+
+    if not embedded_profile:
         logger.warning("Embedded profile is None, aborting process.")
         return []
 

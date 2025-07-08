@@ -687,7 +687,7 @@ function insertReplacementPaper(replacementDetails, position, container) {
 
         invisibleCard.innerHTML = `
             <h3>${replacementDetails.replacement_title}</h3>
-            <a href="N/A" target="_blank">Read Paper</a>
+            <a href="${replacementDetails.replacement_url}" target="_blank">Read Paper</a>
             <p>${replacementDetails.replacement_summary}</p>
             <div class="star-rating">
                 <span class="star" data-value="1">&#9733;</span>
