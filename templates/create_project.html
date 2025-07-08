@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create New Project</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .tooltip-desc {
+            display: inline-block;
+            margin-left: 8px;
+            color: #b3e0ff;
+            font-size: 0.95em;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -20,13 +28,20 @@
                         ℹ️
                         <span class="tooltip">
                             <strong>You can use natural language filters in your prompt:</strong><br>
-                            • authors<br>
-                            • publication_date<br>
-                            • fwci<br>
-                            • citation_normalized_percentile<br>
-                            • cited_by_count<br>
-                            • counts_by_year<br>
-                            • similarity_score<br><br>
+                            <b>Authors</b><br>
+                            <span class="tooltip-desc">Filter by specific authors of the paper.</span><br>
+                            <b>Publication Date</b><br>
+                            <span class="tooltip-desc">The year or date when the paper was published.</span><br>
+                            <b>Field-Weighted Citation Impact (FWCI)</b><br>
+                            <span class="tooltip-desc">A metric that shows how well-cited a paper is compared to others in its field (1.0 = world average).</span><br>
+                            <b>Citation Normalized Percentile</b><br>
+                            <span class="tooltip-desc">Indicates the paper's citation performance as a percentile among similar papers (higher is better).</span><br>
+                            <b>Cited By Count</b><br>
+                            <span class="tooltip-desc">The total number of times this paper has been cited by other works.</span><br>
+                            <b>Counts By Year</b><br>
+                            <span class="tooltip-desc">Shows how many times the paper was cited in each year since publication.</span><br>
+                            <b>Similarity Score</b><br>
+                            <span class="tooltip-desc">A score indicating how closely the paper matches your search or interests (higher means more relevant).</span><br><br>
                             <em>Example:</em><br>
                             "I am looking for papers in the field of machine learning in healthcare published after 2018."
                         </span>

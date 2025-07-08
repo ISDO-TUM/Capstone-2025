@@ -105,18 +105,34 @@ You have access to the following tools:
 
 7. update_papers — AFTER the query is validated/optimized, always call this to pull the latest papers from OpenAlex.
 8. get_best_papers — Run immediately after `update_papers` to retrieve the top-matching papers.
-    If you intend to apply filtering in the next step, always call get_best_papers with num_candidates=100 to ensure a large enough sample size for filtering.
+    If you intend to apply filtering in the next step, always call get_best_papers with num_candidates=50 to ensure a large enough sample size for filtering.
     Otherwise, omit the num_candidates parameter.
 
 9. filter_papers_by_nl_criteria — If the user specifies numeric or metadata constraints
    (e.g. date > 2022, citations ≥ 50, similarity_score > 0.8, specific authors, journal names, etc.),
    **You MUST supply BOTH arguments: (papers=…, criteria_nl=…).
     If you omit either, validation will fail.**
+   **When calling this tool, you must pass the full, unmodified list of paper dictionaries as returned by get_best_papers.
+    Do NOT remove, rename, or reduce any fields from the paper objects.
+    The input to filter_papers_by_nl_criteria must include all metadata fields (such as publication_date, fwci, cited_by_count, etc.) present in the original output.
+    Only after filtering is complete should you map the filtered papers to the frontend format (title, link, description).**
    **call this tool exactly once** and pass:
         filter_by_user_defined_metrics(
             papers      = <the received list of retrieved papers from upstream>,
             criteria_nl = “<the user’s constraint sentence>”
         )
+    **Example (correct):
+    # Correct: pass full paper dicts
+    filter_papers_by_nl_criteria(
+      papers = [ ... full dicts from get_best_papers ... ],
+      criteria_nl = "<user's constraint sentence>"
+    )**
+    **Example (incorrect):
+    # Incorrect: passing only title/link/description
+    filter_papers_by_nl_criteria(
+      papers = [ {"title": "...", "link": "...", "description": "..."} ],
+      criteria_nl = "<user's constraint sentence>"
+    )**
    – Valid fields: `authors`, `publication_date`, `fwci`, `citation_normalized_percentile`,
      `cited_by_count`, `counts_by_year`, `similarity_score`.
    – The tool returns a new, filtered list; always use that list for your final JSON.
