@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            
+
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 handleFileSelection(files[0]);
@@ -95,32 +95,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function displayFileInfo(file) {
             const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
-            
+
             fileName.textContent = file.name;
             fileSize.textContent = `${sizeInMB} MB`;
-            
+
             uploadArea.style.display = 'none';
             fileInfo.style.display = 'flex';
-            
+
             extractPDFText(file);
         }
 
         async function extractPDFText(file) {
             const projectDescription = document.getElementById('projectDescription');
             if (!projectDescription) return;
-            
+
             const formData = new FormData();
             formData.append('file', file);
-            
+
             try {
                 const originalValue = projectDescription.value;
                 projectDescription.value = originalValue + '\n\n[Extracting PDF text...]';
-                
+
                 const response = await fetch('/api/extract-pdf-text', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 if (!response.ok) {
                     try {
                         const result = await response.json();
@@ -131,13 +131,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     projectDescription.value = originalValue;
                     return;
                 }
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     const currentText = originalValue.trim();
-                    const newText = currentText ? 
-                        `${currentText}\n\n${result.extracted_text}` : 
+                    const newText = currentText ?
+                        `${currentText}\n\n${result.extracted_text}` :
                         result.extracted_text;
                     projectDescription.value = newText;
                 } else {
@@ -152,10 +152,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function removeFile() {
             fileInput.value = '';
-            
+
             fileInfo.style.display = 'none';
             uploadArea.style.display = 'block';
-            
+
             fileName.textContent = '';
             fileSize.textContent = '';
         }
@@ -307,30 +307,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const fadeOverlay = document.getElementById('descriptionFadeOverlay');
         const controls = document.getElementById('descriptionControls');
         const expandText = toggleButton?.querySelector('.expand-text');
-        
+
         if (!descriptionDisplay || !descriptionWrapper || !toggleButton || !fadeOverlay || !controls || !expandText) return;
 
         const wordCount = description.trim().split(/\s+/).length;
 
         if (wordCount > 500) {
             const isCollapsed = true;
-            
+
             descriptionDisplay.classList.toggle('collapsed', isCollapsed);
             descriptionDisplay.classList.toggle('expanded', !isCollapsed);
             toggleButton.classList.toggle('expanded', !isCollapsed);
             fadeOverlay.classList.toggle('visible', isCollapsed);
             controls.classList.add('visible');
-            
+
             expandText.textContent = isCollapsed ? 'Show full description' : 'Hide full description';
-            
+
             toggleButton.addEventListener('click', () => {
                 const currentlyCollapsed = descriptionDisplay.classList.contains('collapsed');
-                
+
                 descriptionDisplay.classList.toggle('collapsed', !currentlyCollapsed);
                 descriptionDisplay.classList.toggle('expanded', currentlyCollapsed);
                 toggleButton.classList.toggle('expanded', currentlyCollapsed);
                 fadeOverlay.classList.toggle('visible', !currentlyCollapsed);
-                
+
                 expandText.textContent = !currentlyCollapsed ? 'Show full description' : 'Hide full description';
             });
         } else {
@@ -540,9 +540,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = 'project-card';
             card.style.animationDelay = `${idx * 0.04 + 0.1}s`;
+            // Truncate description to 120 chars for safety
+            const truncatedDescription = truncateText(project.description, 120);
             card.innerHTML = `
                 <div class="project-title">${project.name}</div>
-                <div class="project-description">${project.description}</div>
+                <div class="project-description">${truncatedDescription}</div>
                 <div class="project-tags">
                     ${project.tags.map(tag => `<span class="project-tag">${tag}</span>`).join(' ')}
                 </div>
@@ -557,6 +559,12 @@ document.addEventListener('DOMContentLoaded', () => {
             projectsList.appendChild(card);
         });
         animateCardsOnScroll();
+    }
+
+    function truncateText(text, maxLength) {
+        if (!text) return '';
+        if (text.length <= maxLength) return text;
+        return text.slice(0, maxLength - 3).trim() + '...';
     }
 
     function filterProjectsBySearch(projects, searchValue) {
