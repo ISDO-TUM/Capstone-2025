@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create New Project</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .tooltip-desc {
+            display: inline-block;
+            margin-left: 8px;
+            color: #b3e0ff;
+            font-size: 0.95em;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -15,14 +23,37 @@
                 <input type="text" id="projectTitle" name="projectTitle" required>
             </div>
             <div class="form-group">
-                <label for="projectDescription">Project Prompt</label>
+                <label for="projectDescription">Project Prompt
+                    <span class="info-icon" tabindex="0">
+                        ℹ️
+                        <span class="tooltip">
+                            <strong>You can use natural language filters in your prompt:</strong><br>
+                            <b>Authors</b><br>
+                            <span class="tooltip-desc">Filter by specific authors of the paper.</span><br>
+                            <b>Publication Date</b><br>
+                            <span class="tooltip-desc">The year or date when the paper was published.</span><br>
+                            <b>Field-Weighted Citation Impact (FWCI)</b><br>
+                            <span class="tooltip-desc">A metric that shows how well-cited a paper is compared to others in its field (1.0 = world average).</span><br>
+                            <b>Citation Normalized Percentile</b><br>
+                            <span class="tooltip-desc">Indicates the paper's citation performance as a percentile among similar papers (higher is better).</span><br>
+                            <b>Cited By Count</b><br>
+                            <span class="tooltip-desc">The total number of times this paper has been cited by other works.</span><br>
+                            <b>Counts By Year</b><br>
+                            <span class="tooltip-desc">Shows how many times the paper was cited in each year since publication.</span><br>
+                            <b>Similarity Score</b><br>
+                            <span class="tooltip-desc">A score indicating how closely the paper matches your search or interests (higher means more relevant).</span><br><br>
+                            <em>Example:</em><br>
+                            "I am looking for papers in the field of machine learning in healthcare published after 2018."
+                        </span>
+                    </span>
+                </label>
                 <textarea id="projectDescription" name="projectDescription" rows="4" required></textarea>
             </div>
-            
+
             <div class="form-group">
                 <label for="paperUpload">Upload Reference Paper (Optional)</label>
                 <p class="upload-description">Upload a PDF to enhance your project recommendations</p>
-                
+
                 <div id="uploadArea" class="upload-area">
                     <div class="upload-content">
                         <div class="upload-icon">📄</div>
@@ -31,7 +62,7 @@
                     </div>
                     <input type="file" id="paperUpload" accept=".pdf" style="display: none;">
                 </div>
-                
+
                 <div id="fileInfo" class="file-info" style="display: none;">
                     <div class="file-details">
                         <div class="file-icon">📄</div>
@@ -43,7 +74,7 @@
                     <button type="button" id="removeFile" class="btn-remove">Remove</button>
                 </div>
             </div>
-            
+
             <button type="submit" class="btn btn-primary">Create Project</button>
         </form>
     </div>
