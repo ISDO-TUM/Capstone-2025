@@ -138,13 +138,17 @@ def api_create_project():
 def get_projects():
     """Get all projects with project_id and metadata."""
 
-    print(get_all_projects())
     projects = get_all_projects()
     complete_projects = []
-    # todo update database to include project creation date, remove tags from frontend cause we dont really have time for that feature
     for project in projects:
+        if project is None:
+            continue
         project['tags'] = []
-        project['date'] = "2025-07-16"
+        # Use the real creation_date from the DB, format as string for frontend
+        if 'creation_date' in project and project['creation_date']:
+            project['date'] = str(project['creation_date'])
+        else:
+            project['date'] = "Unknown"
         complete_projects.append(project)
     try:
         return jsonify({

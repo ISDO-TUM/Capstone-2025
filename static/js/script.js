@@ -478,9 +478,9 @@ function renderPubSubPapers(papers, container) {
         const val = searchValue.trim().toLowerCase();
         if (!val) return projects;
         return projects.filter(p =>
-            (p.title && p.title.toLowerCase().includes(val)) ||
-            (p.description && p.description.toLowerCase().includes(val)) ||
-            (Array.isArray(p.tags) && p.tags.some(tag => tag.toLowerCase().includes(val)))
+            (p.title && typeof p.title === 'string' && p.title.toLowerCase().includes(val)) ||
+            (p.description && typeof p.description === 'string' && p.description.toLowerCase().includes(val)) ||
+            (Array.isArray(p.tags) && p.tags.some(tag => tag && typeof tag === 'string' && tag.toLowerCase().includes(val)))
         );
     }
 

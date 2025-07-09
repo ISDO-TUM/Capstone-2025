@@ -68,7 +68,7 @@ def get_all_projects() -> list[dict]:
     conn = connect_to_db()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    cursor.execute("SELECT project_id, title, description FROM projects_table")
+    cursor.execute("SELECT project_id, title, description, creation_date FROM projects_table")
 
     projects = [dict(row) for row in cursor.fetchall()]
     cursor.close()
@@ -85,10 +85,12 @@ def get_project_data(project_id: str):
                    FROM projects_table
                    WHERE project_id = %s
                    """, (project_id,))
-    project = dict(cursor.fetchone())
+    row = cursor.fetchone()
     cursor.close()
     conn.close()
-    return project
+    if row is None:
+        return None
+    return dict(row)
 
 
 def add_email_to_project_db(email: str, project_id: str):
@@ -121,7 +123,7 @@ def get_project_by_id(project_id: str):
     conn = connect_to_db()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     cursor.execute("""
-        SELECT project_id, title, description, email, queries
+        SELECT project_id, title, description, email, queries, creation_date
           FROM projects_table
          WHERE project_id = %s
     """, (project_id,))
