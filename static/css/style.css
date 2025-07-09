@@ -807,3 +807,75 @@ body {
     visibility: visible;
     opacity: 1;
 }
+
+
+/* PubSub section styling */
+.pubsub-section {
+    margin: 32px 0;
+    padding: 24px;
+    background: #f7fafe;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.pubsub-section h2 {
+    font-size: 20px;
+    margin-bottom: 16px;
+    color: #007bff;
+}
+
+#pubsubSubscribeForm {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+#pubsubSubscribeForm input[type="email"] {
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 15px;
+    min-width: 240px;
+}
+
+/* Horizontal papers bar */
+#pubsubPapersBar {
+    margin-top: 12px;
+}
+
+#pubsubPapersBar h3 {
+    font-size: 18px;
+    margin-bottom: 8px;
+    color: #343a40;
+}
+
+#pubsubPapersContainer {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+}
+
+#pubsubPapersContainer .recommendation-card {
+    min-width: 240px;
+    max-width: 340px;
+    flex-shrink: 0;
+    background: #f1f8ff;
+    border: 1px solid #cfe2ff;
+}
+
+#pubsubPapersContainer .recommendation-card h4 {
+    font-size: 16px;
+    margin: 0 0 6px 0;
+    color: #0056b3;
+}
+
+#pubsubPapersContainer .recommendation-card a {
+    color: #007bff;
+}
+
+#pubsubPapersContainer .recommendation-card p {
+    color: #495057;
+    font-size: 13px;
+}

@@ -3,7 +3,7 @@ import logging
 from llm.Embeddings import embed_user_profile
 from langchain_core.tools import tool
 from chroma_db.chroma_vector_db import chroma_db
-from paper_handling.database_handler import get_papers_by_hash
+from database.papers_database_handler import get_papers_by_hash
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ def get_best_papers(user_profile: str, num_candidates: int = 10) -> list[dict]:
 
     try:
         paper_metadata = get_papers_by_hash(paper_hashes)
-        logger.info("Paper metadata: {paper_metadata}")
+        logger.info(f"Paper metadata: {paper_metadata}")
     except Exception as e:
         logger.error(f"Error linking hashes to metadata: {e}")
         return []

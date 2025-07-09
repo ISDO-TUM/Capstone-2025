@@ -1,0 +1,361 @@
+
+@inproceedings{li_ddos_2007,
+	address = {Berlin, Heidelberg},
+	title = {{DDoS} {Attack} {Detection} {Algorithms} {Based} on {Entropy} {Computing}},
+	isbn = {978-3-540-77048-0},
+	abstract = {Distributed Denial of Service (DDoS) attack poses a severe threat to the Internet. It is difficult to find the exact signature of attacking. Moreover, it is hard to distinguish the difference of an unusual high volume of traffic which is caused by the attack or occurs when a huge number of users occasionally access the target machine at the same time. The entropy detection method is an effective method to detect the DDoS attack. It is mainly used to calculate the distribution randomness of some attributes in the network packets' headers. In this paper, we focus on the detection technology of DDoS attack. We improve the previous entropy detection algorithm, and propose two enhanced detection methods based on cumulative entropy and time, respectively. Experiment results show that these methods could lead to more accurate and effective DDoS detection.},
+	booktitle = {Information and {Communications} {Security}},
+	publisher = {Springer Berlin Heidelberg},
+	author = {Li, Liying and Zhou, Jianying and Xiao, Ning},
+	editor = {Qing, Sihan and Imai, Hideki and Wang, Guilin},
+	year = {2007},
+	keywords = {Example of application},
+	pages = {452--466},
+	annote = {In summary, here, the network traffic’s entropy is measured and if the value exceeds a threshold (Cumulative entropy detection) or if the entropy is high for an unusual amount of time (time-based entropy detection). It can be implied that attacks that vary their intensity over time would not be so easily detected with this method. Types of DDoS detection: signature and anomaly detection are mentioned and described briefly.
+},
+}
+
+@article{pei_ddos_2019,
+	title = {A {DDoS} {Attack} {Detection} {Method} {Based} on {Machine} {Learning}},
+	volume = {1237},
+	url = {https://dx.doi.org/10.1088/1742-6596/1237/3/032040},
+	doi = {10.1088/1742-6596/1237/3/032040},
+	abstract = {Distributed denial-of-service attack, also known as DDoS attack, is one of the most common network attacks at present. With the rapid development of computer and communication technology, the harm of DDoS attack is becoming more and more serious. Therefore, the research on DDoS attack detection becomes more important. Nowadays, some related research work has been done and some progress has been made. However, due to the diversity of DDoS attack modes and the variable size of attack traffic, there has not yet been a detection method with satisfactory detection accuracy at present. In view of this, this paper proposes a DDoS attack detection method based on machine learning, which includes two steps: feature extraction and model detection. In the feature extraction stage, the DDoS attack traffic characteristics with a large proportion are extracted by comparing the data packages classified according to rules. In the model detection stage, the extracted features are used as input features of machine learning, and the random forest algorithm is used to train the attack detection model. The experimental results show that the proposed DDoS attack detection method based on machine learning has a good detection rate for the current popular DDoS attack.},
+	number = {3},
+	journal = {Journal of Physics: Conference Series},
+	author = {Pei, Jiangtao and Chen, Yunli and Ji, Wei and Pei, Jiangtao},
+	month = jun,
+	year = {2019},
+	note = {Publisher: IOP Publishing},
+	keywords = {ML, Generate DDoS Attacks, Example of application, Anomaly detection, Random Forest, Flow stats collection used for classification},
+	pages = {032040},
+	annote = {In summary here, they use the random forest ML learning method to achieve 99\%+ accuracy in detecting DDoS attacks. The concrete parameters of the attacks and background traffic are not described. But important tools for attack generation are mentioned. It compares the detection rate to the one of the SVM (?) model. No info about time performance
+},
+}
+
+@incollection{szynkiewicz_signature-based_2022,
+	address = {Cham},
+	title = {Signature-{Based} {Detection} of {Botnet} {DDoS} {Attacks}},
+	isbn = {978-3-031-04036-8},
+	url = {https://doi.org/10.1007/978-3-031-04036-8_6},
+	abstract = {The distributed denial of service (DDoS) attack is an attempt to disrupt the proper availability of a targeted server, service or network. The attack is achieved by corrupting or overwhelming the target's communications with a flood of malicious network traffic. In the current era of mass connectivity DDoS attacks emerge as one of the biggest threats, staidly causing greater collateral damage and heaving a negate impacting on the integral Internet Infrastructure. DDoS attacks come in a variety of types and schemes, they continue to evolve, steadily becoming more sophisticated and larger at scale. A close investigation of attack vectors and refining current security measures is required to efficiently mitigate new DDoS threats. The solution described in this article concerns a less explored variation of signature-based techniques for DDoS mitigation. The approach exploits one of the traits of modern DDoS attacks, the utilization of Packet generation algorithms (PGA) in the attack execution. Proposed method performs a fast, protocol-level detection of DDoS network packets and can easily be employed to provide an effective, supplementary protection against DDoS attacks.},
+	booktitle = {Cybersecurity of {Digital} {Service} {Chains}: {Challenges}, {Methodologies}, and {Tools}},
+	publisher = {Springer International Publishing},
+	author = {Szynkiewicz, Pawe{\textbackslash}l},
+	editor = {Ko{\textbackslash}lodziej, Joanna and Repetto, Matteo and Duzha, Armend},
+	year = {2022},
+	doi = {10.1007/978-3-031-04036-8_6},
+	keywords = {Example of application, definition},
+	pages = {120--135},
+}
+
+@inproceedings{gniewkowski_anomaly_2022,
+	address = {Cham},
+	title = {Anomaly {Detection} {Techniques} for {Different} {DDoS} {Attack} {Types}},
+	isbn = {978-3-031-06746-4},
+	abstract = {Malicious activities in computer network systems often generate patterns in network data that do not conform to normal behaviour. Since the nature of such anomalies may be different for different types of attacks, detection of these is not trivial and may require specific anomaly detection techniques. In this work, we focus on anomaly or outlier detection techniques for DDoS attacks on computer networks. Our main goal is to find such techniques that prove most appropriate for different types of attacks. We restrict our research to fully unsupervised methods, because, in real world scenarios, it is difficult to obtain examples of all possible anomalies, especially that the set of those is constantly growing. To the best of our knowledge, our work is the first that utilizes time-related features in a purely unsupervised manner and that provides a fair comparison between widely known outlier detection methods. We evaluate clustering, autoencoder and LSTM-based techniques on commonly used datasets, i.e. DARPA1998, ISCXIDS2012, CICDDOS2019. Moreover, we propose IQRPACF method that combines IQR with partial autocorrelation function. The proposed method not only does not require to be trained, but also, in most cases, outperforms the other solutions.},
+	booktitle = {New {Advances} in {Dependability} of {Networks} and {Systems}},
+	publisher = {Springer International Publishing},
+	author = {Gniewkowski, Mateusz and Maciejewski, Henryk and Surmacz, Tomasz},
+	editor = {Zamojski, Wojciech and Mazurkiewicz, Jacek and Sugier, Jaros{\textbackslash}law and Walkowiak, Tomasz and Kacprzyk, Janusz},
+	year = {2022},
+	keywords = {Example of application, definition},
+	pages = {63--78},
+}
+
+@inproceedings{alzahrani_detection_2018,
+	title = {Detection of {Distributed} {Denial} of {Service} ({DDoS}) {Attacks} {Using} {Artificial} {Intelligence} on {Cloud}},
+	doi = {10.1109/SERVICES.2018.00031},
+	booktitle = {2018 {IEEE} {World} {Congress} on {Services} ({SERVICES})},
+	author = {Alzahrani, Sabah and Hong, Liang},
+	year = {2018},
+	keywords = {ML, Example of application},
+	pages = {35--36},
+	annote = {Uses both anomaly and signature based detection.
+If the signature is unknown, a deep learning ML will be used.
+},
+}
+
+@article{musumeci_machine-learning-enabled_2021,
+	title = {Machine-{Learning}-{Enabled} {DDoS} {Attacks} {Detection} in {P4} {Programmable} {Networks}},
+	volume = {30},
+	issn = {1573-7705},
+	url = {https://doi.org/10.1007/s10922-021-09633-5},
+	doi = {10.1007/s10922-021-09633-5},
+	abstract = {Distributed Denial of Service (DDoS) attacks represent a major concern in modern Software Defined Networking (SDN), as SDN controllers are sensitive points of failures in the whole SDN architecture. Recently, research on DDoS attacks detection in SDN has focused on investigation of how to leverage data plane programmability, enabled by P4 language, to detect attacks directly in network switches, with marginal involvement of SDN controllers. In order to effectively address cybersecurity management in SDN architectures, we investigate the potential of Artificial Intelligence and Machine Learning (ML) algorithms to perform automated DDoS Attacks Detection (DAD), specifically focusing on Transmission Control Protocol SYN flood attacks. We compare two different DAD architectures, called Standalone and Correlated DAD, where traffic features collection and attack detection are performed locally at network switches or in a single entity (e.g., in SDN controller), respectively. We combine the capability of ML and P4-enabled data planes to implement real-time DAD. Illustrative numerical results show that, for all tested ML algorithms, accuracy, precision, recall and F1-score are above 98\% in most cases, and classification time is in the order of few hundreds of \$\${\textbackslash}upmu {\textbackslash}text \{s\}\$\$in the worst case. Considering real-time DAD implementation, significant latency reduction is obtained when features are extracted at the data plane by using P4 language.},
+	number = {1},
+	journal = {Journal of Network and Systems Management},
+	author = {Musumeci, Francesco and Fidanci, Ali Can and Paolucci, Francesco and Cugini, Filippo and Tornatore, Massimo},
+	month = nov,
+	year = {2021},
+	keywords = {ML, Example of application},
+	pages = {21},
+}
+
+@article{wang_tcam-based_2009,
+	title = {A {TCAM}-based solution for integrated traffic anomaly detection and policy filtering},
+	volume = {32},
+	issn = {0140-3664},
+	url = {https://www.sciencedirect.com/science/article/pii/S0140366409002102},
+	doi = {https://doi.org/10.1016/j.comcom.2009.07.016},
+	abstract = {The survivability of the future Internet is largely dependent on whether it will be able to successfully address both security and performance issues facing the Internet. On one hand, the Internet becomes more and more vulnerable due to fast spreading malicious attacks. On the other hand, it is under great stress to meet ever growing/changing application demands while having to sustain multi-gigabit forwarding performance. In this paper, we propose a Ternary Content Addressable Memory (TCAM) coprocessor based solution for high speed, integrated TCP flow anomaly detection and policy filtering. The attacking packets with spoofed source IP addresses are detected through two-dimensional (2D) matching. The key features of the solution are: (1) setting flag bits in TCAM action code to support various packet treatments; (2) managing TCP flow state in pair to do 2D matching. We evaluate the solution’s ability to detect TCP-based flooding attacks based on real-world-trace simulations. The results show that the proposed solution can match up OC-192 line rate. The possible modifications of the solution for the detection of low rate TCP-targeted attacks are also discussed.},
+	number = {17},
+	journal = {Computer Communications},
+	author = {Wang, Zhijun and Che, Hao and Cao, Jiannong and Wang, Jingshan},
+	year = {2009},
+	keywords = {Flow anomaly detection, TCAM coprocessor, Two-dimensional matching, Line rate detection, Performance, Anomaly detection, TCAM},
+	pages = {1893--1901},
+	annote = {States the need for TCAM DDoS detection due the performance requisites of the current world for which TCAM is a step forward together with the necessity for having safe networks as well.
+States that packet and flow classification, needed to support differential services can create potential bottlenecks for high speed forwarding. Here TCAM is used as a packet classifier for policy filtering.
+With 5 Mbits TCAM Memory, OC-192 line rate is achieved.
+TCP attack detection is the priority as most internet traffic is TCP.
+Matches the five tuples of {\textless}SIP, DIP, SPN, DPN, PRO{\textgreater}
+Defines 2D matching as the feature of an outbound flow having a corresponding inbound flow in the opposite direction
+Flows without this feature are called unmatched flows. This will be used to detect anomalies with the assumption of IP spoofing which leads to unmatched flows. Unmatched flows may be caused too, due to servers being down or IP changes in servers, where the old IP is still cached in DNS.
+This approach tries to be a functional TCAM switch with both policy filtering and DDoS detection capabilities. This adds extra complexity due to the local CPU having to differentiate between policy filtering and flow identity rules. Furthermore extra TCAM memory is needed and additional state management is needed. To achieve 2D matching indexing rules for the entries in the flow table are set and for each new flow an entry for the expected flow in the opposite direction is added
+A local CPU keeps track of the states of flows in the TCAM coprocessor.
+It is shown that a 100MHz Processor can handle fine the forwarding and rule updates
+Small flow tables take a lot more time to detect anomalies but dont generate many false alarms. The bigger the table the faster the detection is and the more false alarms they are until a certain point when the table is big enough to not have overflows. Then the detection time is reduced as well as the false alarm rate.
+In comparison to HollywooDDoS, this approach has all problems mentioned in its paper regarding flow based approaches. The latency and detection performance is limited by the table’s size.
+This approach doesn’t have the ability to analyze developing attack patterns and struggles with low-rate targeted TCP DoS attacks. Every flow has to be monitored to have a conclusion.
+
+},
+	annote = {Talks about IP traceback being a difficutl way of detecting DDoS attacks.
+},
+}
+
+@inproceedings{nugraha_deep_2020,
+	title = {Deep {Learning}-based {Slow} {DDoS} {Attack} {Detection} in {SDN}-based {Networks}},
+	doi = {10.1109/NFV-SDN50289.2020.9289894},
+	booktitle = {2020 {IEEE} {Conference} on {Network} {Function} {Virtualization} and {Software} {Defined} {Networks} ({NFV}-{SDN})},
+	author = {Nugraha, Beny and Murthy, Rathan Narasimha},
+	year = {2020},
+	keywords = {ML, Example of application, SDN, Flow stats collection used for classification},
+	pages = {51--56},
+	annote = {Its focus is slow DDoS attacks
+Flow based detection
+},
+}
+
+@article{nadeem_ddos_2022,
+	title = {{DDoS} {Detection} in {SDN} using {Machine} {Learning} {Techniques}.},
+	volume = {71},
+	number = {1},
+	journal = {Computers, Materials \& Continua},
+	author = {Nadeem, Muhammad Waqas and Goh, Hock Guan and Ponnusamy, Vasaki and Aun, Yichiet},
+	year = {2022},
+	keywords = {ML, Example of application, SDN, Random Forest, Flow stats collection used for classification},
+	annote = {Here random forest is used too. Detection accuracy is over 99.7\%. Signals the controller as a weak point of SDNs that is convenient to target in DDoS attacks. The most convenient features to pass to the ML model are found out. No info about latency performance.
+},
+}
+
+@inproceedings{xu_ddos_2016,
+	title = {{DDoS} attack detection under {SDN} context},
+	doi = {10.1109/INFOCOM.2016.7524500},
+	booktitle = {{IEEE} {INFOCOM} 2016 - {The} 35th {Annual} {IEEE} {International} {Conference} on {Computer} {Communications}},
+	author = {Xu, Yang and Liu, Yong},
+	year = {2016},
+	keywords = {Example of application, SDN, TCAM},
+	pages = {1--9},
+	annote = {Low granular IP-Address ranges are analyzed to see if they are being victims of DDoS attacks, if there is a positive assumption. The address range will be zoomed in into a higher granularity to be analyzed further this used for victim detection but can also be utilized to detect attackers.
+The classification method uses packet and byte quantity and asymmetry as features. SOM an unsupervised AI is used a classifier.
+The work uses a so called “attacker detection procedure“ to install openflow rules that drop packets from the attacker to the victim.
+The IP address range of the system is covered by having a set of IP source prefixes and IP destination prefixes that are then used for every match combination. These matches are then installed as flows.
+Sequential method (first victim then attack detection):
+A classification of IP ranges is being constantly done for victim detection. If there is a positive result, the IP range is divided into a finer granularity, otherwise, if the range has a positive result and has been divided before, the division will be reversed/merged so that more TCAM space is available for adding granularity for potential victims. If a range is divided until the lowest granularity is reached, attack detection will begin.
+Attack detection works the same, but it uses a classifier tuned for attackers.
+When both attacker and victim granularities are at their lowest, the concrete IP source and destination IP addresses will be returned.
+Concurrent method (victim and attack detection simultaneously):
+We begin with coarse granularity and if an IP range is suspected as victim, the attack detection is begun simultaneously. Ranges are split if they are suspected to be victims or attackers. Split addresses are merged if they and their siblings yield negative results.
+Performance:
+For victim detection. The sequential method is always a good choice, specially with low TCAM space. For attacker detection, the concurrent method can yield too coarse results when TCAM space is insufficient, otherwise, it is the preferred method.
+
+},
+	annote = {The references of this paper could be very useful for the background part of your BA
+},
+}
+
+@article{mirkovic_taxonomy_2004,
+	title = {A {Taxonomy} of {DDoS} {Attack} and {DDoS} {Defense} {Mechanisms}},
+	volume = {34},
+	issn = {0146-4833},
+	url = {https://doi.org/10.1145/997150.997156},
+	doi = {10.1145/997150.997156},
+	abstract = {Distributed denial-of-service (DDoS) is a rapidly growing problem. The multitude and variety of both the attacks and the defense approaches is overwhelming. This paper presents two taxonomies for classifying attacks and defenses, and thus provides researchers with a better understanding of the problem and the current solution space. The attack classification criteria was selected to highlight commonalities and important features of attack strategies, that define challenges and dictate the design of countermeasures. The defense taxonomy classifies the body of existing DDoS defenses based on their design decisions; it then shows how these decisions dictate the advantages and deficiencies of proposed solutions.},
+	number = {2},
+	journal = {SIGCOMM Comput. Commun. Rev.},
+	author = {Mirkovic, Jelena and Reiher, Peter},
+	month = apr,
+	year = {2004},
+	note = {Place: New York, NY, USA
+Publisher: Association for Computing Machinery},
+	keywords = {definition},
+	pages = {39--53},
+}
+
+@patent{noauthor_notitle_nodate,
+}
+
+@article{bawany_ddos_2017,
+	title = {{DDoS} attack detection and mitigation using {SDN}: methods, practices, and solutions},
+	volume = {42},
+	journal = {Arabian Journal for Science and Engineering},
+	author = {Bawany, Narmeen Zakaria and Shamsi, Jawwad A and Salah, Khaled},
+	year = {2017},
+	note = {Publisher: Springer},
+	pages = {425--441},
+	annote = {ProDefense works using a distributed sets of controllers. The northbound interface is connected to the proDefense app as well as to other smart city applications.
+The context of a smart city is used, because in such a scenario it’s of upmost importance that services are up so that the city can function.
+The cities applications are categorized by how urgent a reaction is. Applications that need constant and reliable uptime apply attack mitigation even preemptively at the cost of higher false positives and vice versa.
+A flow collector passes data to a threshold detector, that in case of detection triggers the response of a policy engine that chooses an adaptive filter. In case of attack mitigation the policy engine applies a mitigation method from a mitigation engine.
+The key advantages of this framework are mentioned
+},
+	annote = {The challenge of real time network traffic monitoring is mentioned. HollywooDDoS addresses this issue with TCAM switches and its aggregation methods.
+Protection of the controller against DDoS attacks remains a task for further investigation
+},
+	annote = {This paper will first present, and classify DDoS detection ad mitigation mechanisms. A classification of these mechanisms according to their methods of anomaly detection will the be made. The mechanisms will be evaluated.
+From then on, an SDN-based proactive DDoS Defense Framework (ProDefense) will be presented. It will be explained how this framework could be utilized in the context of smart cities.
+The DDoS attack classes are: Reflection-based flooding attacks, Protocol exploitation flooding attacks and Reflection and amplification-based flooding attacks.
+A set of requirements for an effective DDoS mechanism are declared along with a set of security challenges.
+Types of detection techniques are: entropy, machine learning, traffic patter analysis, connection rate, and SNORT and OpenFlow integrated.
+The types of attack mitigation techniques are: dropping packets, blocking ports, redirection, controlling bandwidth, network reconfiguration and topology change, deep packet inspection, MAC and/or IP address change, and quarantine or traffic isolation
+It’s mentioned that for applications with high requirements of uptime and availability, quick attack detection and mitigation are essential so that usage is not compromised.
+
+},
+}
+
+@article{dong_ddos_2020,
+	title = {{DDoS} {Attack} {Detection} {Method} {Based} on {Improved} {KNN} {With} the {Degree} of {DDoS} {Attack} in {Software}-{Defined} {Networks}},
+	volume = {8},
+	doi = {10.1109/ACCESS.2019.2963077},
+	journal = {IEEE Access},
+	author = {Dong, Shi and Sarem, Mudar},
+	year = {2020},
+	keywords = {Computer architecture, Computer crime, DDoS attack, Denial-of-service attack, gain value, IP networks, Protocols, Servers, Software, software defined networking, traffic behavior},
+	pages = {5039--5048},
+}
+
+@inproceedings{nagy_low-reaction_2018,
+	title = {Low-reaction time {FPGA}-based {DDoS} detector},
+	doi = {10.1109/NOMS.2018.8406124},
+	booktitle = {{NOMS} 2018 - 2018 {IEEE}/{IFIP} {Network} {Operations} and {Management} {Symposium}},
+	author = {Nagy, Balázs and Orosz, Pèter and Varga, Pal},
+	year = {2018},
+	keywords = {Computer crime, IP networks, Detectors, Engines, Field programmable gate arrays, Monitoring},
+	pages = {1--2},
+}
+
+@inproceedings{jun_ddos_2014,
+	address = {New York, NY, USA},
+	series = {{SAC} '14},
+	title = {{DDoS} attack detection by using packet sampling and flow features},
+	isbn = {978-1-4503-2469-4},
+	url = {https://doi.org/10.1145/2554850.2555109},
+	doi = {10.1145/2554850.2555109},
+	abstract = {DDoS attack becomes a challenge to the security of the Internet. The DDoS attack, which consumes a lot of valuable computing of communication resources, is known hard to defend. Aiming to the threat caused by DDoS attacks, current network requires an effective detection method. Therefore, an intrusion detection system on large network is needed for real-time detection. In this paper, we propose detection mechanism system by using packet sampling and flow feature against DDoS attacks in order to guarantee the transmission of normal traffic and prevent the flood of abnormal traffic. Our approach is proved to be efficiency by OPNET simulation results.},
+	booktitle = {Proceedings of the 29th {Annual} {ACM} {Symposium} on {Applied} {Computing}},
+	publisher = {Association for Computing Machinery},
+	author = {Jun, Jae-Hyun and Ahn, Cheol-Woong and Kim, Sung-Ho},
+	year = {2014},
+	note = {event-place: Gyeongju, Republic of Korea},
+	keywords = {DDoS attack detection, entropy, flow features, packet sampling},
+	pages = {711--712},
+}
+
+@article{beal_denial_2021,
+	title = {Denial of {Service} ({DoS}) {Attack}},
+	url = {https://www.webopedia.com/insights/dos-attack/},
+	language = {English},
+	journal = {Webopedia},
+	author = {Beal, Vangie},
+	month = dec,
+	year = {2021},
+}
+
+@article{noauthor_what_nodate,
+	title = {What is a {DDoS} attack?},
+	url = {https://www.cloudflare.com/learning/ddos/what-is-a-ddos-attack/},
+	journal = {Cloudfare},
+}
+
+@article{wright_ternary_2023,
+	title = {ternary content-addressable memory ({TCAM})},
+	journal = {TechTarget},
+	author = {Wright, Gavin and Scarpati, Jessica},
+	month = nov,
+	year = {2023},
+}
+
+@article{noauthor_what_nodate-1,
+	title = {What are convolutional neural networks?},
+	url = {https://www.ibm.com/topics/convolutional-neural-networks},
+	journal = {IBM},
+}
+
+@article{noauthor_deep_nodate,
+	title = {Deep {Learning} {\textbar} {Introduction} to {Long} {Short} {Term} {Memory}},
+	url = {https://www.geeksforgeeks.org/deep-learning-introduction-to-long-short-term-memory/},
+	journal = {geeksforgeeks},
+}
+
+@article{brownlee_cnn_2019,
+	title = {{CNN} {Long} {Short}-{Term} {Memory} {Networks}},
+	url = {https://machinelearningmastery.com/cnn-long-short-term-memory-networks/},
+	journal = {Machine Learning Mastery},
+	author = {Brownlee, Jason},
+	month = aug,
+	year = {2019},
+}
+
+@misc{mininet_project_contributors_mininet_nodate,
+	title = {Mininet {Documentation}},
+	url = {https://mininet.org/},
+	publisher = {Mininet},
+	collaborator = {Mininet Project Contributors},
+}
+
+@misc{noauthor_openflow_2012,
+	title = {{OpenFlow} {Switch} {Specification}},
+	url = {https://opennetworking.org/wp-content/uploads/2014/10/openflow-spec-v1.3.0.pdf},
+	publisher = {Open Networking Foundation},
+	month = jun,
+	year = {2012},
+}
+
+@misc{noauthor_ryu_nodate,
+	title = {Ryu},
+	url = {https://ryu-sdn.org/index.html},
+	publisher = {Ryu SDN Framework Community},
+}
+
+@article{rouse_line_2016,
+	title = {Line {Speed}},
+	url = {https://www.techopedia.com/definition/32291/line-speed},
+	journal = {Techopedia},
+	author = {Rouse, Margaret},
+	month = nov,
+	year = {2016},
+}
+
+@techreport{ryszard_erazm_jurga_packet_2007,
+	title = {Packet {Sampling} for {Network} {Monitoring}},
+	url = {https://openlab-mu-internal.web.cern.ch/03_documents/3_technical_documents/technical_reports/2007/rj-mm_samplingreport.pdf},
+	institution = {CERN openlab},
+	author = {Ryszard Erazm Jurga, Milosz Marian Hulbój},
+	year = {2007},
+}
+
+@article{kopmann_toward_2023,
+	title = {Toward {Joining} {DDoS} {Mitigation} and {Image} {Segmentation} – {Leveraging} {Computer} {Vision} for {Network} {Security}},
+	volume = {47},
+	issn = {1614-0702, 1862-2607},
+	doi = {10.1007/s11623-023-1801-1},
+	language = {german},
+	number = {8},
+	journal = {Datenschutz und Datensicherheit - DuD},
+	author = {Kopmann, Samuel and Heseding, Hauke and Zitterbart, Martina},
+	year = {2023},
+	note = {Publisher: Vieweg Verlag},
+	pages = {475--477},
+	annote = {46.23.01; LK 01},
+}

@@ -9,12 +9,126 @@ from langchain_core.tools import tool
 from chroma_db.chroma_vector_db import chroma_db
 from utils.status import Status
 from llm.Embeddings import embed_papers
-from paper_handling.database_handler import insert_papers
+from database.papers_database_handler import insert_papers
 from paper_handling.paper_handler import fetch_works_multiple_queries
 from llm.util.agent_custom_filter import _matches, _OPERATORS
 
+from database.projects_database_handler import add_queries_to_project_db
+from database.projectpaper_database_handler import assign_paper_to_project
 logger = logging.getLogger(__name__)
 
+
+@tool
+def store_papers_for_project(project_id: str, papers: list[dict]):
+    """
+    Tool Name: store_papers_for_project
+
+    The goal of this tool is to store the papers for a specific project.
+    The papers are obtained by the result of get_best_papers. Use their abstract and
+    the original user prompt to generate a summary explaining why they are relevant to the
+    user.
+    Args:
+        project_id: The project the papers will be linked to.
+        papers: A list of dicts containing the papers' hashes and a project specific summary.
+            Each dict contains the following fields:
+                paper_hash: The hash of the paper. Provided by get_best_papers
+                summary: A summary describing why this paper is relevant for the user.
+                Must explain the key details of why this paper is relevant to the user without being overly verbose.
+
+    Returns: Success or failure message.
+
+    """
+    try:
+        for paper in papers:
+            assign_paper_to_project(paper["paper_hash"], project_id, paper["summary"])
+    except Exception as e:
+        logger.error(e)
+        return "Failed to link papers to project"
+
+    return "Operation successful"
+
+
+@tool
+def update_papers_for_project(queries: list[str], project_id: str) -> str:
+    """
+    Tool Name: update_papers
+    Description:
+        This tool updates the paper database with the latest research papers and their embeddings
+        based on a list of search queries. It performs the following steps:
+        1. Fetches new papers using the provided list of queries.
+        2. Stores the fetched papers in a PostgreSQL database, removing any duplicates.
+        3. Stores the project's query so that it can be reused in the future
+        4. Computes and stores embeddings for the newly stored papers.
+    Use Case:
+        Use this tool when you want to refresh the paper database with the latest research and ensure
+        that all relevant papers have updated embeddings for ranking or similarity comparison tasks.
+    Input:
+        queries (list[str]): A list of strings corresponding to the user's interests to search for relevant papers.
+        When generating search queries based on the user's interests, make sure to preserve meaningful multi-word expressions as single, coherent search terms. For example, if the user mentions "ice cream," do not split this into "ice" and "cream" — treat it as a unified concept: "ice cream."
+        Generate search queries that reflect the actual intent of the user's interest, emphasizing quality over quantity. Avoid breaking compound phrases into individual words unless they are clearly independent concepts.
+        Use concise and targeted queries that represent whole ideas, domains, or research topics. Only split input into multiple queries if doing so improves the relevance or diversity of the results without losing semantic meaning.
+
+        Examples:
+            - User: "I'm interested in machine learning and neural networks"
+            queries: ["machine learning", "neural networks"]
+
+            - User: "I like ice cream and computer vision"
+            queries: ["ice cream", "computer vision"]
+
+        Avoid:
+            - ["ice", "cream", "computer", "vision"]
+
+        project_id (str): The project ID provided by the user
+    Output:
+        A status message string indicating whether the process completed successfully without errors,
+        or completed with some errors that can be ignored.
+    Returns:
+        str: A human-readable summary of the update operation's result.
+    """
+    try:
+        fetched_papers, status_fetch = fetch_works_multiple_queries(queries)
+
+        status_postgres, deduplicated_papers = insert_papers(fetched_papers)
+
+        logger.info(f"Adding queries for project {project_id}")
+
+        status_queries = add_queries_to_project_db(queries, project_id)
+
+        logger.info("Updated queries for project {project_id")
+
+        embedded_papers = []
+        for paper in deduplicated_papers:
+            embedding = embed_papers(paper['title'],
+                                     paper['abstract'])
+            embedded_paper = {
+                'embedding': embedding,
+                'hash': paper['hash'],
+            }
+            embedded_papers.append(embedded_paper)
+
+        status_chroma = chroma_db.store_embeddings(embedded_papers)
+
+        if all([
+            status_queries == Status.SUCCESS,
+            status_fetch == Status.SUCCESS,
+            status_postgres == Status.SUCCESS,
+            status_chroma == Status.SUCCESS
+        ]):
+            logger.info("Updating paper database successfully.")
+            return ("Paper database has been updated with the latest papers & embeddings. There were no errors. "
+                    "Now you can rank the papers.")
+        else:
+            logger.error("Updating paper database failed.")
+            return ("Paper database has been updated with the latest papers & embeddings. There were some errors. "
+                    "Ignore the errors and proceed with ranking the papers.")
+
+    except Exception as e:
+        logger.error(f"Updating paper database failed: {e}")
+        return ("Paper database has been updated with the latest papers & embeddings. There were some errors. "
+                "Ignore the errors and proceed with ranking the papers.")
+
+
+# DEPRECATED
 
 @tool
 def update_papers(queries: list[str]) -> str:
@@ -54,8 +168,6 @@ def update_papers(queries: list[str]) -> str:
         fetched_papers, status_fetch = fetch_works_multiple_queries(queries)
 
         status_postgres, deduplicated_papers = insert_papers(fetched_papers)
-        # todo print how many new papers for debugging
-
         embedded_papers = []
         for paper in deduplicated_papers:
             embedding = embed_papers(paper['title'],
@@ -85,8 +197,6 @@ def update_papers(queries: list[str]) -> str:
         logger.error(f"Updating paper database failed: {e}")
         return ("Paper database has been updated with the latest papers & embeddings. There were some errors. "
                 "Ignore the errors and proceed with ranking the papers.")
-
-# DEPRECATED
 
 
 def get_paper_basic_data(queries: list[str]) -> list[dict[str, Any]]:

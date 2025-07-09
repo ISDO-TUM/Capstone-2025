@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>PubSub Paper Recommendation UI</title>
+        <style>
+            body { font-family: Arial, sans-serif; max-width: 700px; margin: auto; }
+            h1, h2, h3 { color: #1a3a7b; }
+            ul { background: #f8f8f8; padding: 16px; border-radius: 8px; }
+            li { margin-bottom: 10px; }
+            form { margin: 24px 0; padding: 16px; background: #f4f9ff; border-radius: 8px; }
+            input[type="email"], input[type="text"] { margin-right: 10px; padding: 5px; }
+            button { background: #1a3a7b; color: white; border: none; padding: 7px 15px; border-radius: 4px; }
+        </style>
+    </head>
+
+<body>
+    <h1>Recommended Papers (UI)</h1>
+    <ul>
+    {% for paper in ui_papers %}
+        <li>{{ paper.text }}</li>
+    {% endfor %}
+    </ul>
+
+    <h2>Top Papers for Email Notification</h2>
+    <form method="post" action="/send">
+    <ul>
+    {% for paper in email_papers %}
+        <li>
+            <input type="checkbox" name="email_paper" value="{{ paper.text }}" checked>
+            {{ paper.text }}
+        </li>
+    {% endfor %}
+    </ul>
+    <button type="submit">Send to Subscribers</button>
+    </form>
+
+    <h2>Subscribe for Paper Notifications</h2>
+    <form method="post">
+        <input type="email" name="email" placeholder="Your email" required>
+        <input type="text" name="topic" placeholder="Topic of interest" required>
+        <button type="submit">Subscribe</button>
+    </form>
+    <h3>Current Subscribers:</h3>
+    <ul>
+    {% for sub in subscribers %}
+        <li>{{ sub.email }} ({{ sub.topic }})</li>
+    {% endfor %}
+    </ul>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul>
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+</body>
+</html>

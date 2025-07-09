@@ -15,6 +15,19 @@
     </style>
 </head>
 <body>
+    <header class="main-header">
+        <div class="logo-title">
+            <a href="/" style="display: flex; align-items: center; text-decoration: none; color: inherit;">
+                <span class="logo-svg">
+                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="20" cy="20" r="20" fill="#007bff"/>
+                      <text x="50%" y="55%" text-anchor="middle" fill="#fff" font-size="18" font-family="Segoe UI, Arial" dy=".3em">C</text>
+                    </svg>
+                </span>
+                <h1 style="margin-left: 10px;">Capstone 2025</h1>
+            </a>
+        </div>
+    </header>
     <div class="container">
         <h1>Create New Project</h1>
         <form id="createProjectForm">
@@ -75,7 +88,7 @@
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary">Create Project</button>
+            <button type="submit" class="btn btn-primary">Finalize project and see paper recommendarions</button>
         </form>
     </div>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
