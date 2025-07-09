@@ -2,7 +2,7 @@ import psycopg2
 import os
 
 
-def connect_to_db():#outside_chroma=False)
+def connect_to_db():  # outside_chroma=False)
     """
     Establishes a connection to the PostgreSQL database.
     Reads connection parameters from environment variables.
@@ -16,8 +16,8 @@ def connect_to_db():#outside_chroma=False)
     try:
         return psycopg2.connect(host=db_host, dbname=db_name,
                                 user=db_user, password=db_password, port=db_port)
-        #return conn
+        # return conn
     except psycopg2.Error as e:
         print(f"Error connecting to the database: {e}")
-        #return None
+        # return None
         raise

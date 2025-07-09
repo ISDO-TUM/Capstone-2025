@@ -1,14 +1,11 @@
-import os
 import json
 import logging
 from datetime import datetime, timedelta
-import chromadb
+from chroma_db.chroma_vector_db import chroma_db
 import numpy as np
-from chromadb.api.models.Collection import Collection
 from database.projectpaper_database_handler import get_pubsub_papers_for_project, reset_newsletter_tags, \
     set_newsletter_tags_for_project
 from pubsub.temporary_llm_that_will_be_replaced_soon import calL_temp_agent
-from utils.status import Status
 from typing import List, TypedDict
 from database.papers_database_handler import insert_papers, get_papers_by_original_id, get_paper_by_hash
 from database.projects_database_handler import get_queries_for_project, get_project_prompt
@@ -22,45 +19,6 @@ logger = logging.getLogger(__name__)
 class PaperData(TypedDict):
     embedding: List[float]
     hash: str
-
-
-class ChromaVectorDB:
-    def __init__(self, collection_name: str = "research-papers") -> None:
-        # Read Chroma host from ENV variables
-        CHROMA_HOST = os.environ.get("CHROMA_HOST", "chromadb")
-        CHROMA_PORT = int(os.environ.get("CHROMA_PORT", 8000))
-        self.client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
-        self.collection: Collection = self.client.get_or_create_collection(collection_name)
-
-    def store_embeddings(self, data: List[PaperData]) -> int:
-        """
-        Store text embeddings in Chroma using OpenAI API.
-
-        Args:
-            data: list of dicts like {"hash": str, "embedding": List[float]}
-
-        Returns:
-            status_code: Status.SUCCESS if all succeeded, Status.FAILURE if any failed
-        """
-        any_failure = False
-
-        for item in data:
-            try:
-                hash_id = item["hash"]
-                embedding = item["embedding"]
-                self.collection.upsert(
-                    ids=[hash_id],
-                    embeddings=[embedding],
-                )
-
-            except Exception as e:
-                logger.error(f"Failed to store embedding for hash={item.get('hash')}: {e}")
-                any_failure = True
-
-        return Status.FAILURE if any_failure else Status.SUCCESS
-
-
-chroma_db = ChromaVectorDB()  # outside_docker=True)
 
 
 def start_pubsub():

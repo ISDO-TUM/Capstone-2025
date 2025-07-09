@@ -110,7 +110,7 @@ States that packet and flow classification, needed to support differential servi
 With 5 Mbits TCAM Memory, OC-192 line rate is achieved.
 TCP attack detection is the priority as most internet traffic is TCP.
 Matches the five tuples of {\textless}SIP, DIP, SPN, DPN, PRO{\textgreater}
-Defines 2D matching as the feature of an outbound flow having a corresponding inbound flow in the opposite direction 
+Defines 2D matching as the feature of an outbound flow having a corresponding inbound flow in the opposite direction
 Flows without this feature are called unmatched flows. This will be used to detect anomalies with the assumption of IP spoofing which leads to unmatched flows. Unmatched flows may be caused too, due to servers being down or IP changes in servers, where the old IP is still cached in DNS.
 This approach tries to be a functional TCAM switch with both policy filtering and DDoS detection capabilities. This adds extra complexity due to the local CPU having to differentiate between policy filtering and flow identity rules. Furthermore extra TCAM memory is needed and additional state management is needed. To achieve 2D matching indexing rules for the entries in the flow table are set and for each new flow an entry for the expected flow in the opposite direction is added
 A local CPU keeps track of the states of flows in the TCAM coprocessor.

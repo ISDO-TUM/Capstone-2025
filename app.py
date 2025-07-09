@@ -433,5 +433,4 @@ def api_get_project(project_id):
 
 
 if __name__ == '__main__':
-  app.run(host='0.0.0.0', debug=True, port=80)  # nosec B201, B104
-
+    app.run(host='0.0.0.0', debug=True, port=80)  # nosec B201, B104

@@ -1,5 +1,5 @@
-SELECT * 
-  FROM paperprojects_table 
+SELECT *
+  FROM paperprojects_table
  LIMIT 5;
 INSERT INTO paperprojects_table (
     project_id,
