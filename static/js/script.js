@@ -451,9 +451,11 @@ function renderPubSubPapers(papers, container) {
             const card = document.createElement('div');
             card.className = 'project-card';
             card.style.animationDelay = `${idx * 0.04 + 0.1}s`;
+            // Truncate description to 120 chars for safety
+            const truncatedDescription = truncateText(project.description, 120);
             card.innerHTML = `
-                <div class="project-title">${project.title}</div>
-                <div class="project-description">${project.description}</div>
+                <div class="project-title">${project.name}</div>
+                <div class="project-description">${truncatedDescription}</div>
                 <div class="project-tags">
                     ${project.tags.map(tag => `<span class="project-tag">${tag}</span>`).join(' ')}
                 </div>
@@ -472,6 +474,12 @@ function renderPubSubPapers(papers, container) {
             projectsList.appendChild(card);
         });
         animateCardsOnScroll();
+    }
+
+    function truncateText(text, maxLength) {
+        if (!text) return '';
+        if (text.length <= maxLength) return text;
+        return text.slice(0, maxLength - 3).trim() + '...';
     }
 
     function filterProjectsBySearch(projects, searchValue) {
