@@ -256,11 +256,18 @@ def get_recommendations():
                 recommendations = []
                 for rec in recs_basic_data:
                     paper = get_paper_by_hash(rec['paper_hash'])
-                    paper_dict = {
-                        'title': paper.get("title", "N/A"),
-                        'link': paper.get("link", "N/A"),
-                        'description': rec.get("summary", "Relevant based on user interest.")
-                    }
+                    if paper is not None:
+                        paper_dict = {
+                            'title': paper.get("title", "N/A"),
+                            'link': paper.get("landing_page_url", "#"),
+                            'description': rec.get("summary", "Relevant based on user interest.")
+                        }
+                    else:
+                        paper_dict = {
+                            'title': "N/A",
+                            'link': "#",
+                            'description': rec.get("summary", "Relevant based on user interest.")
+                        }
                     recommendations.append(paper_dict)
                 yield f"data: {json.dumps({'recommendations': recommendations})}\n\n"
             except Exception as e:
@@ -387,11 +394,18 @@ def api_get_newsletter():
     papers = []
     for paper_hash, summary in rows:
         paper = get_paper_by_hash(paper_hash)
-        papers.append({
-            "title": paper.get("title", "Untitled"),
-            "link": paper.get("landing_page_url", "#"),
-            "description": summary
-        })
+        if paper is not None:
+            papers.append({
+                "title": paper.get("title", "Untitled"),
+                "link": paper.get("landing_page_url", "#"),
+                "description": summary
+            })
+        else:
+            papers.append({
+                "title": "Untitled",
+                "link": "#",
+                "description": summary
+            })
     return jsonify(papers), 200
 
 # Gives front-end the project’s metadata (title, description, queries, email).

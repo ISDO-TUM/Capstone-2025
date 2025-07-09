@@ -23,8 +23,8 @@ function renderPubSubPapers(papers, container) {
       const card = document.createElement('div');
       card.classList.add('recommendation-card');
 
-      // 2) create and fill out h4 from title
-      const titleEl = document.createElement('h4');
+      // 2) create and fill out h3 from title (match Recommendations section)
+      const titleEl = document.createElement('h3');
       titleEl.textContent = paper.title;
 
       // 3) creates link
@@ -118,11 +118,8 @@ function renderPubSubPapers(papers, container) {
             console.log('pubsubPapersContainer is', container);
             //4. render - first test if comes empty, then always shows the real ones
         if (papers.length === 0) {
-            console.log('Render TEST cards because no papers came out');
-            renderPubSubPapers([
-                { title: 'Test A', link: '#', description: 'Test A: This is a card to test PubSub UI' },
-                { title: 'Test B', link: '#', description: 'Test B: This is a card to test PubSub UI' }
-            ], container);
+            // Instead of rendering test cards, show a placeholder message
+            container.innerHTML = '<p class="no-papers-placeholder">Here the newest papers will be shown later.</p>';
         } else {
             console.log('📬 Rendering real PubSub papers:', papers);
             renderPubSubPapers(papers, container);
@@ -481,9 +478,9 @@ function renderPubSubPapers(papers, container) {
         const val = searchValue.trim().toLowerCase();
         if (!val) return projects;
         return projects.filter(p =>
-            p.name.toLowerCase().includes(val) ||
-            p.description.toLowerCase().includes(val) ||
-            p.tags.some(tag => tag.toLowerCase().includes(val))
+            (p.title && p.title.toLowerCase().includes(val)) ||
+            (p.description && p.description.toLowerCase().includes(val)) ||
+            (Array.isArray(p.tags) && p.tags.some(tag => tag.toLowerCase().includes(val)))
         );
     }
 
