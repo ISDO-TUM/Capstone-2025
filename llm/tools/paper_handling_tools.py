@@ -35,15 +35,15 @@ def store_papers_for_project(project_id: str, papers: list[dict]):
                 summary: A summary describing why this paper is relevant for the user.
                 Must explain the key details of why this paper is relevant to the user without being overly verbose.
 
-
-
-
     Returns: Success or failure message.
 
     """
-
-    for paper in papers:
-        assign_paper_to_project(paper["paper_hash"], project_id, paper["summary"])
+    try:
+        for paper in papers:
+            assign_paper_to_project(paper["paper_hash"], project_id, paper["summary"])
+    except Exception as e:
+        logger.error(e)
+        return "Failed to link papers to project"
 
     return "Operation successful"
 
@@ -89,12 +89,12 @@ def update_papers_for_project(queries: list[str], project_id: str) -> str:
         fetched_papers, status_fetch = fetch_works_multiple_queries(queries)
 
         status_postgres, deduplicated_papers = insert_papers(fetched_papers)
-        # todo print how many new papers for debugging
-        print("Adding queries for project", project_id)
 
-        add_queries_to_project_db(queries, project_id)
+        logger.info(f"Adding queries for project {project_id}")
 
-        print("Updated queries for project", project_id)
+        status_queries = add_queries_to_project_db(queries, project_id)
+
+        logger.info("Updated queries for project {project_id")
 
         embedded_papers = []
         for paper in deduplicated_papers:
@@ -109,6 +109,7 @@ def update_papers_for_project(queries: list[str], project_id: str) -> str:
         status_chroma = chroma_db.store_embeddings(embedded_papers)
 
         if all([
+            status_queries == Status.SUCCESS,
             status_fetch == Status.SUCCESS,
             status_postgres == Status.SUCCESS,
             status_chroma == Status.SUCCESS
@@ -167,8 +168,6 @@ def update_papers(queries: list[str]) -> str:
         fetched_papers, status_fetch = fetch_works_multiple_queries(queries)
 
         status_postgres, deduplicated_papers = insert_papers(fetched_papers)
-        # todo print how many new papers for debugging
-
         embedded_papers = []
         for paper in deduplicated_papers:
             embedding = embed_papers(paper['title'],
