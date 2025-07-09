@@ -414,7 +414,8 @@ def reformulate_query(keywords: list[str], query_description: str = "") -> str:
 @tool
 def detect_out_of_scope_query(query_description: str) -> str:
     """
-    Checks whether a user query is nonsensical or unrelated to scientific research.
+    Checks whether a user query is nonsensical or unrelated to scientific research,
+    and if valid, extracts a list of expressive keywords.
 
     Input:
     {
@@ -424,12 +425,14 @@ def detect_out_of_scope_query(query_description: str) -> str:
     Output:
         JSON object with:
         - status: "valid" or "out_of_scope"
-        - reason: explanation if out_of_scope
+        - reason: explanation if out_of_scope or why valid
+        - keywords: list of expressive keywords (empty if out_of_scope)
     """
-    if not query_description.strip():
+    if not isinstance(query_description, str) or not query_description.strip():
         return json.dumps({
             "status": "out_of_scope",
-            "reason": "Query is empty or whitespace."
+            "reason": "Query is empty or whitespace.",
+            "keywords": []
         })
 
     prompt = f"""
@@ -439,25 +442,47 @@ def detect_out_of_scope_query(query_description: str) -> str:
     for a scientific literature search or if it is out-of-scope (e.g., a greeting,
     joke, personal opinion, or unrelated to science).
 
+    If the query is valid, extract a list of 2-5 expressive, domain-relevant keywords
+    that best capture the research intent. Do not include generic words like 'paper', 'research', 'study', etc.
+
     Query: "{query_description}"
 
     Respond with a JSON object like:
     {{
         "status": "valid" | "out_of_scope",
-        "reason": "..."  // explanation for decision
+        "reason": "...",  // explanation for decision
+        "keywords": [ ... ] // list of keywords (empty if out_of_scope)
     }}
     """
 
     response = LLM.invoke(prompt)
 
     try:
-        logger.info("Checking if query is out of scope.")
-        return json.dumps(json.loads(response.content))
+        logger.info("Checking if query is out of scope and extracting keywords.")
+        content = response.content
+        if isinstance(content, str):
+            try:
+                return json.dumps(json.loads(content))
+            except Exception:
+                return json.dumps({
+                    "status": "error",
+                    "reason": "Failed to parse response. Raw content: " + content,
+                    "keywords": []
+                })
+        elif isinstance(content, (dict, list)):
+            return json.dumps(content)
+        else:
+            return json.dumps({
+                "status": "error",
+                "reason": "Unexpected response type.",
+                "keywords": []
+            })
     except Exception as e:
         logger.error(f"Failed to parse response: {e}")
         return json.dumps({
             "status": "error",
-            "reason": "Failed to parse response. Raw content: " + response.content
+            "reason": "Failed to parse response. Raw content: " + str(response.content),
+            "keywords": []
         })
 
 
