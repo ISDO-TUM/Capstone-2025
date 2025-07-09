@@ -7,6 +7,19 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+    <header class="main-header">
+        <div class="logo-title">
+            <a href="/" style="display: flex; align-items: center; text-decoration: none; color: inherit;">
+                <span class="logo-svg">
+                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="20" cy="20" r="20" fill="#007bff"/>
+                      <text x="50%" y="55%" text-anchor="middle" fill="#fff" font-size="18" font-family="Segoe UI, Arial" dy=".3em">C</text>
+                    </svg>
+                </span>
+                <h1 style="margin-left: 10px;">Capstone 2025</h1>
+            </a>
+        </div>
+    </header>
     <div class="container">
         <div class="project-header">
             <h1 id="projectTitleDisplay"></h1>
@@ -31,6 +44,16 @@
             <ul id="agentThoughtsContainer" class="agent-thoughts-list">
                 </ul>
         </div>
+
+        <!-- Latest Papers Section (formerly PubSub) -->
+        <h2>Latest Papers</h2>
+        <div id="pubsubPapersContainer" class="recommendations-grid"></div>
+        <!-- Newsletter form  -->
+        <form id="pubsubSubscribeForm" style="margin-top:16px;">
+            <label for="pubsubEmail">Subscribe to our newsletter for new papers:</label>
+            <input type="email" id="pubsubEmail">
+            <button type="submit" class="btn btn-primary">Subscribe</button>
+        </form>
 
         <div class="recommendations-section">
             <h2>Recommendations</h2>
