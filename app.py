@@ -11,7 +11,7 @@ from database.projectpaper_database_handler import get_papers_for_project
 from database.projects_database_handler import get_project_by_id, get_queries_for_project
 from database.projects_database_handler import add_new_project_to_db, get_all_projects
 from llm.Agent import trigger_agent_show_thoughts
-import PyPDF2
+from pypdf import PdfReader
 
 from pubsub.pubsub_main import update_newsletter_papers
 from database.projectpaper_database_handler import get_pubsub_papers_for_project
@@ -199,7 +199,7 @@ def extract_pdf_text():
         return jsonify({"error": "File must be a PDF"}), 400
 
     try:
-        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file.read()))
+        pdf_reader = PdfReader(io.BytesIO(file.read()))
 
         text_content = ""
         for page in pdf_reader.pages:
