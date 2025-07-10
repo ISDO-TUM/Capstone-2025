@@ -54,7 +54,9 @@ def update_papers(queries: list[str]) -> str:
         fetched_papers, status_fetch = fetch_works_multiple_queries(queries)
 
         status_postgres, deduplicated_papers = insert_papers(fetched_papers)
-        # todo print how many new papers for debugging
+        logger.info(f"Inserted {len(deduplicated_papers)} papers into database")
+        if deduplicated_papers:
+            logger.info(f"Sample paper hash: {deduplicated_papers[0].get('hash', 'N/A')}")
 
         embedded_papers = []
         for paper in deduplicated_papers:
@@ -66,6 +68,7 @@ def update_papers(queries: list[str]) -> str:
             }
             embedded_papers.append(embedded_paper)
 
+        logger.info(f"Storing {len(embedded_papers)} embeddings in ChromaDB")
         status_chroma = chroma_db.store_embeddings(embedded_papers)
 
         if all([

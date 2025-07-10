@@ -93,7 +93,7 @@ def out_of_scope_check_node(state):
 # --- Quality Control Node (QC) ---
 
 
-@node_logger("quality_control", input_keys=["user_query", "out_of_scope_result", "keywords"], output_keys=["qc_decision", "qc_tool_result", "keywords"])
+@node_logger("quality_control", input_keys=["user_query", "out_of_scope_result", "keywords"], output_keys=["qc_decision", "qc_tool_result", "keywords", "has_filter_instructions"])
 def quality_control_node(state):
     from llm.LLMDefinition import LLM
     tools = get_tools()
@@ -104,14 +104,26 @@ def quality_control_node(state):
         result = state.get("out_of_scope_result")
         user_query = state.get("user_query", "")
         keywords = state.get("keywords", [])
+
+        # Extract keywords from out_of_scope_result if available
         if result:
-            parsed = json.loads(result)
-            if isinstance(parsed, dict) and parsed.get("status") == "out_of_scope":
-                qc_decision = "out_of_scope"
-                qc_tool_result = result
-                state["qc_decision"] = qc_decision
-                state["qc_tool_result"] = qc_tool_result
-                return state
+            try:
+                parsed = json.loads(result)
+                if isinstance(parsed, dict):
+                    if parsed.get("status") == "out_of_scope":
+                        qc_decision = "out_of_scope"
+                        qc_tool_result = result
+                        state["qc_decision"] = qc_decision
+                        state["qc_tool_result"] = qc_tool_result
+                        return state
+                    elif parsed.get("status") == "valid" and "keywords" in parsed:
+                        keywords = parsed["keywords"]
+                        state["keywords"] = keywords
+            except Exception as e:
+                logger.error(f"Error parsing out_of_scope_result: {e}")
+
+        # Update keywords in state
+        state["keywords"] = keywords
         # LLM-driven QC decision
         qc_prompt = f"""
 You are an academic research assistant. Given the following user query and keywords, decide which action to take:
@@ -223,6 +235,29 @@ def update_papers_node(state):
         state["error"] = f"Update papers node error: {e}"
     return state
 
+# --- Get Best Papers Node ---
+
+
+@node_logger("get_best_papers", input_keys=["user_query", "keywords"], output_keys=["papers_raw"])
+def get_best_papers_node(state):
+    tools = get_tools()
+    tool_map = {getattr(tool, 'name', None): tool for tool in tools}
+    get_best_papers_tool = tool_map.get("get_best_papers")
+    papers_raw = []
+    try:
+        # Prefer keywords if available, else use user_query
+        user_profile = None
+        if state.get("keywords"):
+            user_profile = ", ".join(state["keywords"])
+        else:
+            user_profile = state.get("user_query", "")
+        if get_best_papers_tool:
+            papers_raw = get_best_papers_tool.invoke({"user_profile": user_profile})
+        state["papers_raw"] = papers_raw
+    except Exception as e:
+        state["error"] = f"Get best papers node error: {e}"
+    return state
+
 
 def run_stategraph_agent(user_query: str):
     # This function will initialize the state, run the graph, and return the result
@@ -234,11 +269,11 @@ if __name__ == "__main__":
     # Example usage (stepwise test)
     queries = [
         "I am looking for papers in the field of machine learning in healthcare published after 2018.",  # accept
-        "Hello world",  # out_of_scope
-        "Biology",  # reformulate (too short/vague)
-        "Deep learning for genomics and climate change adaptation",  # split (multi-topic)
-        "Quantum entanglement in nitrogen-vacancy centers at 4K in diamond nanostructures",  # broaden (very narrow)
-        "Recent advances in science and technology"  # narrow (too broad)
+        # "Hello world",  # out_of_scope
+        # "Biology",  # reformulate (too short/vague)
+        # "Deep learning for genomics and climate change adaptation",  # split (multi-topic)
+        # "Quantum entanglement in nitrogen-vacancy centers at 4K in diamond nanostructures",  # broaden (very narrow)
+        # "Recent advances in science and technology"  # narrow (too broad)
     ]
     for user_query in queries:
         print(f"\n=== Testing query: '{user_query}' ===")
@@ -266,3 +301,6 @@ if __name__ == "__main__":
         # Step 4: Update papers node
         state = update_papers_node(state)
         print("After update_papers_node:", state)
+        # Step 5: Get best papers node
+        state = get_best_papers_node(state)
+        print("After get_best_papers_node:", state)
