@@ -5,7 +5,7 @@ import sys
 import io
 
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context
-from llm.Agent import trigger_agent_show_thoughts
+from llm.StategraphAgent import trigger_stategraph_agent_show_thoughts
 import PyPDF2
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ def get_recommendations():
 
     def generate():
         try:
-            for response_part in trigger_agent_show_thoughts(user_description):
+            for response_part in trigger_stategraph_agent_show_thoughts(user_description):
                 if not response_part['is_final']:
                     yield f"data: {json.dumps({'thought': response_part['thought']})}\n\n"
                 else:
@@ -90,7 +90,7 @@ def extract_pdf_text():
     if file.filename == '':
         return jsonify({"error": "No file selected"}), 400
 
-    if not file.filename.lower().endswith('.pdf'):
+    if not file.filename or not file.filename.lower().endswith('.pdf'):
         return jsonify({"error": "File must be a PDF"}), 400
 
     try:

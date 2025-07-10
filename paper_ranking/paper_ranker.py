@@ -3,19 +3,20 @@ import logging
 from llm.Embeddings import embed_user_profile
 from langchain_core.tools import tool
 from chroma_db.chroma_vector_db import chroma_db
-from paper_handling.database_handler import get_papers_by_hash
+from paper_handling.database_handler import get_papers_by_hash, get_all_papers
 
 logger = logging.getLogger(__name__)
 
 
 @tool
-def get_best_papers(user_profile: str) -> list[dict]:
+def get_best_papers(user_profile: str, count: int = 10) -> list[dict]:
     """
     Tool Name: get_best_papers
     Returns a list of recommended papers based on the user profile.
 
     Args:
         user_profile (str): The user's input or research interests.
+        count (int): Number of papers to retrieve (default: 10).
 
     Returns:
         List[Dict]: A list of paper metadata dictionaries.
@@ -31,7 +32,8 @@ def get_best_papers(user_profile: str) -> list[dict]:
         return []
 
     try:
-        paper_hashes = chroma_db.perform_similarity_search(10, embedded_profile)
+        paper_hashes = chroma_db.perform_similarity_search(count, embedded_profile)
+        logger.info(f"Similarity search returned {len(paper_hashes) if paper_hashes else 0} hashes (requested: {count})")
 
     except Exception as e:
         logger.error(f"Error performing similarity search: {e}")
@@ -42,11 +44,32 @@ def get_best_papers(user_profile: str) -> list[dict]:
         return []
 
     try:
+        # Debug: Check what hashes we're looking for
+        logger.info(f"Looking for hashes: {paper_hashes[:3]}...")  # Show first 3
+
         paper_metadata = get_papers_by_hash(paper_hashes)
-        logger.info("Paper metadata: {paper_metadata}")
+        logger.info(f"Paper metadata: {paper_metadata}")
+        logger.info(f"Number of papers found: {len(paper_metadata) if paper_metadata else 0}")
+
+        # Debug: Check if any of the hashes exist in the database
+        if not paper_metadata and paper_hashes:
+            all_papers = get_all_papers()
+            all_hashes = [p.get('paper_hash') for p in all_papers if p.get('paper_hash')]
+            logger.info(f"Sample hashes in database: {all_hashes[:3]}")
+            logger.info(f"Any matching hashes: {any(h in all_hashes for h in paper_hashes[:3])}")
+
     except Exception as e:
         logger.error(f"Error linking hashes to metadata: {e}")
         return []
+
+    # Debug: Check if there are any papers in the database
+    try:
+        all_papers = get_all_papers()
+        logger.info(f"Total papers in database: {len(all_papers)}")
+        if all_papers:
+            logger.info(f"Sample paper hash: {all_papers[0].get('paper_hash', 'N/A')}")
+    except Exception as e:
+        logger.error(f"Error checking database state: {e}")
 
     return paper_metadata if paper_metadata else []
 
