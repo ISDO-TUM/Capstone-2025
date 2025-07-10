@@ -7,7 +7,7 @@ import json
 
 # from langgraph.graph import StateGraph
 # from langchain_core.messages import HumanMessage
-# from llm.LLMDefinition import LLM
+from llm.LLMDefinition import LLM
 from llm.tools.Tools_aggregator import get_tools
 
 # --- State schema ---
@@ -95,7 +95,6 @@ def out_of_scope_check_node(state):
 
 @node_logger("quality_control", input_keys=["user_query", "out_of_scope_result", "keywords"], output_keys=["qc_decision", "qc_tool_result", "keywords", "has_filter_instructions"])
 def quality_control_node(state):
-    from llm.LLMDefinition import LLM
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
     qc_decision = "accept"  # Default
@@ -124,25 +123,69 @@ def quality_control_node(state):
 
         # Update keywords in state
         state["keywords"] = keywords
+
+        # Use LLM to intelligently detect filter instructions
+        filter_detection_prompt = f"""
+        You are an academic research assistant. Analyze the user query to determine if it contains filter instructions.
+
+        Filter instructions include:
+        - Date/time constraints: "after 2020", "before 2018", "published since 2022", "between 2019-2023"
+        - Citation constraints: "highly cited", "more than 50 citations", "well-cited papers"
+        - Author constraints: "by author X", "from researcher Y", "authored by"
+        - Journal/conference constraints: "published in Nature", "from conference X", "in journal Y"
+        - Impact constraints: "high impact", "top journals", "prestigious venues"
+        - Similarity constraints: "highly relevant", "closely related", "similar to"
+        - Specific metrics: "fwci > 5", "citation percentile > 90", "impact factor > 10"
+
+        User query: "{user_query}"
+
+        Respond with ONLY a JSON object:
+        {{
+        "has_filter_instructions": true/false,
+        "reason": "brief explanation of why"
+        }}
+        """
+
+        try:
+            filter_response = LLM.invoke(filter_detection_prompt)
+            filter_result = json.loads(filter_response.content) if isinstance(filter_response.content, str) else filter_response.content
+
+            # Handle potential list response
+            if isinstance(filter_result, list) and len(filter_result) > 0:
+                filter_result = filter_result[0]
+
+            has_filter_instructions = False
+            reason = "No reason provided"
+            if isinstance(filter_result, dict):
+                has_filter_instructions = filter_result.get("has_filter_instructions", False)
+                reason = filter_result.get("reason", "No reason provided")
+
+            state["has_filter_instructions"] = has_filter_instructions
+            logger.info(f"Filter detection: {has_filter_instructions} - {reason}")
+
+        except Exception as e:
+            logger.error(f"Error in filter detection: {e}")
+            state["has_filter_instructions"] = False
+
         # LLM-driven QC decision
         qc_prompt = f"""
-You are an academic research assistant. Given the following user query and keywords, decide which action to take:
-- If the query is valid and specific, respond with 'accept'.
-- If the query is vague, respond with 'reformulate'.
-- If the query is too broad, respond with 'narrow'.
-- If the query is too narrow, respond with 'broaden'.
-- If the query contains multiple topics, respond with 'split'.
-- If the query is not a valid research topic, respond with 'out_of_scope'.
+        You are an academic research assistant. Given the following user query and keywords, decide which action to take:
+        - If the query is valid and specific, respond with 'accept'.
+        - If the query is vague, respond with 'reformulate'.
+        - If the query is too broad, respond with 'narrow'.
+        - If the query is too narrow, respond with 'broaden'.
+        - If the query contains multiple topics, respond with 'split'.
+        - If the query is not a valid research topic, respond with 'out_of_scope'.
 
-User query: "{user_query}"
-Keywords: {keywords}
+        User query: "{user_query}"
+        Keywords: {keywords}
 
-Respond with a JSON object:
-{{
-  "qc_decision": "accept" | "reformulate" | "broaden" | "narrow" | "split" | "out_of_scope",
-  "reason": "..."
-}}
-"""
+        Respond with a JSON object:
+        {{
+        "qc_decision": "accept" | "reformulate" | "broaden" | "narrow" | "split" | "out_of_scope",
+        "reason": "..."
+        }}
+        """
         qc_response = LLM.invoke(qc_prompt)
         qc_result = json.loads(qc_response.content) if isinstance(qc_response.content, str) else qc_response.content
         # If qc_result is a list, use the first element if possible
@@ -238,7 +281,7 @@ def update_papers_node(state):
 # --- Get Best Papers Node ---
 
 
-@node_logger("get_best_papers", input_keys=["user_query", "keywords"], output_keys=["papers_raw"])
+@node_logger("get_best_papers", input_keys=["user_query", "keywords", "has_filter_instructions"], output_keys=["papers_raw"])
 def get_best_papers_node(state):
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
@@ -251,18 +294,203 @@ def get_best_papers_node(state):
             user_profile = ", ".join(state["keywords"])
         else:
             user_profile = state.get("user_query", "")
+
+        # Determine retrieval count based on filter instructions
+        has_filter_instructions = state.get("has_filter_instructions", False)
+        retrieval_count = 50 if has_filter_instructions else 10  # More papers if filtering will be applied
+
         if get_best_papers_tool:
-            papers_raw = get_best_papers_tool.invoke({"user_profile": user_profile})
+            # Use count parameter based on filter instructions
+            papers_raw = get_best_papers_tool.invoke({
+                "user_profile": user_profile,
+                "count": retrieval_count
+            })
+
+            logger.info(f"Retrieved {len(papers_raw)} papers (filter instructions: {has_filter_instructions}, requested: {retrieval_count})")
+
         state["papers_raw"] = papers_raw
     except Exception as e:
         state["error"] = f"Get best papers node error: {e}"
     return state
 
 
+# --- Filter Papers Node ---
+@node_logger("filter_papers", input_keys=["user_query", "papers_raw", "has_filter_instructions"], output_keys=["papers_filtered"])
+def filter_papers_node(state):
+    tools = get_tools()
+    tool_map = {getattr(tool, 'name', None): tool for tool in tools}
+    filter_tool = tool_map.get("filter_papers_by_nl_criteria")
+    papers_filtered = []
+
+    try:
+        user_query = state.get("user_query", "")
+        papers_raw = state.get("papers_raw", [])
+        has_filter_instructions = state.get("has_filter_instructions", False)
+
+        if not has_filter_instructions or not papers_raw:
+            # No filtering needed or no papers to filter
+            papers_filtered = papers_raw
+            logger.info(f"No filtering applied. Papers count: {len(papers_filtered)}")
+        else:
+            # Extract filter criteria from user query using LLM
+
+            filter_extraction_prompt = f"""
+            Extract filter criteria from the user query. Look for:
+            - Date ranges (after, before, since, from, to, between)
+            - Citation counts (citations, cited, more than X citations)
+            - Authors (author, authors, by)
+            - Journals/conferences (journal, conference, published in)
+            - Similarity scores (similarity, score, above X)
+            - Impact metrics (fwci, impact factor, percentile)
+
+            User query: "{user_query}"
+
+            Return only the filter criteria as a natural language string, or "no filters" if none found.
+            Examples:
+            - "papers published after 2020"
+            - "papers with more than 50 citations"
+            - "papers by author John Smith"
+            - "papers with similarity score above 0.8"
+
+            Filter criteria:
+            """
+
+            filter_response = LLM.invoke(filter_extraction_prompt)
+            filter_criteria = filter_response.content.strip() if isinstance(filter_response.content, str) else str(filter_response.content)
+
+            if filter_criteria and filter_criteria.lower() != "no filters":
+                # Apply the filter
+                if filter_tool:
+                    filter_result = filter_tool.invoke({
+                        "papers": papers_raw,
+                        "criteria_nl": filter_criteria
+                    })
+
+                    try:
+                        filter_result_parsed = json.loads(filter_result)
+                        if filter_result_parsed.get("status") == "success":
+                            papers_filtered = filter_result_parsed.get("kept_papers", [])
+                            logger.info(f"Applied filter: {filter_criteria}. Kept {len(papers_filtered)} out of {len(papers_raw)} papers")
+                        else:
+                            logger.warning(f"Filter failed: {filter_result_parsed.get('message', 'Unknown error')}")
+                            papers_filtered = papers_raw
+                    except Exception as e:
+                        logger.error(f"Error parsing filter result: {e}")
+                        papers_filtered = papers_raw
+                else:
+                    logger.warning("Filter tool not found")
+                    papers_filtered = papers_raw
+            else:
+                # No filter criteria found
+                papers_filtered = papers_raw
+                logger.info("No filter criteria detected")
+
+        state["papers_filtered"] = papers_filtered
+
+    except Exception as e:
+        state["error"] = f"Filter papers node error: {e}"
+        state["papers_filtered"] = state.get("papers_raw", [])
+
+    return state
+
+
 def run_stategraph_agent(user_query: str):
-    # This function will initialize the state, run the graph, and return the result
-    # (To be implemented in the next steps)
-    pass
+    """
+    Run the complete Stategraph agent workflow and return the final results.
+
+    Args:
+        user_query (str): The user's research query
+
+    Returns:
+        dict: Final state with papers and results
+    """
+    # Initialize state
+    state = {"user_query": user_query}
+
+    # Run the complete workflow
+    state = input_node(state)
+    state = out_of_scope_check_node(state)
+
+    # Extract keywords from out_of_scope_result if available
+    out_of_scope_result = state.get("out_of_scope_result")
+    if out_of_scope_result:
+        try:
+            parsed = json.loads(out_of_scope_result)
+            if parsed.get("status") == "valid" and "keywords" in parsed:
+                state["keywords"] = parsed["keywords"]
+        except Exception as e:
+            logger.error(f"Error parsing out_of_scope_result: {e}")
+
+    state = quality_control_node(state)
+    state = update_papers_node(state)
+    state = get_best_papers_node(state)
+    state = filter_papers_node(state)
+
+    return state
+
+
+def trigger_stategraph_agent_show_thoughts(user_message: str):
+    """
+    A generator that yields each step of the Stategraph agent's thought process.
+    This replaces the old React agent's trigger_agent_show_thoughts function.
+    """
+    try:
+        # Initialize state
+        state = {"user_query": user_message}
+
+        # Step 1: Input node
+        yield {"thought": "Processing user input...", "is_final": False, "final_content": None}
+        state = input_node(state)
+
+        # Step 2: Out-of-scope check
+        yield {"thought": "Checking if query is within scope...", "is_final": False, "final_content": None}
+        state = out_of_scope_check_node(state)
+
+        # Extract keywords from out_of_scope_result if available
+        out_of_scope_result = state.get("out_of_scope_result")
+        if out_of_scope_result:
+            try:
+                parsed = json.loads(out_of_scope_result)
+                if parsed.get("status") == "valid" and "keywords" in parsed:
+                    state["keywords"] = parsed["keywords"]
+                    yield {"thought": f"Extracted keywords: {state['keywords']}", "is_final": False, "final_content": None}
+            except Exception as e:
+                logger.error(f"Error parsing out_of_scope_result: {e}")
+
+        # Step 3: Quality control
+        yield {"thought": "Performing quality control and filter detection...", "is_final": False, "final_content": None}
+        state = quality_control_node(state)
+
+        # Step 4: Update papers
+        yield {"thought": "Updating paper database with latest research...", "is_final": False, "final_content": None}
+        state = update_papers_node(state)
+
+        # Step 5: Get best papers
+        yield {"thought": "Retrieving most relevant papers...", "is_final": False, "final_content": None}
+        state = get_best_papers_node(state)
+
+        # Step 6: Filter papers
+        yield {"thought": "Applying filters to refine results...", "is_final": False, "final_content": None}
+        state = filter_papers_node(state)
+
+        # Prepare final response
+        papers_filtered = state.get("papers_filtered", [])
+        final_recommendations = []
+
+        for paper in papers_filtered:
+            final_recommendations.append({
+                "title": paper.get("title", "N/A"),
+                "link": paper.get("landing_page_url", paper.get("pdf_url", "N/A")),
+                "description": f"Relevant paper on {paper.get('title', 'this topic')} with {paper.get('cited_by_count', 0)} citations."
+            })
+
+        final_response = {"papers": final_recommendations}
+
+        yield {"thought": "Finalizing recommendations...", "is_final": True, "final_content": json.dumps(final_response)}
+
+    except Exception as e:
+        logger.error(f"Error in Stategraph agent: {e}")
+        yield {"thought": f"An error occurred: {str(e)}", "is_final": True, "final_content": None}
 
 
 if __name__ == "__main__":
@@ -304,3 +532,6 @@ if __name__ == "__main__":
         # Step 5: Get best papers node
         state = get_best_papers_node(state)
         print("After get_best_papers_node:", state)
+        # Step 6: Filter papers node
+        state = filter_papers_node(state)
+        print("After filter_papers_node:", state)

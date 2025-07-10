@@ -33,6 +33,8 @@ class ChromaVectorDB:
 
     def __init__(self, collection_name: str = "research-papers") -> None:
         # single code-path, host decided by env-var
+        # UNCOMMENT THIS FOR LOCAL TESTING ONLY;
+        # self.client = chromadb.HttpClient(host="localhost", port=8000)
         self.client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
         self.collection: Collection = self.client.get_or_create_collection(collection_name)
 
@@ -77,6 +79,14 @@ class ChromaVectorDB:
             or None if error occurs
         """
         try:
+            # Check collection count first
+            collection_count = self.collection.count()
+            logger.info(f"ChromaDB collection has {collection_count} documents")
+
+            if collection_count == 0:
+                logger.warning("ChromaDB collection is empty!")
+                return []
+
             results = self.collection.query(
                 query_embeddings=[user_profile_embedding],
                 n_results=k,
@@ -84,7 +94,9 @@ class ChromaVectorDB:
             )
 
             # The IDs are returned in the results even without specifying them in include
-            return results.get("ids", [[]])[0]
+            ids = results.get("ids", [[]])[0]
+            logger.info(f"Similarity search returned {len(ids)} results: {ids}")
+            return ids
 
         except Exception as e:
             logger.error(f"Error performing similarity search: {e}")

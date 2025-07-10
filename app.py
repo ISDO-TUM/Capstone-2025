@@ -24,24 +24,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 
-MOCK_NEWSLETTER = [
-    {
-        "title": "Weekly AI Research Digest - Healthcare Focus",
-        "link": "https://arxiv.org/abs/2301.22222",
-        "description": "Latest breakthroughs in AI applications for healthcare diagnostics."
-    },
-    {
-        "title": "Emerging Trends in Medical AI Ethics",
-        "link": "https://arxiv.org/abs/2301.33333",
-        "description": "Discussion on ethical considerations in medical AI deployment."
-    },
-    {
-        "title": "Real-world Clinical AI Implementation Case Studies",
-        "link": "https://arxiv.org/abs/2301.44444",
-        "description": "Practical insights from successful clinical AI integrations."
-    }
-]
-
 
 @app.errorhandler(413)
 def request_entity_too_large(error):
@@ -166,7 +148,7 @@ def extract_pdf_text():
     if file.filename == '':
         return jsonify({"error": "No file selected"}), 400
 
-    if not file.filename.lower().endswith('.pdf'):
+    if not file.filename or not file.filename.lower().endswith('.pdf'):
         return jsonify({"error": "File must be a PDF"}), 400
 
     try:
