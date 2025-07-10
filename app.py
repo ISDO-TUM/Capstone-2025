@@ -108,7 +108,19 @@ def get_recommendations():
                     print(f"Deleted {removed} row(s).")
                     for response_part in trigger_agent_show_thoughts(user_description + "project ID: " + project_id):
                         yield f"data: {json.dumps({'thought': response_part['thought']})}\n\n"
+                        if response_part['is_final']:
+                            try:
+                                llm_response_content = response_part['final_content']
+                                response_data = json.loads(llm_response_content)
 
+                                # Check if this is an out-of-scope response
+                                if response_data.get('type') == 'out_of_scope':
+                                    yield f"data: {json.dumps({'out_of_scope': response_data})}\n\n"
+                                    return
+                            except json.JSONDecodeError:
+                                print(f"Failed to parse LLM response: {llm_response_content}")
+                                error_payload = json.dumps({"error": "Failed to parse recommendations from LLM."})
+                                yield f"data: {error_payload}\n\n"
                 recs_basic_data = get_papers_for_project(project_id)
                 recommendations = []
                 for rec in recs_basic_data:

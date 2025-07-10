@@ -313,8 +313,14 @@ body {
   background-color: #f9fafb;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  max-height: 400px;
+  max-height: 600px;
   overflow-y: auto;
+  padding-right: 8px;
+}
+@media (max-width: 600px) {
+    .agent-thoughts-list {
+        max-height: 400px;
+    }
 }
 
 .agent-thoughts-list li {
@@ -878,4 +884,239 @@ body {
 #pubsubPapersContainer .recommendation-card p {
     color: #495057;
     font-size: 13px;
+}
+/* Out-of-scope message styles */
+.out-of-scope-container {
+    background: rgba(255, 248, 225, 0.9);
+    border: 2px solid #ffc107;
+    border-radius: 16px;
+    padding: 24px;
+    margin: 20px 0;
+    box-shadow: 0 4px 16px rgba(255, 193, 7, 0.15);
+}
+
+.out-of-scope-title {
+    color: #856404;
+    font-size: 1.5rem;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.out-of-scope-explanation {
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border-left: 4px solid #ffc107;
+}
+
+.out-of-scope-explanation p {
+    margin: 8px 0;
+    line-height: 1.6;
+    color: #495057;
+}
+
+.out-of-scope-explanation strong {
+    color: #856404;
+}
+
+.out-of-scope-suggestion {
+    background: rgba(220, 248, 198, 0.8);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    border-left: 4px solid #28a745;
+}
+
+.out-of-scope-suggestion p {
+    margin: 8px 0;
+    line-height: 1.6;
+    color: #155724;
+}
+
+.out-of-scope-suggestion strong {
+    color: #155724;
+}
+
+.new-query-container {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.new-query-container label {
+    display: block;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+}
+
+.new-query-container textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    color: #495057;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    resize: vertical;
+    min-height: 80px;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.new-query-container textarea:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.new-query-container button {
+    margin-top: 16px;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+/* Mobile responsive for out-of-scope */
+@media (max-width: 480px) {
+    .out-of-scope-container {
+        padding: 16px;
+        margin: 16px 0;
+    }
+
+    .out-of-scope-title {
+        font-size: 1.3rem;
+    }
+
+    .new-query-container {
+        padding: 16px;
+    }
+
+    .new-query-container textarea {
+        min-height: 60px;
+        font-size: 0.95rem;
+    }
+}
+
+/* --- Minimal Out-of-Scope Subunit Styles for Agent Thoughts --- */
+.out-of-scope-thought-subunit {
+    margin: 20px 0 0 0;
+    padding: 12px 18px 10px 14px;
+    background: rgba(255, 255, 240, 0.45); /* even lighter yellow/ivory */
+    border-left: 2px solid #fff5b8; /* very thin, subtle yellow */
+    border-radius: 6px;
+    box-shadow: none;
+    font-size: 0.97rem;
+    width: 100%;
+    max-width: none;
+    transition: background 0.2s, border-color 0.2s;
+    box-sizing: border-box;
+    display: block;
+}
+.out-of-scope-short {
+    font-weight: 500;
+    color: #b59a2c;
+    font-size: 0.97rem;
+    margin-bottom: 0;
+    line-height: 1.5;
+}
+.out-of-scope-expand-btn {
+    background: none;
+    border: none;
+    color: #4a6ee0;
+    font-size: 0.95rem;
+    cursor: pointer;
+    padding: 0 0 0 0;
+    text-decoration: underline;
+    font-weight: 400;
+    white-space: nowrap;
+    margin: 4px 0 8px 0;
+    border-radius: 0;
+}
+.out-of-scope-full {
+    background: rgba(245,245,245,0.93);
+    border-radius: 4px;
+    padding: 7px 10px;
+    margin-bottom: 8px;
+    margin-top: 2px;
+    color: #555;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    border: 1px solid #f8f8f8;
+}
+.out-of-scope-suggestion-inline {
+    background: rgba(245, 247, 250, 0.7);
+    border-radius: 4px;
+    padding: 7px 10px;
+    margin-bottom: 8px;
+    border-left: 2px solid #e3eafc;
+    color: #3a4664;
+    font-size: 0.95rem;
+}
+.out-of-scope-suggestion-inline strong {
+    color: #4a6ee0;
+    font-weight: 500;
+}
+.new-query-inline-container {
+    background: rgba(255,255,255,0.97);
+    border-radius: 4px;
+    padding: 7px 10px 10px 10px;
+    border: 1px solid #f3f3f3;
+    margin-top: 6px;
+    box-shadow: none;
+}
+.new-query-inline-container label {
+    font-weight: 400;
+    color: #495057;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+    display: block;
+}
+.new-query-inline-container textarea {
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    color: #495057;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    resize: vertical;
+    min-height: 40px;
+    box-sizing: border-box;
+    font-family: inherit;
+    margin-bottom: 6px;
+    background: #fafbfc;
+}
+.new-query-inline-container textarea:focus {
+    border-color: #4a6ee0;
+    box-shadow: 0 0 0 1.5px rgba(74, 110, 224, 0.08);
+}
+.new-query-inline-container button {
+    margin-top: 2px;
+    padding: 7px 16px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    background: linear-gradient(135deg, #4a6ee0 0%, #7eaaff 100%);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    box-shadow: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.new-query-inline-container button:hover, .new-query-inline-container button:focus {
+    background: linear-gradient(135deg, #3a57b7 0%, #4a6ee0 100%);
+}
+@media (max-width: 600px) {
+    .out-of-scope-thought-subunit {
+        margin-left: 0;
+        padding: 7px 2px 6px 2px;
+        width: 100%;
+    }
 }
