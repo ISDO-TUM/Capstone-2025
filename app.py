@@ -56,15 +56,22 @@ def get_recommendations():
                 else:
                     try:
                         llm_response_content = response_part['final_content']
-                        recommendations = json.loads(llm_response_content).get('papers')
-                        final_recommendations = []
-                        for rec in recommendations:
-                            final_recommendations.append({
-                                "title": rec.get("title", "N/A"),
-                                "link": rec.get("link", "N/A"),
-                                "description": rec.get("description", "Relevant based on user interest.")
-                            })
-                        yield f"data: {json.dumps({'recommendations': final_recommendations})}\n\n"
+                        response_data = json.loads(llm_response_content)
+
+                        # Check if this is an out-of-scope response
+                        if response_data.get('type') == 'out_of_scope':
+                            yield f"data: {json.dumps({'out_of_scope': response_data})}\n\n"
+                        else:
+                            # Handle regular recommendations
+                            recommendations = response_data.get('papers')
+                            final_recommendations = []
+                            for rec in recommendations:
+                                final_recommendations.append({
+                                    "title": rec.get("title", "N/A"),
+                                    "link": rec.get("link", "N/A"),
+                                    "description": rec.get("description", "Relevant based on user interest.")
+                                })
+                            yield f"data: {json.dumps({'recommendations': final_recommendations})}\n\n"
                     except json.JSONDecodeError:
                         print(f"Failed to parse LLM response: {llm_response_content}")
                         error_payload = json.dumps({"error": "Failed to parse recommendations from LLM."})
