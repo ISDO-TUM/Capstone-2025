@@ -68,7 +68,7 @@ function renderPubSubPapers(papers, container) {
               return alert('Error creating project');
             }
             const { projectId } = await res.json();
-            window.location.href = `/project/${projectId}`;
+            window.location.href = `/project/${projectId}?updateRecommendations=true`;
           });
 
 
@@ -125,8 +125,13 @@ function renderPubSubPapers(papers, container) {
             renderPubSubPapers(papers, container);
         }
 
+            const params= new URLSearchParams(window.location.search);
+            const updateRecommendations = params.get('updateRecommendations') === 'true';
             //5. Load rest of UI
-            loadProjectOverviewData(projectId, project.description);
+            loadProjectOverviewData(projectId, project.description, updateRecommendations);
+            if (updateRecommendations) {
+                history.replaceState({}, '', window.location.pathname);
+            }
 
         } else if (path === '/') {
             const createProjectBtn = document.getElementById('createProjectBtn');
@@ -265,7 +270,7 @@ function renderPubSubPapers(papers, container) {
         }
     }
 
-    function loadProjectOverviewData (projectId, projectDescription) {
+    function loadProjectOverviewData (projectId, projectDescription,  updateRecommendations = false) {
         const recommendationsContainer = document.getElementById('recommendationsContainer');
         const agentThoughtsContainer = document.getElementById('agentThoughtsContainer');
 
@@ -273,7 +278,7 @@ function renderPubSubPapers(papers, container) {
             agentThoughtsContainer.innerHTML = '<p>🧠 Agent is thinking...</p>';
             recommendationsContainer.innerHTML = '<p>⌛ Waiting for agent to provide recommendations...</p>';
 
-            fetchRecommendationsStream(projectId, projectDescription, agentThoughtsContainer, recommendationsContainer)
+            fetchRecommendationsStream(projectId, projectDescription, agentThoughtsContainer, recommendationsContainer, updateRecommendations)
                 .catch(error => {
                     console.error("Error fetching recommendations stream:", error);
                     agentThoughtsContainer.innerHTML += '<p>❌ Error communicating with the agent.</p>';
@@ -281,7 +286,7 @@ function renderPubSubPapers(papers, container) {
                 });
         }
 
-    async function fetchRecommendationsStream(projectId, projectDescription, thoughtsContainer, recommendationsContainer) {
+    async function fetchRecommendationsStream(projectId, projectDescription, thoughtsContainer, recommendationsContainer,  updateRecommendations = false) {
         console.log(`Starting to stream recommendations based on project description...`);
         thoughtsContainer.innerHTML = ''; // Clear for new thoughts
 
@@ -291,7 +296,7 @@ function renderPubSubPapers(papers, container) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     projectId: projectId,
-                    update_recommendations : true //todo set this to true only if new project or if future 'refresh recommendations' button pressed
+                    update_recommendations : updateRecommendations //todo set this to true only if new project or if future 'refresh recommendations' button pressed
                 }),
             });
 
