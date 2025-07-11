@@ -91,47 +91,43 @@ function renderPubSubPapers(papers, container) {
 
             const container = document.getElementById('pubsubPapersContainer');
 
-            // clear and wire up form
-            renderPubSubSection();               //
-            setupPubSubForm();                   //
-
-            // tell backend to update newsletter papers. Try to update but not break UI if fails
-        try {
-            //todo update newsletter papers only on project creation or once a week
-            const updateRes = await fetch('/api/pubsub/update_newsletter_papers', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ projectId })
-            });
-            const updateJson = await updateRes.json();
-            if (!updateRes.ok) {
-              console.warn('⚠️ update_newsletter_papers status failed:', updateRes.status, updateJson);
-            }
-          } catch (err) {
-            console.error('Error when calling update_newsletter_papers:', err);
-          }
-            // 3. fetch them back. Read papers even if update failed
-            const papers = await fetch(
-                `/api/pubsub/get_newsletter_papers?projectId=${projectId}`
-            ).then(r => r.json());
-            console.log('PubSub papers fetched:', papers);
-            console.log('pubsubPapersContainer is', container);
-            //4. render - first test if comes empty, then always shows the real ones
-        if (papers.length === 0) {
-            // Instead of rendering test cards, show a placeholder message
-            container.innerHTML = '<p class="no-papers-placeholder">Here the newest papers will be shown later.</p>';
-        } else {
-            console.log('📬 Rendering real PubSub papers:', papers);
-            renderPubSubPapers(papers, container);
-        }
+            renderPubSubSection();
+            setupPubSubForm();
 
             const params= new URLSearchParams(window.location.search);
             const updateRecommendations = params.get('updateRecommendations') === 'true';
-            //5. Load rest of UI
             loadProjectOverviewData(projectId, project.description, updateRecommendations);
             if (updateRecommendations) {
                 history.replaceState({}, '', window.location.pathname);
             }
+
+            try {
+                //todo update newsletter papers only on project creation or once a week
+                const updateRes = await fetch('/api/pubsub/update_newsletter_papers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ projectId })
+                });
+                const updateJson = await updateRes.json();
+                if (!updateRes.ok) {
+                  console.warn('⚠️ update_newsletter_papers status failed:', updateRes.status, updateJson);
+                }
+              } catch (err) {
+                console.error('Error when calling update_newsletter_papers:', err);
+              }
+                const papers = await fetch(
+                    `/api/pubsub/get_newsletter_papers?projectId=${projectId}`
+                ).then(r => r.json());
+                console.log('PubSub papers fetched:', papers);
+                console.log('pubsubPapersContainer is', container);
+            if (papers.length === 0) {
+                // Instead of rendering test cards, show a placeholder message
+                container.innerHTML = '<p class="no-papers-placeholder">Here the newest papers will be shown later.</p>';
+            } else {
+                console.log('📬 Rendering real PubSub papers:', papers);
+                renderPubSubPapers(papers, container);
+            }
+
 
         } else if (path === '/') {
             const createProjectBtn = document.getElementById('createProjectBtn');

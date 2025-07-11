@@ -226,6 +226,7 @@ def extract_pdf_text():
 
 @app.route('/api/pubsub/update_newsletter_papers', methods=['POST'])
 def api_update_newsletter():
+    logger.info("Triggered api_update_newsletter")
     payload = request.get_json() or {}
     project_id = payload.get('projectId')
     if not project_id:
