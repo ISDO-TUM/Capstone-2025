@@ -1,4 +1,41 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Helper function to create star rating HTML
+    const createStarRatingHTML = () => `
+        <span class="star" data-value="1">&#9733;</span>
+        <span class="star" data-value="2">&#9733;</span>
+        <span class="star" data-value="3">&#9733;</span>
+        <span class="star" data-value="4">&#9733;</span>
+        <span class="star" data-value="5">&#9733;</span>
+    `;
+
+    // Helper function to show notification popup
+    const showNotification = (icon, title, message) => {
+        const notification = document.createElement('div');
+        notification.className = 'replacement-notification';
+        notification.innerHTML = `
+            <div class="notification-content">
+                <div class="notification-icon">${icon}</div>
+                <div class="notification-text">
+                    <div class="notification-title">${title}</div>
+                    <div class="notification-message">${message}</div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => notification.classList.add('show'), 100);
+
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 4000);
+    };
+
     const handleRouting = () => {
         const path = window.location.pathname;
 
@@ -231,6 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
             agentThoughtsContainer.innerHTML = '<p>🧠 Agent is thinking...</p>';
             recommendationsContainer.innerHTML = '<p>⌛ Waiting for agent to provide recommendations...</p>';
 
+            setupLoadMoreButton(projectId, recommendationsContainer, agentThoughtsContainer);
             fetchRecommendationsStream(projectId, agentThoughtsContainer, recommendationsContainer)
                 .catch(error => {
                     console.error("Error fetching recommendations stream:", error);
@@ -326,6 +364,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function createPaperCard(paper) {
+        const card = document.createElement('div');
+        card.classList.add('recommendation-card');
+
+        // Add temporary highlight for replacement papers
+        if (paper.is_replacement) {
+            card.classList.add('new-replacement');
+            // Remove the highlight after 5 seconds
+            setTimeout(() => {
+                card.classList.remove('new-replacement');
+            }, 5000);
+        }
+
+        const titleEl = document.createElement('h3');
+        titleEl.textContent = paper.title;
+
+        const linkEl = document.createElement('a');
+        linkEl.href = paper.link;
+        linkEl.textContent = "Read Paper";
+        linkEl.target = "_blank";
+
+        const descriptionEl = document.createElement('p');
+        descriptionEl.textContent = paper.description;
+
+        const starRatingEl = document.createElement('div');
+        starRatingEl.classList.add('star-rating');
+        starRatingEl.innerHTML = createStarRatingHTML();
+
+        card.dataset.paperHash = paper.hash;
+        card.dataset.title = paper.title.toLowerCase();
+        card.dataset.rating = paper.rating || 0;
+
+        card.appendChild(titleEl);
+        card.appendChild(linkEl);
+        card.appendChild(descriptionEl);
+        card.appendChild(starRatingEl);
+
+        return card;
+    }
+
     function renderRecommendations(recommendations, container) {
         container.innerHTML = '';
         if (!recommendations || recommendations.length === 0) {
@@ -333,49 +411,120 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        recommendations.forEach((paper, index) => {
-            const card = document.createElement('div');
-            card.classList.add('recommendation-card');
+        window.currentRecommendations = recommendations;
+        window.currentDisplayCount = 10;
+        window.originalCardOrder = [];
 
-            // Add temporary highlight for replacement papers
-            if (paper.is_replacement) {
-                card.classList.add('new-replacement');
-                // Remove the highlight after 5 seconds
-                setTimeout(() => {
-                    card.classList.remove('new-replacement');
-                }, 5000);
+        const papersToShow = recommendations.slice(0, window.currentDisplayCount);
+
+        papersToShow.forEach((paper) => {
+            const card = createPaperCard(paper);
+            container.appendChild(card);
+            window.originalCardOrder.push(card);
+        });
+
+        showLoadMoreButton();
+        showSearchPanel();
+        setupSearchPanel();
+
+        setTimeout(() => {
+            if (typeof filterAndSortPapers === 'function') {
+                filterAndSortPapers();
+            }
+        }, 100);
+    }
+
+    async function loadMorePapers(projectId, recommendationsContainer, thoughtsContainer) {
+        const loadMoreBtn = document.getElementById('loadMoreBtn');
+        if (!loadMoreBtn) return;
+
+        loadMoreBtn.disabled = true;
+        loadMoreBtn.classList.add('loading');
+        loadMoreBtn.textContent = 'Loading...';
+
+        try {
+            const response = await fetch('/api/load_more_papers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ project_id: projectId }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Network response was not ok: ${response.status}. ${errorText}`);
             }
 
-            const titleEl = document.createElement('h3');
-            titleEl.textContent = paper.title;
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
 
-            const linkEl = document.createElement('a');
-            linkEl.href = paper.link;
-            linkEl.textContent = "Read Paper";
-            linkEl.target = "_blank";
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
 
-            const descriptionEl = document.createElement('p');
-            descriptionEl.textContent = paper.description;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n\n');
+                buffer = lines.pop();
 
-            const starRatingEl = document.createElement('div');
-            starRatingEl.classList.add('star-rating');
-            starRatingEl.innerHTML = `
-                <span class="star" data-value="1">&#9733;</span>
-                <span class="star" data-value="2">&#9733;</span>
-                <span class="star" data-value="3">&#9733;</span>
-                <span class="star" data-value="4">&#9733;</span>
-                <span class="star" data-value="5">&#9733;</span>
-            `;
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const jsonString = line.substring(6);
+                        const data = JSON.parse(jsonString);
 
-            card.dataset.paperHash = paper.hash;
+                        if (data.thought) {
+                            console.log('Agent thought:', data.thought);
+                        } else if (data.recommendations) {
+                            data.recommendations.forEach((paper) => {
+                                const card = createPaperCard(paper);
+                                card.classList.add('new-replacement');
+                                setTimeout(() => {
+                                    card.classList.remove('new-replacement');
+                                }, 5000);
+                                recommendationsContainer.appendChild(card);
+                                window.originalCardOrder.push(card);
+                            });
 
-            card.appendChild(titleEl);
-            card.appendChild(linkEl);
-            card.appendChild(descriptionEl);
-            card.appendChild(starRatingEl);
+                            window.currentRecommendations = window.currentRecommendations.concat(data.recommendations);
+                            window.currentDisplayCount = window.currentRecommendations.length;
 
-            container.appendChild(card);
-        });
+                            if (typeof filterAndSortPapers === 'function') {
+                                filterAndSortPapers();
+                            }
+                        } else if (data.error) {
+                            console.error('Server-side error:', data.error);
+                            if (thoughtsContainer) {
+                                thoughtsContainer.innerHTML += `<p>Error loading more papers: ${data.error}</p>`;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load more papers:', error);
+            if (thoughtsContainer) {
+                thoughtsContainer.innerHTML += `<p>Failed to load more papers: ${error.message}</p>`;
+            }
+        } finally {
+            loadMoreBtn.disabled = false;
+            loadMoreBtn.classList.remove('loading');
+            loadMoreBtn.textContent = 'Load More';
+        }
+    }
+
+    function showLoadMoreButton() {
+        const loadMoreBtn = document.getElementById('loadMoreBtn');
+        if (loadMoreBtn) {
+            loadMoreBtn.style.display = 'block';
+        }
+    }
+
+    function setupLoadMoreButton(projectId, recommendationsContainer, thoughtsContainer) {
+        const loadMoreBtn = document.getElementById('loadMoreBtn');
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', () => {
+                loadMorePapers(projectId, recommendationsContainer, thoughtsContainer);
+            });
+        }
     }
 
     function setupCollapsibleDescription(description) {
@@ -518,7 +667,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     handleRouting();
 
-    // Star rating handlers
     const recommendationsContainer = document.getElementById('recommendationsContainer');
     if (recommendationsContainer) {
         recommendationsContainer.addEventListener('mouseover', function (e) {
@@ -550,13 +698,8 @@ document.addEventListener('DOMContentLoaded', () => {
             star.classList.toggle('selected', parseInt(star.dataset.value) <= value);
         });
 
-        console.log(`Rated ${value} star(s)`);
-
-        // Get paper hash (you should include it when rendering each recommendation card)
         const paperHash = clickedStar.closest('.recommendation-card').dataset.paperHash;
         const currentProjectId = window.location.pathname.split('/').pop();
-
-        console.log(`Sending rating - paperHash: ${paperHash}, projectId: ${currentProjectId}, rating: ${value}`);
 
         // For low ratings, remember the card position for replacement
         let cardToReplace = null;
@@ -569,7 +712,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Keep the space occupied but make it invisible
             cardToReplace.style.opacity = '0';
             cardToReplace.style.visibility = 'hidden';
-            // Use position absolute to take it out of flow but keep space with a placeholder
             const originalHeight = cardToReplace.offsetHeight;
             cardToReplace.style.position = 'absolute';
             cardToReplace.style.zIndex = '-1';
@@ -583,42 +725,57 @@ document.addEventListener('DOMContentLoaded', () => {
             cardToReplace.parentNode.insertBefore(placeholder, cardToReplace);
         }
 
-        // Save the rating
         fetch('/api/rate_paper', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paper_hash: paperHash, rating: value, project_id: currentProjectId  })
+            body: JSON.stringify({ paper_hash: paperHash, rating: value, project_id: currentProjectId })
         })
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) {
+                const card = clickedStar.closest('.recommendation-card');
+                if (card) {
+                    card.dataset.rating = value;
+                }
+                if (typeof filterAndSortPapers === 'function') {
+                    filterAndSortPapers();
+                }
+                return { status: 'success', message: 'Rating updated locally' };
+            }
+            return res.json();
+        })
         .then(data => {
             if (data.status === 'success') {
-                console.log("Rating saved!");
+                const card = clickedStar.closest('.recommendation-card');
+                if (card) {
+                    card.dataset.rating = value;
+                }
 
                 // Check if a replacement was performed
                 if (data.replacement && data.replacement.status === 'success') {
-                    console.log("Paper replaced successfully:", data.replacement);
-
-                    // Show popup notification with the new paper name
                     const replacementDetails = data.replacement;
                     if (replacementDetails.replacement_title) {
-                        showReplacementNotification(replacementDetails.replacement_title);
+                        showNotification('🔄', 'Paper Replaced!', `Added: "${replacementDetails.replacement_title}"`);
                     }
 
                     // Insert the replacement paper at the exact same position
                     if (cardIndex >= 0 && replacementDetails.replacement_title) {
                         insertReplacementPaper(replacementDetails, cardIndex, recommendationsContainer);
                     } else {
-                        // Fallback: refresh all recommendations
                         refreshRecommendations(recommendationsContainer, currentProjectId);
                     }
-                } else if (value <= 2) {
-                    console.log("Low rating detected but no replacement was performed.");
+                } else if (value >= 3) {
+                    const paperTitle = clickedStar.closest('.recommendation-card').querySelector('h3').textContent;
+                    showNotification('⭐', 'Paper Rated Highly!', `The agent will recommend more papers similar to: "${paperTitle}"`);
                 }
-            } else {
-                console.error("Failed to save rating:", data.message);
-            }
-        })
-        .catch(err => {
+
+                        if (typeof filterAndSortPapers === 'function') {
+                            filterAndSortPapers();
+                        }
+                    } else {
+                        console.error("Failed to save rating:", data.message);
+                    }
+                })
+                .catch(err => {
             console.error("Error in rating process:", err);
             // Show the card again on error
             if (cardToReplace) {
@@ -633,41 +790,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-
-// Function to show replacement notification popup
-function showReplacementNotification(newPaperTitle) {
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = 'replacement-notification';
-    notification.innerHTML = `
-        <div class="notification-content">
-            <div class="notification-icon">🔄</div>
-            <div class="notification-text">
-                <div class="notification-title">Paper Replaced!</div>
-                <div class="notification-message">Added: "${newPaperTitle}"</div>
-            </div>
-        </div>
-    `;
-
-    // Add to page
-    document.body.appendChild(notification);
-
-    // Trigger animation
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 100);
-
-    // Remove after 4 seconds
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }, 4000);
-}
-
 // Function to insert replacement paper at specific position
 function insertReplacementPaper(replacementDetails, position, container) {
     // Find the invisible card at the specified position
@@ -675,7 +797,6 @@ function insertReplacementPaper(replacementDetails, position, container) {
     const invisibleCard = allCards[position];
 
     if (invisibleCard && invisibleCard.style.visibility === 'hidden') {
-        // Remove the placeholder first
         const placeholder = container.querySelector('.replacement-placeholder');
         if (placeholder) {
             placeholder.remove();
@@ -683,11 +804,13 @@ function insertReplacementPaper(replacementDetails, position, container) {
 
         // Replace the invisible card's content
         invisibleCard.dataset.paperHash = replacementDetails.replacement_paper_hash;
+        invisibleCard.dataset.title = replacementDetails.replacement_title;
+        invisibleCard.dataset.rating = '0';
         invisibleCard.classList.add('new-replacement');
 
         invisibleCard.innerHTML = `
             <h3>${replacementDetails.replacement_title}</h3>
-            <a href="N/A" target="_blank">Read Paper</a>
+            <a href="${replacementDetails.replacement_url}" target="_blank">Read Paper</a>
             <p>${replacementDetails.replacement_summary}</p>
             <div class="star-rating">
                 <span class="star" data-value="1">&#9733;</span>
@@ -698,7 +821,6 @@ function insertReplacementPaper(replacementDetails, position, container) {
             </div>
         `;
 
-        // Reset the card's styling and animate it in
         invisibleCard.style.visibility = 'visible';
         invisibleCard.style.opacity = '0';
         invisibleCard.style.transform = 'scale(0.8)';
@@ -710,9 +832,231 @@ function insertReplacementPaper(replacementDetails, position, container) {
             invisibleCard.style.transform = 'scale(1)';
         }, 100);
 
-        // Remove highlight after 3 seconds
         setTimeout(() => {
             invisibleCard.classList.remove('new-replacement');
         }, 3000);
     }
+}
+
+// Search Panel Functions
+function showSearchPanel() {
+    const searchPanel = document.getElementById('searchPanel');
+    if (searchPanel) {
+        searchPanel.style.display = 'block';
+    }
+}
+
+function setupSearchPanel() {
+    const titleSearchInput = document.getElementById('titleSearchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const sortSelect = document.getElementById('sortSelect');
+    const filterSelect = document.getElementById('filterSelect');
+    const clearSortBtn = document.getElementById('clearSortBtn');
+    const clearFilterBtn = document.getElementById('clearFilterBtn');
+    const resultsCount = document.getElementById('resultsCount');
+
+    if (!titleSearchInput || !clearSearchBtn || !sortSelect || !filterSelect || !clearSortBtn || !clearFilterBtn || !resultsCount) {
+        return;
+    }
+
+    titleSearchInput.addEventListener('input', debounce(() => {
+        filterAndSortPapers();
+        updateClearButton();
+    }, 300));
+
+    clearSearchBtn.addEventListener('click', () => {
+        titleSearchInput.value = '';
+        filterAndSortPapers();
+        updateClearButton();
+    });
+
+    clearSortBtn.addEventListener('click', () => {
+        sortSelect.value = '';
+        filterAndSortPapers();
+        updateDropdownButtons();
+    });
+
+    clearFilterBtn.addEventListener('click', () => {
+        filterSelect.value = '';
+        filterAndSortPapers();
+        updateDropdownButtons();
+    });
+
+    // Show/hide clear search button based on input content
+    function updateClearButton() {
+        const hasSearchContent = titleSearchInput.value.trim().length > 0;
+        if (hasSearchContent) {
+            clearSearchBtn.classList.add('visible');
+        } else {
+            clearSearchBtn.classList.remove('visible');
+        }
+    }
+
+    // Show/hide clear buttons and dropdown styles based on current selection
+    function updateDropdownButtons() {
+        const sortDropdown = sortSelect.parentElement;
+        const filterDropdown = filterSelect.parentElement;
+
+        const hasSortSelection = sortSelect.value && sortSelect.value !== '' && sortSelect.value !== 'relevance';
+        const hasFilterSelection = filterSelect.value && filterSelect.value !== '';
+
+        if (hasSortSelection) {
+            sortDropdown.classList.add('has-selection');
+            clearSortBtn.classList.add('visible');
+        } else {
+            sortDropdown.classList.remove('has-selection');
+            clearSortBtn.classList.remove('visible');
+        }
+
+        if (hasFilterSelection) {
+            filterDropdown.classList.add('has-selection');
+            clearFilterBtn.classList.add('visible');
+        } else {
+            filterDropdown.classList.remove('has-selection');
+            clearFilterBtn.classList.remove('visible');
+        }
+    }
+
+    sortSelect.addEventListener('change', () => {
+        filterAndSortPapers();
+        updateDropdownButtons();
+    });
+
+    filterSelect.addEventListener('change', () => {
+        filterAndSortPapers();
+        updateDropdownButtons();
+    });
+
+    updateDropdownButtons();
+}
+
+// Filter and sort visible papers based on search input and dropdowns
+function filterAndSortPapers() {
+    const titleSearchInput = document.getElementById('titleSearchInput');
+    const sortSelect = document.getElementById('sortSelect');
+    const filterSelect = document.getElementById('filterSelect');
+    const resultsCount = document.getElementById('resultsCount');
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    const cards = document.querySelectorAll('.recommendation-card');
+
+    if (!titleSearchInput || !sortSelect || !filterSelect || !resultsCount) return;
+
+    const searchTerm = titleSearchInput.value.toLowerCase().trim();
+    const sortBy = sortSelect.value;
+    const filterBy = filterSelect.value;
+
+    let visibleCards = 0;
+
+    cards.forEach(card => {
+        let shouldShow = true;
+
+        // Filter by title match
+        if (searchTerm) {
+            const title = card.dataset.title || '';
+            if (!title.includes(searchTerm)) {
+                shouldShow = false;
+            }
+        }
+
+        // Filter by rating status (rated or unrated)
+        if (shouldShow && filterBy && filterBy !== '') {
+            const rating = parseInt(card.dataset.rating) || 0;
+
+            switch (filterBy) {
+                case 'rated':
+                    if (rating === 0) shouldShow = false;
+                    break;
+                case 'unrated':
+                    if (rating > 0) shouldShow = false;
+                    break;
+            }
+        }
+
+        // Show/hide cards and optionally highlight matches
+        if (shouldShow) {
+            card.classList.remove('hidden');
+            if (searchTerm && card.dataset.title.includes(searchTerm)) {
+                card.classList.add('highlighted');
+            } else {
+                card.classList.remove('highlighted');
+            }
+            visibleCards++;
+        } else {
+            card.classList.add('hidden');
+            card.classList.remove('highlighted');
+        }
+    });
+
+    const visibleCardsArray = Array.from(cards).filter(card => !card.classList.contains('hidden'));
+
+    // Handle sorting if a valid option is selected
+    if (sortBy && sortBy !== '') {
+        if (sortBy === 'relevance') {
+            const container = document.getElementById('recommendationsContainer');
+            if (container && window.originalCardOrder) {
+                window.originalCardOrder.forEach(card => {
+                    if (!card.classList.contains('hidden')) {
+                        container.appendChild(card);
+                    }
+                });
+            }
+        } else {
+            // Sort visible cards by title or rating
+            visibleCardsArray.sort((a, b) => {
+                switch (sortBy) {
+                    case 'title':
+                        const titleA = (a.dataset.title || '').toLowerCase();
+                        const titleB = (b.dataset.title || '').toLowerCase();
+                        return titleA.localeCompare(titleB);
+
+                    case 'rating':
+                        const ratingA = parseInt(a.dataset.rating) || 0;
+                        const ratingB = parseInt(b.dataset.rating) || 0;
+                        return ratingB - ratingA;
+
+                    case 'date':
+                        return 0;
+
+                    default:
+                        return 0;
+                }
+            });
+
+            const container = document.getElementById('recommendationsContainer');
+            if (container) {
+                visibleCardsArray.forEach(card => {
+                    container.appendChild(card);
+                });
+            }
+        }
+    }
+
+    resultsCount.textContent = `${visibleCards} paper${visibleCards !== 1 ? 's' : ''} found`;
+
+    // Show/hide "Load More" button based on filtering
+    if (loadMoreBtn) {
+        if (searchTerm || filterBy) {
+            loadMoreBtn.style.display = 'none';
+        } else {
+            loadMoreBtn.style.display = 'block';
+        }
+    }
+}
+
+// Debounce function for search input
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Function to refresh recommendations (fallback for replacements)
+function refreshRecommendations(container, projectId) {
+    fetchRecommendationsStream(projectId, document.getElementById('agentThoughtsContainer'), container);
 }

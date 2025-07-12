@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional, TypedDict
+from typing import List, Optional, TypedDict, Union
 
 import chromadb
 from chromadb.api.models.Collection import Collection
@@ -64,27 +64,78 @@ class ChromaVectorDB:
 
         return Status.FAILURE if any_failure else Status.SUCCESS
 
-    def perform_similarity_search(self, k: int, user_profile_embedding: List[float]) -> Optional[List[str]]:
+    def perform_similarity_search(
+        self,
+        k: int,
+        user_profile_embedding: List[float],
+        return_scores: bool = False,
+        min_similarity: float = 0.0
+    ) -> Optional[Union[List[str], tuple[List[str], List[float]]]]:
         """
         Perform similarity search on ChromaDB.
 
         Args:
-            k (int): No. of top similar results to return
+            k (int): No. of top similar results to return (ignored when min_similarity > 0)
             user_profile_embedding (List[float]): Embedding vector of the user profile
+            return_scores (bool): Whether to return similarity scores along with IDs
+            min_similarity (float): Minimum similarity score (0-1) to include in results
 
         Returns:
-            List[str]: List of top-k hashes (ids) of similar items
-            or None if error occurs
+            Union[List[str], tuple[List[str], List[float]]]:
+            - If return_scores=False: List of top-k hashes (ids) of similar items
+            - If return_scores=True: Tuple of (paper_ids, similarity_scores)
+            - None if error occurs
         """
         try:
+            # Get total number of documents in collection
+            total_docs = self.collection.count()
+
+            # If we're filtering by similarity, get ALL papers to check their similarity
+            if min_similarity > 0:
+                n_results = total_docs
+            else:
+                n_results = k
+
+            # Include distances only if we need scores
+            include_params = ["metadatas"]
+            if return_scores or min_similarity > 0:
+                include_params.append("distances")
+
             results = self.collection.query(
                 query_embeddings=[user_profile_embedding],
-                n_results=k,
-                include=["metadatas"]
+                n_results=n_results,
+                include=include_params  # type: ignore
             )
 
-            # The IDs are returned in the results even without specifying them in include
-            return results.get("ids", [[]])[0]
+            ids_result = results.get("ids", [[]])
+            ids = ids_result[0] if ids_result else []
+
+            if not ids:
+                return None
+
+            # If we don't need scores, return just the IDs
+            if not return_scores and min_similarity == 0.0:
+                return ids
+
+            # Get distances for score calculation
+            distances_result = results.get("distances", [[]])
+            distances = distances_result[0] if distances_result else []
+
+            if not distances:
+                return None
+
+            # Convert distances to similarity scores and filter
+            filtered_ids = []
+            filtered_scores = []
+
+            for paper_id, distance in zip(ids, distances):
+                if paper_id is not None and distance is not None:
+                    similarity_score = 1 - distance
+                    if similarity_score >= min_similarity:
+                        filtered_ids.append(paper_id)
+                        filtered_scores.append(similarity_score)
+
+            return filtered_ids, filtered_scores
 
         except Exception as e:
             logger.error(f"Error performing similarity search: {e}")

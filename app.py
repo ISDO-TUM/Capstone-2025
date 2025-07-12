@@ -6,13 +6,18 @@ import io
 
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context
 
-from database.papers_database_handler import get_paper_by_hash
+from database.papers_database_handler import get_paper_by_hash, insert_papers
 from database.projectpaper_database_handler import get_papers_for_project
-from database.projects_database_handler import add_new_project_to_db, get_project_data, get_all_projects
+from database.projects_database_handler import (add_new_project_to_db, get_project_data, get_all_projects,
+                                                get_user_profile_embedding, get_project_queries)
 from database.database_connection import connect_to_db
 from llm.Agent import trigger_agent_show_thoughts
 from llm.feedback import update_user_profile_embedding_from_rating
 from llm.tools.paper_handling_tools import replace_low_rated_paper
+from llm.Embeddings import embed_papers
+from chroma_db.chroma_vector_db import chroma_db
+from paper_handling.paper_handler import fetch_works_multiple_queries, search_and_filter_papers, process_available_papers
+from utils.status import Status
 import PyPDF2
 
 logger = logging.getLogger(__name__)
@@ -350,6 +355,7 @@ def extract_pdf_text():
 
 @app.route('/api/rate_paper', methods=['POST'])
 def rate_paper():
+    """Rate a paper, update the user embedding, and replace it if it's low rated"""
     data = request.get_json()
     if not data:
         return jsonify({"status": "error", "message": "No data provided"}), 400
@@ -395,7 +401,6 @@ def rate_paper():
                 })
 
                 # Parse the JSON result
-                import json
                 replacement_result = json.loads(result)
                 print(f"Replacement result: {replacement_result}")
 
@@ -416,6 +421,84 @@ def rate_paper():
     finally:
         cur.close()
         conn.close()
+
+
+@app.route('/api/load_more_papers', methods=['POST'])
+def load_more_papers():
+    """Load more paper recommendations for user."""
+    try:
+        data = request.get_json()
+        project_id = data.get('project_id') if data else None
+        if not project_id:
+            return jsonify({"error": "Missing project_id"}), 400
+
+        project = get_project_data(project_id)
+        if not project:
+            return jsonify({"error": "Project not found"}), 404
+
+        def generate():
+            try:
+                # Retrieve the latest user profile embedding
+                user_embedding = get_user_profile_embedding(project_id)
+                if not user_embedding:
+                    yield f"data: {json.dumps({'error': 'No user profile embedding found'})}\n\n"
+                    return
+
+                # Retrieve already shown papers and project description
+                shown_hashes = {p.get('paper_hash') for p in get_papers_for_project(project_id)}
+                description = project.get('description', 'No description')
+
+                def yield_recommendations(similarity):
+                    papers = search_and_filter_papers(chroma_db, user_embedding, shown_hashes, min_similarity=similarity)
+                    if papers:
+                        recs = process_available_papers(papers, project_id, description)
+                        if len(recs) == 10:
+                            yield f"data: {json.dumps({'recommendations': recs})}\n\n"
+                            return True
+                    return False
+
+                # First try finding more papers in Chroma
+                if (yield from yield_recommendations(-0.4)):
+                    return
+
+                # Next try fetching more papers with OpenAlex
+                queries = get_project_queries(project_id)
+                if not queries:
+                    yield f"data: {json.dumps({'error': 'No search queries found for this project'})}\n\n"
+                    return
+
+                for count in [10, 15, 20, 25]:
+                    yield f"data: {json.dumps({'thought': f'Fetching {count} papers per query from OpenAlex...'})}\n\n"
+                    fetched, status = fetch_works_multiple_queries(queries, per_page=count)
+                    if status != Status.SUCCESS or not fetched:
+                        continue
+
+                    _, deduped = insert_papers(fetched)
+                    embeddings = [
+                        {'embedding': embed_papers(p['title'], p['abstract']), 'hash': p['hash']}
+                        for p in deduped if embed_papers(p['title'], p['abstract'])
+                    ]
+
+                    if embeddings:
+                        chroma_db.store_embeddings(embeddings)
+                        if (yield from yield_recommendations(-0.4)):
+                            return
+
+                # Last resort
+                if (yield from yield_recommendations(-0.4)):
+                    return
+
+                yield f"data: {json.dumps({'error': 'No more papers available to show.'})}\n\n"
+
+            except Exception as e:
+                logger.error(f"Error in generator: {e}")
+                yield f"data: {json.dumps({'error': f'Internal error: {str(e)}'})}\n\n"
+
+        return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+    except Exception as e:
+        logger.error(f"Error in /load_more_papers: {e}")
+        return jsonify({"error": f"Failed to load more papers: {str(e)}"}), 500
 
 
 if __name__ == '__main__':

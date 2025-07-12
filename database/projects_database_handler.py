@@ -1,6 +1,7 @@
 import uuid
 import json
 from typing import List
+import ast
 
 import psycopg2.extras
 
@@ -156,6 +157,44 @@ def add_email_to_project_db(email: str, project_id: str):
     conn.commit()
     cursor.close()
     conn.close()
+
+
+def get_project_queries(project_id: str) -> list[str] | None:
+    """
+    Get the stored queries for a specific project.
+
+    Args:
+        project_id (str): The project ID
+
+    Returns:
+        list[str] | None: List of queries if found, None otherwise
+    """
+    conn = connect_to_db()
+    if conn is None:
+        raise Exception("Failed to connect to database")
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT queries
+        FROM projects_table
+        WHERE project_id = %s
+    """, (project_id,))
+
+    result = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if result and result[0]:
+        try:
+            # Parse the stored queries string (stored as repr(list))
+            queries = ast.literal_eval(result[0])
+            if isinstance(queries, list):
+                return queries
+        except (SyntaxError, ValueError, TypeError):
+            # If parsing fails, return None
+            return None
+    return None
 
 
 def _uuid_exists(project_id: str, cursor) -> bool:

@@ -977,7 +977,8 @@ def replace_low_rated_paper(project_id: str, low_rated_paper_hash: str) -> str:
             "replaced_paper_hash": low_rated_paper_hash,
             "replacement_paper_hash": available_hashes[0],
             "replacement_title": replacement_paper.get('title', 'Unknown'),
-            "replacement_summary": replacement_summary
+            "replacement_summary": replacement_summary,
+            "replacement_url": replacement_paper.get('landing_page_url', 'N/A')
         })
 
     except Exception as e:
