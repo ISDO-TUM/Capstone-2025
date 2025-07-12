@@ -5,9 +5,9 @@ import sys
 import io
 
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context
-
 from database.papers_database_handler import get_paper_by_hash
-from database.projectpaper_database_handler import get_papers_for_project
+from database.projectpaper_database_handler import get_papers_for_project, should_update, mark_paper_seen, \
+    delete_project_rows
 from database.projects_database_handler import get_project_by_id, get_queries_for_project
 from database.projects_database_handler import add_new_project_to_db, get_all_projects
 from llm.Agent import trigger_agent_show_thoughts
@@ -15,6 +15,7 @@ from pypdf import PdfReader
 
 from pubsub.pubsub_main import update_newsletter_papers
 from database.projectpaper_database_handler import get_pubsub_papers_for_project
+from pubsub.pubsub_params import DAYS_FOR_UPDATE
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +122,8 @@ def get_recommendations():
             try:
                 if update_recommendations:
                     # todo before calling the agent delete ALL papers for the project in paperprojects_table
+                    removed = delete_project_rows(project_id)
+                    print(f"Deleted {removed} row(s).")
                     for response_part in trigger_agent_show_thoughts(user_description + "project ID: " + project_id):
                         yield f"data: {json.dumps({'thought': response_part['thought']})}\n\n"
 
@@ -152,38 +155,6 @@ def get_recommendations():
     except Exception as e:
         logger.error(f"Error in /api/recommendations: {e}")
         return jsonify({"error": f"Failed to get recommendations: {str(e)}"}), 500
-
-
-@app.route('/api/getNewsletter', methods=['POST'])
-def get_newsletter():
-    """Get newsletter/pubsub papers for a project."""
-    try:
-        data = request.get_json()
-        if not data or 'project_id' not in data:
-            return jsonify({"error": "Missing project_id"}), 400
-
-        # project_id validated above but currently unused in mock implementation
-        update_newsletter = data.get('update_newsletter', False)
-
-        def generate():
-            try:
-                if update_newsletter:
-                    yield f"data: {json.dumps({'thought': 'Fetching latest publications...'})}\n\n"
-                    yield f"data: {json.dumps({'thought': 'Filtering relevant content...'})}\n\n"
-                    yield f"data: {json.dumps({'thought': 'Preparing newsletter digest...'})}\n\n"
-
-                yield f"data: {json.dumps({'recommendations': MOCK_NEWSLETTER})}\n\n"
-
-            except Exception as e:
-                logger.error(f"Error in newsletter generation: {e}")
-                error_payload = json.dumps({"error": f"An internal error occurred: {str(e)}"})
-                yield f"data: {error_payload}\n\n"
-
-        return Response(stream_with_context(generate()), mimetype='text/event-stream')
-
-    except Exception as e:
-        logger.error(f"Error in /api/getNewsletter: {e}")
-        return jsonify({"error": f"Failed to get newsletter: {str(e)}"}), 500
 
 
 @app.route('/api/extract-pdf-text', methods=['POST'])
@@ -232,6 +203,9 @@ def api_update_newsletter():
     if not project_id:
         return jsonify({"error": "Missing projectId"}), 400
 
+    if not should_update(project_id, DAYS_FOR_UPDATE):
+        return jsonify({"status": "Project not updated"}), 200
+
     # first read queries
     queries = get_queries_for_project(project_id)
     if not queries:
@@ -262,10 +236,14 @@ def api_get_newsletter():
     project_id = request.args.get('projectId') or request.args.get('project_id')
     if not project_id:
         return jsonify({"error": "Missing projectId"}), 400
-
-    rows = get_pubsub_papers_for_project(project_id)  # [(hash, summary), …]
+    rows = get_pubsub_papers_for_project(project_id)
+    # [(hash, summary), …]
     papers = []
     for paper_hash, summary in rows:
+        if mark_paper_seen(project_id, paper_hash):
+            logger.info(f"Row ({project_id}, {paper_hash}) marked as seen.")
+        else:
+            logger.error(f"No matching row found or could not update row ({project_id}, {paper_hash}).")
         paper = get_paper_by_hash(paper_hash)
         if paper is not None:
             papers.append({

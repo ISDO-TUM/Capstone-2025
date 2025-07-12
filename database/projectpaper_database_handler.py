@@ -2,6 +2,7 @@
 import psycopg2
 import psycopg2.extras
 from database.database_connection import connect_to_db
+from datetime import datetime, timedelta
 
 
 def assign_paper_to_project(paper_hash: str, project_id: str, summary: str, newsletter: bool = False, seen: bool = False):
@@ -142,9 +143,120 @@ def get_pubsub_papers_for_project(project_id: str):
         FROM paperprojects_table
         WHERE project_id = %s
         AND newsletter = TRUE
-        AND seen = FALSE
                    """, (project_id,))
     papers = cursor.fetchall()
     cursor.close()
     connection.close()
     return papers
+
+
+def should_update(project_id: str, days_for_update: int | float) -> bool:
+    """
+    Return True if *either* of these are true for the given project:
+
+    1. There are **no** rows with newsletter=True.
+    2. The newest newsletter=True row is older than `days_for_update` days.
+
+    Parameters
+    ----------
+    conn : psycopg2.extensions.connection
+        An open connection to the database.
+    project_id : str
+        The project you’re checking.
+    days_for_update : int | float
+        Age threshold in days.
+
+    Returns
+    -------
+    bool
+    """
+    conn = connect_to_db()
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT creation_date
+            FROM public.paperprojects_table
+            WHERE project_id = %s
+              AND newsletter IS TRUE          -- only rows flagged for the newsletter
+            ORDER BY creation_date DESC
+            LIMIT 1;
+            """,
+            (project_id,)
+        )
+        row = cur.fetchone()
+
+    # No newsletter-eligible papers → definitely update
+    if row is None:
+        return True
+
+    latest_date = row[0]
+    # Use matching timezone if the column is tz-aware, else UTC
+    now = datetime.now(latest_date.tzinfo) if latest_date.tzinfo else datetime.utcnow()
+    return now - latest_date >= timedelta(days=days_for_update)
+
+
+def mark_paper_seen(project_id: str, paper_hash: str) -> bool:
+    """
+    Mark a (project_id, paper_hash) pair as seen in paperprojects_table.
+
+    Parameters
+    ----------
+    conn : psycopg2.extensions.connection
+        An open psycopg2 connection.
+    project_id : str
+        The ID of the project.
+    paper_hash : str
+        The paper's hash.
+
+    Returns
+    -------
+    bool
+        True if one row was updated, False if no matching row existed.
+    """
+    conn = connect_to_db()
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE public.paperprojects_table
+            SET seen = TRUE
+            WHERE project_id = %s AND paper_hash = %s;
+            """,
+            (project_id, paper_hash)
+        )
+        updated = cur.rowcount  # number of rows affected
+
+    # Commit the change—remove this if you're running with autocommit = True
+    conn.commit()
+
+    return updated == 1
+
+
+def delete_project_rows(project_id: str) -> int:
+    """
+    Delete all rows belonging to `project_id` from public.paperprojects_table.
+
+    Parameters
+    ----------
+    conn : psycopg2.extensions.connection
+        An open psycopg2 connection.
+    project_id : str
+        The project whose rows you want to purge.
+
+    Returns
+    -------
+    int
+        How many rows were deleted (0 if none existed).
+    """
+    conn = connect_to_db()
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            DELETE FROM public.paperprojects_table
+            WHERE project_id = %s;
+            """,
+            (project_id,)
+        )
+        deleted = cur.rowcount   # rows affected
+
+    conn.commit()               # omit if autocommit=True
+    return deleted
