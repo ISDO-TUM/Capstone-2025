@@ -1,10 +1,12 @@
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from chroma_db.chroma_vector_db import chroma_db
 import numpy as np
 from database.projectpaper_database_handler import get_pubsub_papers_for_project, reset_newsletter_tags, \
     set_newsletter_tags_for_project
+from pubsub import pubsub_params
+
 from pubsub.temporary_llm_that_will_be_replaced_soon import calL_temp_agent
 from typing import List, TypedDict
 from database.papers_database_handler import insert_papers, get_papers_by_original_id, get_paper_by_hash
@@ -21,16 +23,9 @@ class PaperData(TypedDict):
     hash: str
 
 
-def start_pubsub():
-    # todo call update newsletter papers once a week, right now they are updated always when a project page is opened
-    pass
-
-
 def _one_week_ago_date():
     one_week_ago = datetime.today() - timedelta(weeks=1)
     return one_week_ago.strftime("%Y-%m-%d")
-
-# debugging for update_newsletter_papers
 
 
 def update_newsletter_papers(project_id: str):
@@ -49,7 +44,7 @@ def update_newsletter_papers(project_id: str):
 
     # 2. Fetch works
     logger.info("  ↳ fetching works from API…")
-    papers, _ = fetch_works_multiple_queries(queries, from_publication_date="2020-01-01")  # todo change from_publication_date to one week ago date. If there are no papers from the last week say 'no new papers found' or smth in the frontend
+    papers, _ = fetch_works_multiple_queries(queries, from_publication_date=get_update_date(pubsub_params.DAYS_FOR_UPDATE))
     logger.info(f"    ✓ fetched {len(papers)} papers")
 
     # 3. Insert into Postgres
@@ -95,7 +90,7 @@ def update_newsletter_papers(project_id: str):
 
     # 8. Collect current + new candidates
     logger.info("  ↳ loading current newsletter-paper hashes…")
-    current = get_pubsub_papers_for_project(project_id)
+    current = get_pubsub_papers_for_project(project_id)  # If recommendation is older than the update days threshold but the user has not seen it consider it again
     logger.info(f"    ✓ {len(current)} existing newsletter entries")
     potential = []
     for h in current:
@@ -183,5 +178,21 @@ def _remove_duplicate_dicts(dict_list):
     return unique_list
 
 
+def get_update_date(days_for_update: int | float) -> str:
+    """
+    Return the date (YYYY-MM-DD) for 'today minus days_for_update' in UTC.
+
+    Parameters
+    ----------
+    days_for_update : int | float
+        Number of days to subtract from the current date.
+
+    Returns
+    -------
+    str
+        The date string, e.g. '2025-07-05'.
+    """
+    target_date = (datetime.now(timezone.utc) - timedelta(days=days_for_update)).date()
+    return target_date.isoformat()
 # if __name__ == '__main__':
     # update_newsletter_papers("babbab43-0323-423e-ba29-f74ec07e2d57")
