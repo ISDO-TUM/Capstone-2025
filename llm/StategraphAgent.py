@@ -474,12 +474,22 @@ def no_results_handler_node(state):
     "{user_query}"
     After applying all filters, no papers were found.
     The filter criteria were: {json.dumps(filter_criteria_json)}
-    The closest available values for each metric are: {json.dumps(closest_values)}
+    The detailed analysis of available values: {json.dumps(closest_values)}
+
+    IMPORTANT: Use the EXACT values provided above in your explanation. Do not make up generic values.
 
     Please explain to the user in a friendly, concise way:
-    1. That no papers matched their filter (this is not an error)
-    2. For each filterable metric, what the closest available value is and whether it is above or below their filter (e.g., the newest paper is from 2022, which is below your filter of 2024)
-    3. Suggest how they could adjust their query or filter to get results
+    1. That no papers matched their combined filters (this is not an error)
+    2. For each filter individually:
+       - State the best available value for that metric
+       - Whether any papers would match that filter alone
+       - If papers would match individually, mention this as a potential adjustment
+    3. Suggest specific adjustments based on the actual values:
+       - If individual filters would work, suggest trying them separately
+       - If values are close to thresholds, suggest lowering them slightly
+       - If best available values are much better than thresholds, highlight this
+
+    Be specific and use the actual numbers from the analysis data.
     """
     try:
         llm_response = LLM.invoke(smart_explanation_prompt)
