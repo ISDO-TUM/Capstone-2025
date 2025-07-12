@@ -649,6 +649,59 @@ def multi_step_reasoning(query_description: str,
         })
 
 
+def normalize_similarity_scores(papers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Normalize similarity scores from OpenAlex's large relevance scores to 0-1 range.
+    This makes filtering more intuitive and consistent with typical similarity score expectations.
+
+    Args:
+        papers: List of paper dictionaries with 'similarity_score' field
+
+    Returns:
+        List of papers with normalized similarity scores (0-1 range)
+    """
+    if not papers:
+        return papers
+
+    # Extract all similarity scores
+    scores = []
+    for paper in papers:
+        score = paper.get('similarity_score')
+        if score is not None and isinstance(score, (int, float)):
+            scores.append(float(score))
+
+    if not scores:
+        return papers
+
+    # Calculate min and max for normalization
+    min_score = min(scores)
+    max_score = max(scores)
+
+    # Avoid division by zero
+    if max_score == min_score:
+        # All scores are the same, set to 0.5
+        normalized_papers = []
+        for paper in papers:
+            paper_copy = paper.copy()
+            if paper_copy.get('similarity_score') is not None:
+                paper_copy['similarity_score'] = 0.5
+            normalized_papers.append(paper_copy)
+        return normalized_papers
+
+    # Normalize to 0-1 range
+    normalized_papers = []
+    for paper in papers:
+        paper_copy = paper.copy()
+        score = paper_copy.get('similarity_score')
+        if score is not None and isinstance(score, (int, float)):
+            normalized_score = (float(score) - min_score) / (max_score - min_score)
+            paper_copy['similarity_score'] = normalized_score
+        normalized_papers.append(paper_copy)
+
+    logger.info(f"Normalized {len(scores)} similarity scores from range [{min_score:.2f}, {max_score:.2f}] to [0.0, 1.0]")
+    return normalized_papers
+
+
 def apply_filter_spec_to_papers(
     papers: List[Dict[str, Any]],
     filter_spec: Dict[str, Dict[str, Any]]
@@ -673,8 +726,11 @@ def apply_filter_spec_to_papers(
                 "message": f"Unsupported operator '{rule['op']}'"
             }
 
+    # Normalize similarity scores before filtering
+    normalized_papers = normalize_similarity_scores(papers)
+
     kept_papers: list[dict] = []
-    for paper in papers:
+    for paper in normalized_papers:
         try:
             if all(_matches(paper.get(metric), rule["op"], rule["value"])
                    for metric, rule in filter_spec.items()):
@@ -731,6 +787,13 @@ def filter_papers_by_nl_criteria(
     Schema per entry:
     "<metric>": {{"op": "<operator>", "value": <number|string|list>}}
 
+    Guidelines for similarity_score (normalized 0-1 scale):
+    - "high similarity" or "very similar" → use ">=" with 0.7
+    - "very high similarity" or "extremely similar" → use ">=" with 0.8
+    - "moderate similarity" → use ">=" with 0.6
+    - "low similarity" → use ">=" with 0.5
+    - "any similarity" → use ">=" with 0.1
+
     Examples
     --------
     NL:  Keep papers after 2022 with similarity above 0.8
@@ -738,6 +801,12 @@ def filter_papers_by_nl_criteria(
     {{
     "publication_date": {{"op": ">", "value": 2022}},
     "similarity_score": {{"op": ">", "value": 0.8}}
+    }}
+
+    NL:  Find papers similar to X with high similarity
+    JSON:
+    {{
+    "similarity_score": {{"op": ">=", "value": 0.7}}
     }}
 
     NL:  Only papers with >25 citations from Nature
@@ -769,19 +838,22 @@ def filter_papers_by_nl_criteria(
 @tool
 def find_closest_paper_metrics(papers: List[Dict[str, Any]], filter_spec: Dict[str, Dict[str, Any]]) -> str:
     """
-    For each filterable/rankable metric in the filter_spec, finds the closest value in the papers to the filter value,
-    and whether it is above, below, or equal to the threshold.
-    Returns a dict: {metric: {"closest_value": value, "direction": "above"|"below"|"equal"}} for each metric.
+    For each filterable/rankable metric in the filter_spec, analyzes the available values and provides detailed insights.
+    Returns a dict with closest values, best available values, and whether individual filters would have yielded results.
     Only processes numeric/date metrics (not authors, journals, etc.).
     """
+    # Normalize similarity scores for analysis
+    normalized_papers = normalize_similarity_scores(papers)
+
     result = {}
     for metric, rule in filter_spec.items():
         if metric in ["publication_date", "citations", "fwci", "impact_factor", "percentile", "similarity_score", "cited_by_count", "citation_normalized_percentile"]:
             filter_value = rule.get("value")
+            filter_op = rule.get("op", ">")
             if filter_value is None:
                 continue
             available_values = []
-            for paper in papers:
+            for paper in normalized_papers:
                 val = paper.get(metric)
                 if val is not None:
                     # For publication_date, extract year
@@ -801,15 +873,53 @@ def find_closest_paper_metrics(papers: List[Dict[str, Any]], filter_spec: Dict[s
                         except (ValueError, TypeError):
                             continue
                     available_values.append(val)
+
             if available_values:
+                # Find the closest value to the threshold
                 closest = min(available_values, key=lambda x: abs(x - filter_value))
+
+                # Find the best available value (highest for >/>=, lowest for </<=)
+                if filter_op in [">", ">="]:
+                    best_value = max(available_values)
+                elif filter_op in ["<", "<="]:
+                    best_value = min(available_values)
+                else:
+                    best_value = closest
+
+                # Determine if any papers would match this filter individually
+                matching_values = []
+                for val in available_values:
+                    if filter_op == ">" and val > filter_value:
+                        matching_values.append(val)
+                    elif filter_op == ">=" and val >= filter_value:
+                        matching_values.append(val)
+                    elif filter_op == "<" and val < filter_value:
+                        matching_values.append(val)
+                    elif filter_op == "<=" and val <= filter_value:
+                        matching_values.append(val)
+                    elif filter_op == "==" and val == filter_value:
+                        matching_values.append(val)
+                    elif filter_op == "!=" and val != filter_value:
+                        matching_values.append(val)
+
+                # Determine direction of closest value
                 if closest == filter_value:
                     direction = "equal"
                 elif closest < filter_value:
                     direction = "below"
                 else:
                     direction = "above"
-                result[metric] = {"closest_value": closest, "direction": direction}
+
+                result[metric] = {
+                    "closest_value": closest,
+                    "direction": direction,
+                    "best_available_value": best_value,
+                    "would_match_individually": len(matching_values) > 0,
+                    "matching_count": len(matching_values),
+                    "available_values": sorted(available_values),
+                    "filter_threshold": filter_value,
+                    "filter_operator": filter_op
+                }
     return json.dumps(result)
 
 

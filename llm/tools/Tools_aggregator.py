@@ -7,7 +7,8 @@ from llm.tools.paper_handling_tools import (
     reformulate_query,
     detect_out_of_scope_query,
     filter_papers_by_nl_criteria,
-    store_papers_for_project
+    store_papers_for_project,
+    find_closest_paper_metrics
 )
 from llm.tools.paper_ranker import get_best_papers
 
@@ -20,7 +21,8 @@ tools = [
     reformulate_query,
     store_papers_for_project,
     detect_out_of_scope_query,
-    filter_papers_by_nl_criteria
+    filter_papers_by_nl_criteria,
+    find_closest_paper_metrics
 ]
 
 
