@@ -61,6 +61,9 @@ def get_recommendations():
                         # Check if this is an out-of-scope response
                         if response_data.get('type') == 'out_of_scope':
                             yield f"data: {json.dumps({'out_of_scope': response_data})}\n\n"
+                        # Check if this is a no-results response
+                        elif response_data.get('type') == 'no_results':
+                            yield f"data: {json.dumps({'no_results': response_data})}\n\n"
                         else:
                             # Handle regular recommendations
                             recommendations = response_data.get('papers')

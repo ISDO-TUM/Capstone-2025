@@ -1016,3 +1016,109 @@ body {
         width: 100%;
     }
 }
+
+/* --- No-Results Thought Subunit Styles --- */
+.no-results-thought-subunit {
+    margin: 20px 0 0 0;
+    padding: 12px 18px 10px 14px;
+    background: rgba(255, 248, 220, 0.45);
+    border-left: 2px solid #ffc107;
+    border-radius: 6px;
+    box-shadow: none;
+    font-size: 0.97rem;
+    width: 100%;
+    max-width: none;
+    transition: background 0.2s, border-color 0.2s;
+    box-sizing: border-box;
+    display: block;
+}
+
+.no-results-explanation {
+    color: #856404;
+    font-size: 0.97rem;
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.no-results-explanation p {
+    margin: 6px 0;
+}
+
+.no-results-explanation strong {
+    color: #664d03;
+}
+
+.no-results-expand-btn {
+    background: none;
+    border: none;
+    color: #856404;
+    font-size: 0.95rem;
+    cursor: pointer;
+    padding: 0 0 0 0;
+    text-decoration: underline;
+    font-weight: 400;
+    white-space: nowrap;
+    margin: 4px 0 8px 0;
+    border-radius: 0;
+}
+
+.no-results-expand-btn:hover {
+    color: #664d03;
+}
+
+.no-results-filter-details {
+    background: rgba(245, 245, 245, 0.93);
+    border-radius: 4px;
+    padding: 7px 10px;
+    margin-bottom: 8px;
+    margin-top: 2px;
+    color: #555;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    border: 1px solid #f8f8f8;
+}
+
+.no-results-filter-details h4 {
+    color: #664d03;
+    font-size: 0.95rem;
+    margin: 0 0 8px 0;
+    font-weight: 600;
+}
+
+.no-results-filter-details ul {
+    margin: 0;
+    padding-left: 16px;
+}
+
+.no-results-filter-details li {
+    color: #856404;
+    font-size: 0.9rem;
+    margin: 3px 0;
+}
+
+.no-results-filter-details strong {
+    color: #664d03;
+}
+
+.no-results-suggestion-inline {
+    background: rgba(255, 248, 220, 0.7);
+    border-radius: 4px;
+    padding: 7px 10px;
+    margin-bottom: 8px;
+    border-left: 2px solid #ffc107;
+    color: #856404;
+    font-size: 0.95rem;
+}
+
+.no-results-suggestion-inline strong {
+    color: #664d03;
+    font-weight: 500;
+}
+
+@media (max-width: 600px) {
+    .no-results-thought-subunit {
+        margin-left: 0;
+        padding: 7px 2px 6px 2px;
+        width: 100%;
+    }
+}
