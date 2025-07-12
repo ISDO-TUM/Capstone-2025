@@ -117,6 +117,9 @@ def get_recommendations():
                                 if response_data.get('type') == 'out_of_scope':
                                     yield f"data: {json.dumps({'out_of_scope': response_data})}\n\n"
                                     return
+                                elif response_data.get('type') == 'no_results':
+                                    yield f"data: {json.dumps({'no_results': response_data})}\n\n"
+                                    return
                             except json.JSONDecodeError:
                                 print(f"Failed to parse LLM response: {llm_response_content}")
                                 error_payload = json.dumps({"error": "Failed to parse recommendations from LLM."})

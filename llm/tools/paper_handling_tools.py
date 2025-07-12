@@ -766,6 +766,53 @@ def filter_papers_by_nl_criteria(
     return json.dumps(result)
 
 
+@tool
+def find_closest_paper_metrics(papers: List[Dict[str, Any]], filter_spec: Dict[str, Dict[str, Any]]) -> str:
+    """
+    For each filterable/rankable metric in the filter_spec, finds the closest value in the papers to the filter value,
+    and whether it is above, below, or equal to the threshold.
+    Returns a dict: {metric: {"closest_value": value, "direction": "above"|"below"|"equal"}} for each metric.
+    Only processes numeric/date metrics (not authors, journals, etc.).
+    """
+    result = {}
+    for metric, rule in filter_spec.items():
+        if metric in ["publication_date", "citations", "fwci", "impact_factor", "percentile", "similarity_score", "cited_by_count", "citation_normalized_percentile"]:
+            filter_value = rule.get("value")
+            if filter_value is None:
+                continue
+            available_values = []
+            for paper in papers:
+                val = paper.get(metric)
+                if val is not None:
+                    # For publication_date, extract year
+                    if metric == "publication_date":
+                        try:
+                            val = int(str(val)[:4])
+                        except (ValueError, TypeError):
+                            continue
+                    elif metric in ["citations", "cited_by_count", "percentile", "citation_normalized_percentile"]:
+                        try:
+                            val = int(val)
+                        except (ValueError, TypeError):
+                            continue
+                    else:
+                        try:
+                            val = float(val)
+                        except (ValueError, TypeError):
+                            continue
+                    available_values.append(val)
+            if available_values:
+                closest = min(available_values, key=lambda x: abs(x - filter_value))
+                if closest == filter_value:
+                    direction = "equal"
+                elif closest < filter_value:
+                    direction = "below"
+                else:
+                    direction = "above"
+                result[metric] = {"closest_value": closest, "direction": direction}
+    return json.dumps(result)
+
+
 def main():
     from langgraph.prebuilt import create_react_agent
     from langchain_core.messages import HumanMessage

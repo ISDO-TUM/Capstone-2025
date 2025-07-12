@@ -349,6 +349,11 @@ function renderPubSubPapers(papers, container) {
                             renderOutOfScopeInThoughts(data.out_of_scope, lastThoughtEl, thoughtsContainer);
                             // Clear recommendations section
                             recommendationsContainer.innerHTML = '';
+                        } else if (data.no_results) {
+                            // Render no-results as a subunit under the last agent thought
+                            renderNoResultsInThoughts(data.no_results, lastThoughtEl, thoughtsContainer);
+                            // Clear recommendations section
+                            recommendationsContainer.innerHTML = '';
                         } else if (data.error) {
                             console.error('Server-side error:', data.error);
                             recommendationsContainer.innerHTML = `<p>Error: ${data.error}</p>`;
@@ -443,6 +448,117 @@ function renderPubSubPapers(papers, container) {
         const inputEl = document.createElement('textarea');
         inputEl.id = 'newQueryInput';
         inputEl.placeholder = 'Enter a new research query focused on academic topics, technologies, or fields of study...';
+        inputEl.rows = 3;
+        const submitBtn = document.createElement('button');
+        submitBtn.textContent = 'Submit New Query';
+        submitBtn.classList.add('btn', 'btn-primary');
+        submitBtn.addEventListener('click', () => {
+            const newQuery = inputEl.value.trim();
+            if (newQuery) {
+                // Remove the subunit and restart
+                if (subunit.parentNode) subunit.parentNode.removeChild(subunit);
+                thoughtsContainer.innerHTML = '<p>🧠 Processing new query...</p>';
+                // Update the top input field to reflect the new query
+                const topInput = document.querySelector('input#projectTitle, textarea#projectDescription, input[type="text"], textarea');
+                if (topInput) {
+                    topInput.value = newQuery;
+                }
+                // Start new recommendation stream with the new query
+                const recommendationsContainer = document.getElementById('recommendationsContainer');
+                fetchRecommendationsStream(newQuery, thoughtsContainer, recommendationsContainer)
+                    .catch(error => {
+                        console.error("Error fetching recommendations for new query:", error);
+                        thoughtsContainer.innerHTML += '<p>❌ Error processing new query.</p>';
+                    });
+            } else {
+                alert('Please enter a new query.');
+            }
+        });
+        inputContainer.appendChild(inputLabel);
+        inputContainer.appendChild(inputEl);
+        inputContainer.appendChild(submitBtn);
+        subunit.appendChild(inputContainer);
+
+        // Insert subunit under the last thought or at the end
+        if (lastThoughtEl) {
+            lastThoughtEl.appendChild(subunit);
+        } else {
+            thoughtsContainer.appendChild(subunit);
+        }
+    }
+
+    // Render no-results as a subunit under the last agent thought
+    function renderNoResultsInThoughts(noResultsData, lastThoughtEl, thoughtsContainer) {
+        const message = noResultsData.message;
+
+        // Create no-results subunit
+        const subunit = document.createElement('div');
+        subunit.classList.add('no-results-thought-subunit');
+
+        // Explanation (top)
+        const explanationEl = document.createElement('div');
+        explanationEl.classList.add('no-results-explanation');
+        explanationEl.innerHTML = message.explanation;
+        subunit.appendChild(explanationEl);
+
+        // Show filter details button
+        const expandBtn = document.createElement('button');
+        expandBtn.classList.add('no-results-expand-btn');
+        expandBtn.textContent = 'Show filter details';
+        subunit.appendChild(expandBtn);
+
+        // Expand/collapse for filter details
+        const filterDetailsEl = document.createElement('div');
+        filterDetailsEl.classList.add('no-results-filter-details');
+        filterDetailsEl.style.display = 'none';
+
+        // Build filter details content
+        let filterDetailsContent = '<h4>Applied Filters:</h4><ul>';
+        if (message.filter_criteria) {
+            Object.entries(message.filter_criteria).forEach(([key, value]) => {
+                const operator = value.op || '=';
+                filterDetailsContent += `<li><strong>${key}:</strong> ${operator} ${value.value}</li>`;
+            });
+        }
+        filterDetailsContent += '</ul>';
+
+        if (message.closest_values && Object.keys(message.closest_values).length > 0) {
+            filterDetailsContent += '<h4>Closest Available Values:</h4><ul>';
+            Object.entries(message.closest_values).forEach(([key, value]) => {
+                const direction = value.direction || 'unknown';
+                filterDetailsContent += `<li><strong>${key}:</strong> ${value.value} (${direction})</li>`;
+            });
+            filterDetailsContent += '</ul>';
+        }
+
+        filterDetailsEl.innerHTML = filterDetailsContent;
+
+        expandBtn.addEventListener('click', () => {
+            if (filterDetailsEl.style.display === 'none') {
+                filterDetailsEl.style.display = 'block';
+                expandBtn.textContent = 'Hide filter details';
+            } else {
+                filterDetailsEl.style.display = 'none';
+                expandBtn.textContent = 'Show filter details';
+            }
+        });
+        subunit.appendChild(filterDetailsEl);
+
+        // Suggestion for new query
+        const suggestionEl = document.createElement('div');
+        suggestionEl.classList.add('no-results-suggestion-inline');
+        suggestionEl.innerHTML = '<strong>💡 Tip:</strong> Try adjusting your filters or broadening your search terms.';
+        subunit.appendChild(suggestionEl);
+
+        // New query input
+        const inputContainer = document.createElement('div');
+        inputContainer.classList.add('new-query-inline-container');
+        const inputLabel = document.createElement('label');
+        inputLabel.textContent = 'Try a new search:';
+        inputLabel.setAttribute('for', 'newQueryInput');
+        const inputEl = document.createElement('textarea');
+        inputEl.id = 'newQueryInput';
+        inputEl.placeholder = 'Enter a new research query with different filters or broader terms...';
         inputEl.rows = 3;
         const submitBtn = document.createElement('button');
         submitBtn.textContent = 'Submit New Query';

@@ -401,66 +401,102 @@ def filter_papers_node(state):
             # No filtering needed or no papers to filter
             papers_filtered = papers_raw
             logger.info(f"No filtering applied. Papers count: {len(papers_filtered)}")
+            state["applied_filter_criteria"] = {}
         else:
-            # Extract filter criteria from user query using LLM
-
-            filter_extraction_prompt = f"""
-            Extract filter criteria from the user query. Look for:
-            - Date ranges (after, before, since, from, to, between)
-            - Citation counts (citations, cited, more than X citations)
-            - Authors (author, authors, by)
-            - Journals/conferences (journal, conference, published in)
-            - Similarity scores (similarity, score, above X)
-            - Impact metrics (fwci, impact factor, percentile)
-
-            User query: "{user_query}"
-
-            Return only the filter criteria as a natural language string, or "no filters" if none found.
-            Examples:
-            - "papers published after 2020"
-            - "papers with more than 50 citations"
-            - "papers by author John Smith"
-            - "papers with similarity score above 0.8"
-
-            Filter criteria:
-            """
-
-            filter_response = LLM.invoke(filter_extraction_prompt)
-            filter_criteria = filter_response.content.strip() if isinstance(filter_response.content, str) else str(filter_response.content)
-
-            if filter_criteria and filter_criteria.lower() != "no filters":
-                # Apply the filter
-                if filter_tool:
-                    filter_result = filter_tool.invoke({
-                        "papers": papers_raw,
-                        "criteria_nl": filter_criteria
-                    })
-
-                    try:
-                        filter_result_parsed = json.loads(filter_result)
-                        if filter_result_parsed.get("status") == "success":
-                            papers_filtered = filter_result_parsed.get("kept_papers", [])
-                            logger.info(f"Applied filter: {filter_criteria}. Kept {len(papers_filtered)} out of {len(papers_raw)} papers")
-                        else:
-                            logger.warning(f"Filter failed: {filter_result_parsed.get('message', 'Unknown error')}")
-                            papers_filtered = papers_raw
-                    except Exception as e:
-                        logger.error(f"Error parsing filter result: {e}")
+            # Use the filter_papers_by_nl_criteria tool to get both filtered papers and the filter spec
+            filter_extraction_nl = user_query
+            if filter_tool:
+                filter_result = filter_tool.invoke({
+                    "papers": papers_raw,
+                    "criteria_nl": filter_extraction_nl
+                })
+                try:
+                    filter_result_parsed = json.loads(filter_result)
+                    if filter_result_parsed.get("status") == "success":
+                        papers_filtered = filter_result_parsed.get("kept_papers", [])
+                        logger.info(f"Applied filter. Kept {len(papers_filtered)} out of {len(papers_raw)} papers")
+                        # Store the filter spec (filters) in the state for later use
+                        state["applied_filter_criteria"] = filter_result_parsed.get("filters", {})
+                    else:
+                        logger.warning(f"Filter failed: {filter_result_parsed.get('message', 'Unknown error')}")
                         papers_filtered = papers_raw
-                else:
-                    logger.warning("Filter tool not found")
+                        state["applied_filter_criteria"] = {}
+                except Exception as e:
+                    logger.error(f"Error parsing filter result: {e}")
                     papers_filtered = papers_raw
+                    state["applied_filter_criteria"] = {}
             else:
-                # No filter criteria found
+                logger.warning("Filter tool not found")
                 papers_filtered = papers_raw
-                logger.info("No filter criteria detected")
+                state["applied_filter_criteria"] = {}
 
         state["papers_filtered"] = papers_filtered
 
     except Exception as e:
         state["error"] = f"Filter papers node error: {e}"
         state["papers_filtered"] = state.get("papers_raw", [])
+        state["applied_filter_criteria"] = {}
 
+    return state
+
+# --- Smart No-Results Handler Node ---
+
+
+@node_logger("no_results_handler", input_keys=["user_query", "papers_raw", "papers_filtered"], output_keys=["no_results_message"])
+def no_results_handler_node(state):
+    """
+    If no papers are found after filtering, generate a smart explanation using the LLM.
+    Finds the closest value for each filterable metric (year, citations, impact factor, etc.) using the find_closest_paper_metrics tool.
+    """
+    user_query = state.get("user_query", "")
+    papers_raw = state.get("papers_raw", [])
+    # papers_filtered is used implicitly - we know it's empty when this node is called
+    filter_criteria_json = state.get("applied_filter_criteria", {})
+
+    # Use the tool to get closest values and directions
+    tools = get_tools()
+    tool_map = {getattr(tool, 'name', None): tool for tool in tools}
+    closest_tool = tool_map.get("find_closest_paper_metrics")
+    closest_values = {}
+    if closest_tool:
+        try:
+            closest_result = closest_tool.invoke({
+                "papers": papers_raw,
+                "filter_spec": filter_criteria_json
+            })
+            closest_values = json.loads(closest_result)
+        except Exception:
+            closest_values = {}
+
+    # Compose a prompt for the LLM
+    smart_explanation_prompt = f"""
+    The user searched for academic papers with the following query:
+    "{user_query}"
+    After applying all filters, no papers were found.
+    The filter criteria were: {json.dumps(filter_criteria_json)}
+    The closest available values for each metric are: {json.dumps(closest_values)}
+
+    Please explain to the user in a friendly, concise way:
+    1. That no papers matched their filter (this is not an error)
+    2. For each filterable metric, what the closest available value is and whether it is above or below their filter (e.g., the newest paper is from 2022, which is below your filter of 2024)
+    3. Suggest how they could adjust their query or filter to get results
+    """
+    try:
+        llm_response = LLM.invoke(smart_explanation_prompt)
+        explanation = llm_response.content if hasattr(llm_response, 'content') else str(llm_response)
+        state["no_results_message"] = {
+            "type": "no_results",
+            "explanation": explanation,
+            "closest_values": closest_values,
+            "filter_criteria": filter_criteria_json
+        }
+    except Exception:
+        state["no_results_message"] = {
+            "type": "no_results",
+            "explanation": "No papers matched your filter. Please try broadening your search.",
+            "closest_values": closest_values,
+            "filter_criteria": filter_criteria_json
+        }
     return state
 
 
@@ -488,8 +524,8 @@ def run_stategraph_agent(user_query: str):
             parsed = json.loads(out_of_scope_result)
             if parsed.get("status") == "valid" and "keywords" in parsed:
                 state["keywords"] = parsed["keywords"]
-        except Exception as e:
-            logger.error(f"Error parsing out_of_scope_result: {e}")
+        except Exception:
+            logger.error("Error parsing out_of_scope_result")
 
     state = quality_control_node(state)
     state = update_papers_node(state)
@@ -562,6 +598,22 @@ def trigger_stategraph_agent_show_thoughts(user_message: str):
         yield {"thought": "Applying filters to refine results...", "is_final": False, "final_content": None}
         state = filter_papers_node(state)
 
+        # Check for no results
+        if not state.get("papers_filtered"):
+            yield {"thought": "No papers found after filtering. Generating smart no-results explanation...", "is_final": False, "final_content": None}
+            state = no_results_handler_node(state)
+            no_results_message = state.get("no_results_message", {})
+            yield {
+                "thought": "No papers found. Please try broadening your search or adjusting your filter.",
+                "is_final": True,
+                "final_content": json.dumps({
+                    "type": "no_results",
+                    "message": no_results_message,
+                    "requires_user_input": True
+                })
+            }
+            return
+
         # Prepare final response
         papers_filtered = state.get("papers_filtered", [])
         final_recommendations = []
@@ -607,9 +659,9 @@ if __name__ == "__main__":
                 parsed = json.loads(out_of_scope_result)
                 if parsed.get("status") == "valid" and "keywords" in parsed:
                     state["keywords"] = parsed["keywords"]
-            except Exception as e:
+            except Exception:
                 # Optionally log or handle parsing errors
-                logger.error(f"Error in ...: {e}")
+                logger.error("Error parsing out_of_scope_result")
                 pass
         print("After out_of_scope_check_node:", state)
         # Step 3: Quality control node
