@@ -7,7 +7,7 @@ efficiency through GPU acceleration for large-scale experiments.
 """
 
 # user_message_two = """
-# I'm studying the integration of wearable biosensors with real-time health monitoring systems. I'm especially
+# I’m studying the integration of wearable biosensors with real-time health monitoring systems. I’m especially
 # interested in energy-efficient data transmission techniques and how machine learning can be used to predict
 # cardiovascular anomalies from sensor streams.
 # """
@@ -21,8 +21,8 @@ efficiency through GPU acceleration for large-scale experiments.
 # ]
 
 user_message_two = """
-I'm investigating scalable machine learning methods for real-time decision-making in high-dimensional environments.
-I'm particularly interested in how approximate Bayesian optimization techniques and GPU acceleration can enhance
+I’m investigating scalable machine learning methods for real-time decision-making in high-dimensional environments.
+I’m particularly interested in how approximate Bayesian optimization techniques and GPU acceleration can enhance
 performance in classification and control tasks.
 """
 
@@ -34,7 +34,7 @@ user_message_two_keywords = [
 
 
 user_message_three = """
-I'm exploring the role of ocean-atmosphere coupling in long-term climate variability. Specifically, I want to
+I’m exploring the role of ocean-atmosphere coupling in long-term climate variability. Specifically, I want to
 understand how El Niño patterns interact with polar jet streams and what models are most accurate for decadal-scale
 prediction.
 """
@@ -48,7 +48,7 @@ user_message_three_keywords = [
 ]
 
 user_message_four = """
-I'm researching how natural language processing can support legal compliance monitoring in multinational corporations.
+I’m researching how natural language processing can support legal compliance monitoring in multinational corporations.
 My focus is on multilingual document classification and extracting obligations from contracts across EU jurisdictions.
 """
 
@@ -62,8 +62,8 @@ user_message_four_keywords = [
 
 # This is supposed to be a poor query to test the agents ability to reformulate queries
 user_message_five = """
-I want to learn about technology and how it's changing stuff in the world. Maybe also with AI. What are the big things
-people are talking about?"
+I want to learn about technology and how it’s changing stuff in the world. Maybe also with AI. What are the big things
+people are talking about?”
 """
 
 user_message_five_keywords = [
@@ -75,7 +75,7 @@ user_message_five_keywords = [
 ]
 
 user_message_six = """
-I'm looking for papers that compare the performance of the Sparse Spectrum Gaussian Process Bandit algorithm against
+I’m looking for papers that compare the performance of the Sparse Spectrum Gaussian Process Bandit algorithm against
 the Thompson Sampling baseline using CUDA-accelerated simulations on the MNIST dataset, specifically for the 7 vs. 9
 digit classification task.
 """
@@ -120,7 +120,7 @@ You have access to the following tools:
    **call this tool exactly once** and pass:
         filter_papers_by_nl_criteria(
             papers      = <the received list of retrieved papers from upstream>,
-            criteria_nl = "<the user's constraint sentence>"
+            criteria_nl = “<the user’s constraint sentence>”
         )
     **Example (correct):
     # Correct: pass full paper dicts
