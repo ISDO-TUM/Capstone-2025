@@ -40,9 +40,9 @@ def update_newsletter_papers(project_id: str):
     # 1. Get queries for project
     logger.info("  ↳ fetching queries for project…")
     qs = get_queries_for_project(project_id)
-    if not qs:
+    if not qs or not qs[0]:
         logger.error(f"  ✖ no queries found for project {project_id}")
-        return
+        raise ValueError(f"No search queries found for project {project_id}. Please create a project and generate recommendations first.")
     queries_str = qs[0]
     queries = ast.literal_eval(queries_str)
     logger.info(f"    ✓ queries: {queries}")
@@ -79,7 +79,7 @@ def update_newsletter_papers(project_id: str):
     pp = get_project_prompt(project_id)
     if not pp:
         logger.error(f"    ✖ no prompt found for project {project_id}")
-        return
+        raise ValueError(f"No project description found for project {project_id}")
     project_prompt = pp[0]
     logger.info(f"    ✓ prompt: {project_prompt[:50]}…")
 

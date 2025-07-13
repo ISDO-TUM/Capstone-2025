@@ -4,6 +4,7 @@ from llm.Embeddings import embed_user_profile
 from langchain_core.tools import tool
 from chroma_db.chroma_vector_db import chroma_db
 from database.papers_database_handler import get_papers_by_hash
+from database.projects_database_handler import get_user_profile_embedding, add_user_profile_embedding, get_project_data
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +24,32 @@ def get_best_papers(user_profile: str, num_candidates: int = 10) -> list[dict]:
         List[Dict]: A list of paper metadata dictionaries.
     """
     try:
-        embedded_profile = embed_user_profile(user_profile)
+        embedded_profile = get_user_profile_embedding(user_profile)
+
+        if embedded_profile:
+            logger.info(f"Using stored embedding for project {user_profile}")
+        else:
+            logger.info(f"No embedding found for project {user_profile}, creating one...")
+            project_data = get_project_data(user_profile)
+            description = project_data.get('description') if project_data else None
+
+            if not description:
+                logger.error(f"No project description found for project {user_profile}")
+                return []
+
+            embedded_profile = embed_user_profile(description)
+            if not embedded_profile:
+                logger.error(f"Failed to create embedding for project {user_profile}")
+                return []
+
+            add_user_profile_embedding(user_profile, embedded_profile)
+            logger.info(f"Created and saved embedding for project {user_profile}")
+
     except Exception as e:
-        logger.error(f"User profile could not be embedded: {e}")
+        logger.error(f"Error getting or creating user profile embedding for project {user_profile}: {e}")
         return []
 
-    if embedded_profile is None:
+    if not embedded_profile:
         logger.warning("Embedded profile is None, aborting process.")
         return []
 
