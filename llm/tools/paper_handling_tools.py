@@ -8,14 +8,13 @@ from langchain_core.tools import tool
 
 from chroma_db.chroma_vector_db import chroma_db
 from database.database_connection import connect_to_db
-from database.papers_database_handler import get_papers_by_hash, insert_papers
+from database.papers_database_handler import insert_papers
 from database.projectpaper_database_handler import assign_paper_to_project, get_papers_for_project
 from database.projects_database_handler import add_queries_to_project_db, get_project_data, get_user_profile_embedding
 from llm.Embeddings import embed_papers
 from llm.LLMDefinition import LLM
-from llm.tools.paper_ranker import get_best_papers
 from llm.util.agent_custom_filter import _matches, _OPERATORS
-from paper_handling.paper_handler import fetch_works_multiple_queries
+from paper_handling.paper_handler import fetch_works_multiple_queries, generate_paper_summary, search_and_filter_papers
 from utils.status import Status
 
 logger = logging.getLogger(__name__)
@@ -787,165 +786,94 @@ def replace_low_rated_paper(project_id: str, low_rated_paper_hash: str) -> str:
     Returns:
         str: JSON string with status and details about the replacement operation
     """
-    try:
-        # Get the user profile embedding
-        user_profile_embedding = get_user_profile_embedding(project_id)
-        if not user_profile_embedding:
-            return json.dumps({
-                "status": "error",
-                "message": "No user profile embedding found for this project. Cannot perform similarity search."
-            })
-
-        # Get current papers and excluded papers
-        connection = connect_to_db()
-        if not connection:
-            return json.dumps({
-                "status": "error",
-                "message": "Database connection failed"
-            })
-
-        try:
-            cursor = connection.cursor()
-
-            # Get current papers in the project
-            current_papers = get_papers_for_project(project_id)
-            current_paper_hashes = {paper['paper_hash'] for paper in current_papers}
-
-            # Verify the low-rated paper exists in the project
-            if low_rated_paper_hash not in current_paper_hashes:
-                return json.dumps({
-                    "status": "error",
-                    "message": f"Paper with hash {low_rated_paper_hash} not found in project {project_id}"
-                })
-
-            # Get excluded papers for this project
-            cursor.execute("""
-                SELECT paper_hash FROM paperprojects_table
-                WHERE project_id = %s AND excluded = TRUE
-            """, (project_id,))
-            excluded_papers = {row[0] for row in cursor.fetchall()}
-
-            logger.info(f"Current papers: {len(current_paper_hashes)}, Excluded papers: {len(excluded_papers)}")
-
-        finally:
-            cursor.close()
-            connection.close()
-
-        # Get candidate papers using get_best_papers
-        candidate_papers = get_best_papers(project_id)
-
-        if not candidate_papers:
-            return json.dumps({
-                "status": "error",
-                "message": "No similar papers found in the database"
-            })
-
-        # Extract and filter candidate hashes
-        candidate_hashes = [paper.get('paper_hash', '') for paper in candidate_papers if paper.get('paper_hash')]
-        available_hashes = [hash_val for hash_val in candidate_hashes
-                            if hash_val not in current_paper_hashes and hash_val not in excluded_papers]
-
-        logger.info(f"Found {len(available_hashes)} available papers after filtering")
-
-        # If no papers available, try broader search
-        if not available_hashes:
-            logger.info("No papers available, trying broader search...")
-            more_candidate_hashes = chroma_db.perform_similarity_search(50, user_profile_embedding)
-            if more_candidate_hashes:
-                available_hashes = [hash_val for hash_val in more_candidate_hashes
-                                    if hash_val not in current_paper_hashes and hash_val not in excluded_papers][:10]
-                logger.info(f"Found {len(available_hashes)} papers in broader search")
-
-        if not available_hashes:
-            return json.dumps({
-                "status": "error",
-                "message": "No papers available to replace the low-rated paper. Consider adding more papers to the database."
-            })
-
-        # Get replacement paper metadata
-        replacement_papers = get_papers_by_hash([available_hashes[0]])
-
-        if not replacement_papers:
-            return json.dumps({
-                "status": "error",
-                "message": "Failed to retrieve metadata for replacement paper"
-            })
-
-        replacement_paper = replacement_papers[0]
-
-        # Generate summary for the replacement paper
-        project_data = get_project_data(project_id)
-        project_description = project_data.get('description', '') if project_data else ''
-
-        summary_prompt = f"""
-        Generate a concise summary explaining why this paper is relevant to the user's research interests.
-
-        User's research interests: {project_description}
-
-        Paper title: {replacement_paper.get('title', 'Unknown')}
-        Paper abstract: {replacement_paper.get('abstract', 'No abstract available')}
-
-        Write a brief summary (2 short sentences) that explains the key details of why this paper is relevant to the
-        user without being overly verbose.
-        Focus on the key contributions and relevance. Be concise and clear.
-        Do not include any prefixes like "Summary:" or "Relevance:" - just write the summary directly.
-        """
-
-        summary_response = LLM.invoke(summary_prompt)
-        replacement_summary = summary_response.content.strip()
-
-        # Perform the replacement in one database transaction
-        connection = connect_to_db()
-        if not connection:
-            return json.dumps({
-                "status": "error",
-                "message": "Database connection failed"
-            })
-
-        try:
-            cursor = connection.cursor()
-
-            # Mark the low-rated paper as excluded
-            cursor.execute("""
-                UPDATE paperprojects_table
-                SET excluded = TRUE
-                WHERE project_id = %s AND paper_hash = %s
-            """, (project_id, low_rated_paper_hash))
-
-            # Add the replacement paper
-            assign_paper_to_project(available_hashes[0], project_id, replacement_summary, is_replacement=True)
-
-            connection.commit()
-
-        except Exception as db_error:
-            connection.rollback()
-            logger.error(f"Database error during paper replacement: {db_error}")
-            return json.dumps({
-                "status": "error",
-                "message": f"Database error during paper replacement: {str(db_error)}"
-            })
-        finally:
-            if cursor:
-                cursor.close()
-            if connection:
-                connection.close()
-
-        return json.dumps({
-            "status": "success",
-            "message": "Successfully replaced low-rated paper with better alternative",
-            "replaced_paper_hash": low_rated_paper_hash,
-            "replacement_paper_hash": available_hashes[0],
-            "replacement_title": replacement_paper.get('title', 'Unknown'),
-            "replacement_summary": replacement_summary,
-            "replacement_url": replacement_paper.get('landing_page_url', 'N/A')
-        })
-
-    except Exception as e:
-        logger.error(f"Error replacing low-rated paper: {e}")
+    # Get the user profile embedding
+    user_profile_embedding = get_user_profile_embedding(project_id)
+    if not user_profile_embedding:
         return json.dumps({
             "status": "error",
-            "message": f"Failed to replace paper: {str(e)}"
+            "message": "No user profile embedding found for this project. Cannot perform similarity search."
         })
+
+    # Get current papers and verify the low-rated paper exists
+    current_papers = get_papers_for_project(project_id)
+    current_paper_hashes = {paper['paper_hash'] for paper in current_papers}
+
+    if low_rated_paper_hash not in current_paper_hashes:
+        return json.dumps({
+            "status": "error",
+            "message": f"Paper with hash {low_rated_paper_hash} not found in project {project_id}"
+        })
+
+    # Get excluded papers and pubsub papers
+    connection = connect_to_db()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT paper_hash, excluded, newsletter
+        FROM paperprojects_table
+        WHERE project_id = %s AND (excluded = TRUE OR newsletter = TRUE)
+    """, (project_id,))
+
+    excluded_papers = set()
+    pubsub_papers = set()
+    for row in cursor.fetchall():
+        if row[1]:  # excluded = TRUE
+            excluded_papers.add(row[0])
+        if row[2]:  # newsletter = TRUE
+            pubsub_papers.add(row[0])
+
+    cursor.close()
+    connection.close()
+
+    # Search for replacement papers
+    available_papers = search_and_filter_papers(chroma_db, user_profile_embedding, current_paper_hashes, -0.4)
+
+    # Filter out excluded and pubsub papers
+    filtered_papers = []
+    for paper in available_papers:
+        if (paper.get('paper_hash') not in excluded_papers and paper.get('paper_hash') not in pubsub_papers):
+            filtered_papers.append(paper)
+            if len(filtered_papers) >= 1:  # Only need one replacement
+                break
+
+    if not filtered_papers:
+        return json.dumps({
+            "status": "error",
+            "message": "No papers available to replace the low-rated paper. Consider adding more papers to the database."
+        })
+
+    replacement_paper = filtered_papers[0]
+
+    # Get data for the replacement paper
+    project_data = get_project_data(project_id)
+    project_description = project_data.get('description', '') if project_data else ''
+    replacement_summary = generate_paper_summary(replacement_paper, project_description)
+
+    # Perform the replacement
+    connection = connect_to_db()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        UPDATE paperprojects_table
+        SET excluded = TRUE
+        WHERE project_id = %s AND paper_hash = %s
+    """, (project_id, low_rated_paper_hash))
+
+    assign_paper_to_project(replacement_paper['paper_hash'], project_id, replacement_summary, is_replacement=True)
+
+    connection.commit()
+    cursor.close()
+    connection.close()
+
+    return json.dumps({
+        "status": "success",
+        "message": "Successfully replaced low-rated paper with better alternative",
+        "replaced_paper_hash": low_rated_paper_hash,
+        "replacement_paper_hash": replacement_paper['paper_hash'],
+        "replacement_title": replacement_paper.get('title', 'Unknown'),
+        "replacement_summary": replacement_summary,
+        "replacement_url": replacement_paper.get('landing_page_url', 'N/A')
+    })
 
 
 def main():

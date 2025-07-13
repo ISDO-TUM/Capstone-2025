@@ -22,7 +22,7 @@ function renderPubSubPapers(papers, container) {
     papers.forEach(paper => {
       // 1) create card's div
       const card = document.createElement('div');
-      card.classList.add('recommendation-card');
+      card.classList.add('recommendation-card', 'pubsub-card');
 
       // 2) create and fill out h3 from title (match Recommendations section)
       const titleEl = document.createElement('h3');
@@ -760,7 +760,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let cardIndex = -1;
         if (value <= 2) {
             cardToReplace = clickedStar.closest('.recommendation-card');
-            const allCards = Array.from(document.querySelectorAll('.recommendation-card'));
+            // Only look for cards in the recommendations container, not pubsub papers
+            const allCards = Array.from(recommendationsContainer.querySelectorAll('.recommendation-card'));
             cardIndex = allCards.indexOf(cardToReplace);
 
             // Keep the space occupied but make it invisible
@@ -858,7 +859,7 @@ function insertReplacementPaper(replacementDetails, position, container) {
 
         // Replace the invisible card's content
         invisibleCard.dataset.paperHash = replacementDetails.replacement_paper_hash;
-        invisibleCard.dataset.title = replacementDetails.replacement_title;
+        invisibleCard.dataset.title = replacementDetails.replacement_title.toLowerCase();
         invisibleCard.dataset.rating = '0';
         invisibleCard.classList.add('new-replacement');
 
@@ -991,7 +992,10 @@ function filterAndSortPapers() {
     const filterSelect = document.getElementById('filterSelect');
     const resultsCount = document.getElementById('resultsCount');
     const loadMoreBtn = document.getElementById('loadMoreBtn');
-    const cards = document.querySelectorAll('.recommendation-card');
+    const recommendationsContainer = document.getElementById('recommendationsContainer');
+
+    // Only count cards in the recommendations container, not pubsub papers
+    const cards = recommendationsContainer ? recommendationsContainer.querySelectorAll('.recommendation-card') : [];
 
     if (!titleSearchInput || !sortSelect || !filterSelect || !resultsCount) return;
 
@@ -1046,11 +1050,10 @@ function filterAndSortPapers() {
     // Handle sorting if a valid option is selected
     if (sortBy && sortBy !== '') {
         if (sortBy === 'relevance') {
-            const container = document.getElementById('recommendationsContainer');
-            if (container && window.originalCardOrder) {
+            if (recommendationsContainer && window.originalCardOrder) {
                 window.originalCardOrder.forEach(card => {
                     if (!card.classList.contains('hidden')) {
-                        container.appendChild(card);
+                        recommendationsContainer.appendChild(card);
                     }
                 });
             }
@@ -1076,10 +1079,9 @@ function filterAndSortPapers() {
                 }
             });
 
-            const container = document.getElementById('recommendationsContainer');
-            if (container) {
+            if (recommendationsContainer) {
                 visibleCardsArray.forEach(card => {
-                    container.appendChild(card);
+                    recommendationsContainer.appendChild(card);
                 });
             }
         }

@@ -127,7 +127,6 @@ def get_recommendations():
                     for response_part in trigger_agent_show_thoughts(user_description + "project ID: " + project_id):
                         yield f"data: {json.dumps({'thought': response_part['thought']})}\n\n"
 
-                # todo update get_papers_for_project so that it doesnt return pubsub papers or define how the behaviour should be
                 recs_basic_data = get_papers_for_project(project_id)
                 recommendations = []
                 for rec in recs_basic_data:
