@@ -57,8 +57,50 @@
 
         <div class="recommendations-section">
             <h2>Recommendations</h2>
+
+            <!-- Search Panel - Initially Hidden -->
+            <div id="searchPanel" class="search-panel" style="display: none;">
+                <div class="search-controls-container">
+                    <!-- Search Input -->
+                    <div class="search-input-wrapper">
+                        <input type="text" id="titleSearchInput" class="search-input" placeholder="Search papers by title...">
+                        <button id="clearSearchBtn" class="clear-search-btn">×</button>
+                    </div>
+
+                    <!-- Sort Dropdown -->
+                    <div class="sort-dropdown">
+                        <select id="sortSelect" class="sort-select">
+                            <option value="" disabled selected>Sort papers</option>
+                            <option value="title">Sort by Title</option>
+                            <option value="rating">Sort by Rating</option>
+                            <option value="relevance">Sort by Relevance</option>
+                        </select>
+                        <button id="clearSortBtn" class="clear-dropdown-btn">×</button>
+                    </div>
+
+                    <!-- Filter Dropdown -->
+                    <div class="filter-dropdown">
+                        <select id="filterSelect" class="filter-select">
+                            <option value="" disabled selected>Filter papers</option>
+                            <option value="rated">Rated papers</option>
+                            <option value="unrated">Unrated papers</option>
+                        </select>
+                        <button id="clearFilterBtn" class="clear-dropdown-btn">×</button>
+                    </div>
+                </div>
+
+                <div class="results-count">
+                    <span id="resultsCount">0 papers found</span>
+                </div>
+            </div>
+
             <div id="recommendationsContainer" class="recommendations-grid">
                 </div>
+            <div class="load-more-container">
+                <button id="loadMoreBtn" class="load-more-btn" style="display: none;">
+                    Load More
+                </button>
+            </div>
         </div>
     </div>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>

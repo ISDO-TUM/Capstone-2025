@@ -5,17 +5,21 @@ import sys
 import io
 
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context
-from database.papers_database_handler import get_paper_by_hash
-from database.projectpaper_database_handler import get_papers_for_project, should_update, mark_paper_seen, \
-    delete_project_rows
-from database.projects_database_handler import get_project_by_id, get_queries_for_project
-from database.projects_database_handler import add_new_project_to_db, get_all_projects
-from llm.Agent import trigger_agent_show_thoughts
 from pypdf import PdfReader
 
+from chroma_db.chroma_vector_db import chroma_db
+from database.database_connection import connect_to_db
+from database.papers_database_handler import get_paper_by_hash, insert_papers
+from database.projectpaper_database_handler import get_papers_for_project, get_pubsub_papers_for_project, delete_project_rows, should_update, mark_paper_seen
+from database.projects_database_handler import add_new_project_to_db, get_all_projects, get_project_data, get_project_by_id, get_queries_for_project, get_user_profile_embedding
+from llm.Agent import trigger_agent_show_thoughts
+from llm.Embeddings import embed_papers
+from llm.feedback import update_user_profile_embedding_from_rating
+from llm.tools.paper_handling_tools import replace_low_rated_paper
+from paper_handling.paper_handler import fetch_works_multiple_queries, process_available_papers, search_and_filter_papers
 from pubsub.pubsub_main import update_newsletter_papers
-from database.projectpaper_database_handler import get_pubsub_papers_for_project
 from pubsub.pubsub_params import DAYS_FOR_UPDATE
+from utils.status import Status
 
 logger = logging.getLogger(__name__)
 
@@ -135,13 +139,17 @@ def get_recommendations():
                         paper_dict = {
                             'title': paper.get("title", "N/A"),
                             'link': paper.get("landing_page_url", "#"),
-                            'description': rec.get("summary", "Relevant based on user interest.")
+                            'description': rec.get("summary", "Relevant based on user interest."),
+                            'hash': rec['paper_hash'],
+                            'is_replacement': rec.get('is_replacement', False)
                         }
                     else:
                         paper_dict = {
                             'title': "N/A",
                             'link': "#",
-                            'description': rec.get("summary", "Relevant based on user interest.")
+                            'description': "Relevant based on user interest.",
+                            'hash': "Nan",
+                            'is_replacement': False
                         }
                     recommendations.append(paper_dict)
                 yield f"data: {json.dumps({'recommendations': recommendations})}\n\n"
@@ -236,8 +244,8 @@ def api_get_newsletter():
     project_id = request.args.get('projectId') or request.args.get('project_id')
     if not project_id:
         return jsonify({"error": "Missing projectId"}), 400
-    rows = get_pubsub_papers_for_project(project_id)
-    # [(hash, summary), …]
+
+    rows = get_pubsub_papers_for_project(project_id)  # [(hash, summary), …]
     papers = []
     for paper_hash, summary in rows:
         if mark_paper_seen(project_id, paper_hash):
@@ -253,15 +261,85 @@ def api_get_newsletter():
             })
         else:
             papers.append({
-                "title": "Untitled",
+                "title": "Paper not found",
                 "link": "#",
                 "description": summary
             })
-    return jsonify(papers), 200
+    return jsonify(papers)
 
 # Gives front-end the project’s metadata (title, description, queries, email).
 # need this on page load to fill in the header (project title/description)
 # and to know which project_id to pass into the other two endpoints.
+
+
+@app.route('/api/rate_paper', methods=['POST'])
+def rate_paper():
+    """Rate a paper, update the user embedding, and replace it if it's low rated"""
+    data = request.get_json()
+    if not data:
+        return jsonify({"status": "error", "message": "No data provided"}), 400
+
+    paper_hash = data.get("paper_hash")
+    project_id = data.get("project_id")
+    rating = data.get("rating")
+
+    print(f"Rating - paper_hash: {paper_hash}, project_id: {project_id}, rating: {rating}")
+
+    if not paper_hash or not project_id or not isinstance(rating, int) or rating < 1 or rating > 5:
+        return jsonify({"status": "error", "message": "Invalid paper_hash, project_id, or rating"}), 400
+
+    conn = connect_to_db()
+    if not conn:
+        return jsonify({"status": "error", "message": "Database connection failed"}), 500
+
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+                    UPDATE paperprojects_table
+                    SET rating = %s
+                    WHERE paper_hash = %s AND project_id = %s;
+                """, (rating, paper_hash, project_id))
+        conn.commit()
+
+        if cur.rowcount == 0:
+            return jsonify({"status": "error", "message": "Paper not found"}), 404
+
+        # Update user profile embedding based on the rating
+        update_user_profile_embedding_from_rating(project_id, paper_hash, rating)
+
+        # If rating is low (1-2 stars), automatically replace the paper
+        replacement_result = None
+        if rating <= 2:
+            try:
+                print(f"Low rating ({rating}) detected, attempting to replace paper {paper_hash}")
+
+                # Call the replacement tool directly
+                result = replace_low_rated_paper.invoke({
+                    "project_id": project_id,
+                    "low_rated_paper_hash": paper_hash
+                })
+
+                # Parse the JSON result
+                replacement_result = json.loads(result)
+                print(f"Replacement result: {replacement_result}")
+
+            except Exception as replacement_error:
+                logger.warning(f"Failed to replace low-rated paper: {replacement_error}")
+                replacement_result = None
+
+        # Return response with replacement info
+        response_data = {"status": "success", "message": "Rating saved"}
+        if replacement_result and replacement_result.get("status") == "success":
+            response_data["replacement"] = replacement_result
+
+        return jsonify(response_data)
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error updating rating: {e}")
+        return jsonify({"status": "error", "message": f"Database error: {e}"}), 500
+    finally:
+        cur.close()
+        conn.close()
 
 
 @app.route('/api/project/<project_id>')
@@ -277,6 +355,84 @@ def api_get_project(project_id):
         "email": proj["email"],
         # etc
     }), 200
+
+
+@app.route('/api/load_more_papers', methods=['POST'])
+def load_more_papers():
+    """Load more paper recommendations for user."""
+    try:
+        data = request.get_json()
+        project_id = data.get('project_id') if data else None
+        if not project_id:
+            return jsonify({"error": "Missing project_id"}), 400
+
+        project = get_project_data(project_id)
+        if not project:
+            return jsonify({"error": "Project not found"}), 404
+
+        def generate():
+            try:
+                # Retrieve the latest user profile embedding
+                user_embedding = get_user_profile_embedding(project_id)
+                if not user_embedding:
+                    yield f"data: {json.dumps({'error': 'No user profile embedding found'})}\n\n"
+                    return
+
+                # Retrieve already shown papers and project description
+                shown_hashes = {p.get('paper_hash') for p in get_papers_for_project(project_id)}
+                description = project.get('description', 'No description')
+
+                def yield_recommendations(similarity):
+                    papers = search_and_filter_papers(chroma_db, user_embedding, shown_hashes, min_similarity=similarity)
+                    if papers:
+                        recs = process_available_papers(papers, project_id, description)
+                        if len(recs) == 10:
+                            yield f"data: {json.dumps({'recommendations': recs})}\n\n"
+                            return True
+                    return False
+
+                # First try finding more papers in Chroma
+                if (yield from yield_recommendations(-0.4)):
+                    return
+
+                # Next try fetching more papers with OpenAlex
+                queries = get_queries_for_project(project_id)
+                if not queries:
+                    yield f"data: {json.dumps({'error': 'No search queries found for this project'})}\n\n"
+                    return
+
+                for count in [10, 15, 20, 25]:
+                    yield f"data: {json.dumps({'thought': f'Fetching {count} papers per query from OpenAlex...'})}\n\n"
+                    fetched, status = fetch_works_multiple_queries(queries, per_page=count)
+                    if status != Status.SUCCESS or not fetched:
+                        continue
+
+                    _, deduped = insert_papers(fetched)
+                    embeddings = [
+                        {'embedding': embed_papers(p['title'], p['abstract']), 'hash': p['hash']}
+                        for p in deduped if embed_papers(p['title'], p['abstract'])
+                    ]
+
+                    if embeddings:
+                        chroma_db.store_embeddings(embeddings)
+                        if (yield from yield_recommendations(-0.4)):
+                            return
+
+                # Last resort
+                if (yield from yield_recommendations(-0.4)):
+                    return
+
+                yield f"data: {json.dumps({'error': 'No more papers available to show.'})}\n\n"
+
+            except Exception as e:
+                logger.error(f"Error in generator: {e}")
+                yield f"data: {json.dumps({'error': f'Internal error: {str(e)}'})}\n\n"
+
+        return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+    except Exception as e:
+        logger.error(f"Error in /load_more_papers: {e}")
+        return jsonify({"error": f"Failed to load more papers: {str(e)}"}), 500
 
 
 if __name__ == '__main__':
