@@ -34,7 +34,7 @@ def assign_paper_to_project(paper_hash: str, project_id: str, summary: str, news
 def get_papers_for_project(project_id: str):
     """
     Returns the list of papers for a project by linking by hash the papers from paperprojects_table
-    with the ones from papers_table
+    with the ones from papers_table. Excludes pubsub papers.
     Args:
         project_id: The project's id
 
@@ -47,7 +47,9 @@ def get_papers_for_project(project_id: str):
                    SELECT papers_table.*, paperprojects_table.rating, paperprojects_table.is_replacement
                    FROM papers_table
                             JOIN paperprojects_table ON papers_table.paper_hash = paperprojects_table.paper_hash
-                   WHERE paperprojects_table.project_id = %s AND paperprojects_table.excluded = FALSE
+                   WHERE paperprojects_table.project_id = %s
+                     AND paperprojects_table.excluded = FALSE
+                     AND paperprojects_table.newsletter = FALSE
                    """, (project_id,))
     papers = cursor.fetchall()
     results = []
