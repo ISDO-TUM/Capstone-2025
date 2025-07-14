@@ -1122,3 +1122,148 @@ body {
         width: 100%;
     }
 }
+
+/* --- Agent Reasoning UI Styles --- */
+.card {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    background-color: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.full-width {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+.card-header {
+    padding: 24px 24px 0 24px;
+}
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+.card-content {
+    padding: 24px;
+}
+.progress-container {
+    margin-bottom: 16px;
+}
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+.progress-bar {
+    width: 100%;
+    height: 12px;
+    background-color: #f1f5f9;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.progress-fill {
+    height: 100%;
+    background-color: #2563eb;
+    transition: width 0.5s ease;
+}
+.step {
+    border-radius: 8px;
+    margin-bottom: 12px;
+    transition: all 0.5s ease;
+    animation: fadeIn 0.5s ease;
+}
+.step-pending {
+    background-color: rgba(241, 245, 249, 0.2);
+    border: 1px solid rgba(226, 232, 240, 0.5);
+}
+.step-active {
+    background-color: rgba(219, 234, 254, 1);
+    border: 2px solid rgba(147, 197, 253, 1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transform: scale(1.02);
+}
+.step-completed {
+    background-color: rgba(241, 245, 249, 0.5);
+    border: 1px solid #e2e8f0;
+}
+.step-failed {
+    background-color: rgba(254, 242, 242, 1);
+    border: 2px solid rgba(252, 165, 165, 1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+.step-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+}
+.step-icon {
+    width: 20px;
+    height: 20px;
+    margin-top: 4px;
+}
+.step-body {
+    flex: 1;
+    min-width: 0;
+}
+.step-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.step-title {
+    font-weight: 500;
+    font-size: 14px;
+    transition: color 0.3s;
+}
+.step-description {
+    font-size: 12px;
+    margin-top: 4px;
+    transition: color 0.3s;
+}
+.bounce-dots {
+    display: flex;
+    gap: 4px;
+}
+.bounce-dot {
+    width: 6px;
+    height: 6px;
+    background-color: #3b82f6;
+    border-radius: 50%;
+    animation: bounce 1s infinite;
+}
+.bounce-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+.bounce-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+.pulse {
+    animation: pulse 2s infinite;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+@keyframes bounce {
+    0%, 20%, 53%, 80%, 100% { transform: translateY(0); }
+    40%, 43% { transform: translateY(-8px); }
+    70% { transform: translateY(-4px); }
+    90% { transform: translateY(-2px); }
+}
+.hidden { display: none; }
+/* --- End Agent Reasoning UI Styles --- */

@@ -1,3 +1,191 @@
+// === Agent Reasoning UI Integration ===
+class AgentInterface {
+    constructor() {
+        this.visibleSteps = [];
+        this.isWorkflowActive = false;
+        this.currentStep = -1;
+        this.currentQuery = '';
+        this.finalContent = null;
+    }
+
+    startWorkflow(query) {
+        this.isWorkflowActive = true;
+        this.visibleSteps = [];
+        this.currentStep = -1;
+        this.currentQuery = query || '';
+        this.finalContent = null;
+        // Clear/hide recommendations at the start
+        const recommendationsSection = document.getElementById('recommendations');
+        if (recommendationsSection) {
+            recommendationsSection.innerHTML = '';
+            recommendationsSection.classList.add('hidden');
+        }
+        const loadingDots = document.getElementById('loadingDots');
+        const brainIcon = document.getElementById('brainIcon');
+        if (loadingDots) loadingDots.classList.remove('hidden');
+        if (brainIcon) brainIcon.classList.add('pulse');
+        this.updateProgress();
+        this.renderSteps();
+        this.listenToAgentProgress(this.currentQuery);
+    }
+
+    listenToAgentProgress(query) {
+        if (this.eventSource) {
+            this.eventSource.close();
+        }
+        const url = query ? `/agent/progress?query=${encodeURIComponent(query)}` : '/agent/progress';
+        this.eventSource = new EventSource(url);
+        this.eventSource.onmessage = (event) => {
+            const stepData = JSON.parse(event.data);
+            this.updateStep(stepData);
+            // If this is the final step, fetch recommendations
+            if (stepData.status === 'completed' && stepData.is_final) {
+                this.eventSource.close();
+                this.fetchRecommendations(query);
+            }
+        };
+        this.eventSource.onerror = () => {
+            this.eventSource.close();
+            const loadingDots = document.getElementById('loadingDots');
+            const brainIcon = document.getElementById('brainIcon');
+            if (loadingDots) loadingDots.classList.add('hidden');
+            if (brainIcon) brainIcon.classList.remove('pulse');
+        };
+    }
+
+    updateStep(stepData) {
+        // stepData: {id, title, status, description, icon, is_final}
+        const idx = this.visibleSteps.findIndex(s => s.id === stepData.id);
+        if (idx !== -1) {
+            this.visibleSteps[idx] = stepData;
+        } else {
+            this.visibleSteps.push(stepData);
+        }
+        this.currentStep = this.visibleSteps.length - 1;
+        this.updateProgress();
+        this.renderSteps();
+    }
+
+    updateProgress() {
+        // Count steps with status 'completed'
+        const completedSteps = this.visibleSteps.filter(step => step.status === 'completed').length;
+        const totalSteps = this.visibleSteps.length;
+        const progress = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
+
+        document.getElementById('progressFill').style.width = `${progress}%`;
+        document.getElementById('progressText').textContent = `${Math.round(progress)}% Complete`;
+
+        if (this.isWorkflowActive) {
+            document.getElementById('progressText').classList.add('pulse');
+        } else {
+            document.getElementById('progressText').classList.remove('pulse');
+        }
+    }
+
+    getStepIcon(step) {
+        if (step.status === 'completed') return '✅';
+        if (step.status === 'failed') return '❌';
+        return step.icon || '🧠';
+    }
+
+    renderSteps() {
+        const container = document.getElementById('stepsContainer');
+        if (!container) return;
+        container.innerHTML = '';
+        this.visibleSteps.forEach((step, index) => {
+            const isCurrent = index === this.currentStep;
+            const isFailed = step.status === 'failed';
+            const stepDiv = document.createElement('div');
+            stepDiv.className = `step ${isFailed ? 'step-failed' : isCurrent ? 'step-active' : 'step-completed'}`;
+            stepDiv.innerHTML = `
+                <div class="step-content">
+                    <div class="step-icon ${step.status === 'processing' ? 'pulse' : ''}">
+                        ${this.getStepIcon(step)}
+                    </div>
+                    <div class="step-body">
+                        <div class="step-header">
+                            <h4 class="step-title">${step.title}</h4>
+                            ${step.status === 'processing' ? '<div class="bounce-dots"><div class="bounce-dot"></div><div class="bounce-dot"></div><div class="bounce-dot"></div></div>' : ''}
+                            ${isCurrent && step.status === 'processing' ? '<span style="font-size: 12px; color: var(--blue-600); font-weight: 500;" class="pulse">Working...</span>' : ''}
+                            ${isFailed ? '<span style="font-size: 12px; color: var(--red-600); font-weight: 500;">Failed</span>' : ''}
+                        </div>
+                        ${step.description ? `<p class="step-description">${step.description}</p>` : ''}
+                    </div>
+                </div>
+            `;
+            container.appendChild(stepDiv);
+        });
+    }
+
+    fetchRecommendations(query) {
+        // Fetch recommendations from your backend (adjust endpoint as needed)
+        fetch('/api/recommendations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectDescription: query })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const recommendationsContainer = document.getElementById('recommendationsContainer');
+            if (recommendationsContainer) {
+                if (data.recommendations && data.recommendations.length > 0) {
+                    recommendationsContainer.innerHTML = data.recommendations.map(rec =>
+                        `<div class="recommendation-card">
+                            <h3>${rec.title}</h3>
+                            <a href="${rec.link}" target="_blank">Read Paper</a>
+                            <p>${rec.description}</p>
+                        </div>`
+                    ).join('');
+                } else {
+                    recommendationsContainer.innerHTML = '<p>No recommendations found.</p>';
+                }
+            }
+        })
+        .catch(error => {
+            const recommendationsContainer = document.getElementById('recommendationsContainer');
+            if (recommendationsContainer) {
+                recommendationsContainer.innerHTML = `<p>Error fetching recommendations: ${error}</p>`;
+            }
+        });
+    }
+
+    // When agent is done, only then show recommendations
+    handleFinalRecommendations(finalContent) {
+        const recommendationsSection = document.getElementById('recommendations');
+        if (!recommendationsSection) return;
+        recommendationsSection.classList.remove('hidden');
+        recommendationsSection.innerHTML = '';
+        let recommendations = [];
+        try {
+            const parsed = typeof finalContent === 'string' ? JSON.parse(finalContent) : finalContent;
+            if (parsed && parsed.papers && Array.isArray(parsed.papers)) {
+                recommendations = parsed.papers;
+            }
+        } catch (e) {
+            recommendationsSection.innerHTML = `<div style="color: red;">Error displaying recommendations.</div>`;
+            return;
+        }
+        if (recommendations.length === 0) {
+            recommendationsSection.innerHTML = '<div style="color: #64748b;">No recommendations found.</div>';
+            return;
+        }
+        // Render recommendations
+        const html = [
+            '<h2 class="recommendations-title">Recommendations</h2>',
+            '<div class="recommendations-grid">',
+            ...recommendations.map(paper => `
+                <div class="card recommendation-card">
+                    <h3 class="recommendation-title">${paper.title}</h3>
+                    <a href="${paper.link}" class="recommendation-link" target="_blank">Read Paper</a>
+                    <p class="recommendation-description">${paper.description}</p>
+                </div>
+            `),
+            '</div>'
+        ].join('');
+        recommendationsSection.innerHTML = html;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const handleRouting = () => {
         const path = window.location.pathname;
@@ -178,7 +366,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const titleDisplay = document.getElementById('projectTitleDisplay');
         const descriptionDisplay = document.getElementById('projectDescriptionDisplay');
         const recommendationsContainer = document.getElementById('recommendationsContainer');
-        const agentThoughtsContainer = document.getElementById('agentThoughtsContainer');
+        // REMOVE: Old agent thoughts UI logic
+        // const agentThoughtsContainer = document.getElementById('agentThoughtsContainer');
+        // if (recommendationsContainer && agentThoughtsContainer) {
+        //     agentThoughtsContainer.innerHTML = '<p>🧠 Agent is thinking...</p>';
+        //     recommendationsContainer.innerHTML = '<p>⌛ Waiting for agent to provide recommendations...</p>';
+        //     fetchRecommendationsStream(projectData.description, agentThoughtsContainer, recommendationsContainer)
+        //         .catch(error => {
+        //             console.error("Error fetching recommendations stream:", error);
+        //             agentThoughtsContainer.innerHTML += '<p>❌ Error communicating with the agent.</p>';
+        //             recommendationsContainer.innerHTML = '<p>Could not load recommendations at this time.</p>';
+        //         });
+        // }
 
         if (titleDisplay) titleDisplay.textContent = projectData.title;
         if (descriptionDisplay) {
@@ -187,23 +386,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (document.title && titleDisplay) document.title = `Project: ${projectData.title}`;
 
-        if (recommendationsContainer && agentThoughtsContainer) {
+        if (recommendationsContainer) {
             // Set initial state messages
-            agentThoughtsContainer.innerHTML = '<p>🧠 Agent is thinking...</p>';
             recommendationsContainer.innerHTML = '<p>⌛ Waiting for agent to provide recommendations...</p>';
 
-            fetchRecommendationsStream(projectData.description, agentThoughtsContainer, recommendationsContainer)
+            fetchRecommendationsStream(projectData.description, recommendationsContainer)
                 .catch(error => {
                     console.error("Error fetching recommendations stream:", error);
-                    agentThoughtsContainer.innerHTML += '<p>❌ Error communicating with the agent.</p>';
                     recommendationsContainer.innerHTML = '<p>Could not load recommendations at this time.</p>';
                 });
         }
     };
 
-    async function fetchRecommendationsStream(projectDescription, thoughtsContainer, recommendationsContainer) {
+    async function fetchRecommendationsStream(projectDescription, container) {
         console.log(`Starting to stream recommendations based on project description...`);
-        thoughtsContainer.innerHTML = ''; // Clear for new thoughts
+        container.innerHTML = ''; // Clear for new thoughts
 
         // Track the last thought element for subunit rendering
         let lastThoughtEl = null;
@@ -255,25 +452,24 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
 
                             thoughtEl.innerHTML = `${icon} ${content}`;
-                            thoughtsContainer.appendChild(thoughtEl);
-                            thoughtsContainer.scrollTop = thoughtsContainer.scrollHeight;
+                            container.appendChild(thoughtEl);
+                            container.scrollTop = container.scrollHeight;
                             lastThoughtEl = thoughtEl;
                         } else if (data.recommendations) {
-                            renderRecommendations(data.recommendations, recommendationsContainer);
+                            renderRecommendations(data.recommendations, container);
                         } else if (data.out_of_scope) {
                             // Render out-of-scope as a subunit under the last agent thought
-                            renderOutOfScopeInThoughts(data.out_of_scope, lastThoughtEl, thoughtsContainer);
+                            renderOutOfScopeInThoughts(data.out_of_scope, lastThoughtEl, container);
                             // Clear recommendations section
-                            recommendationsContainer.innerHTML = '';
+                            container.innerHTML = '';
                         } else if (data.no_results) {
                             // Render no-results as a subunit under the last agent thought
-                            renderNoResultsInThoughts(data.no_results, lastThoughtEl, thoughtsContainer);
+                            renderNoResultsInThoughts(data.no_results, lastThoughtEl, container);
                             // Clear recommendations section
-                            recommendationsContainer.innerHTML = '';
+                            container.innerHTML = '';
                         } else if (data.error) {
                             console.error('Server-side error:', data.error);
-                            recommendationsContainer.innerHTML = `<p>Error: ${data.error}</p>`;
-                            thoughtsContainer.innerHTML += `<p>❌ An error occurred.</p>`;
+                            container.innerHTML = `<p>Error: ${data.error}</p>`;
                         }
                     }
                 }
@@ -381,7 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 // Start new recommendation stream with the new query
                 const recommendationsContainer = document.getElementById('recommendationsContainer');
-                fetchRecommendationsStream(newQuery, thoughtsContainer, recommendationsContainer)
+                fetchRecommendationsStream(newQuery, recommendationsContainer)
                     .catch(error => {
                         console.error("Error fetching recommendations for new query:", error);
                         thoughtsContainer.innerHTML += '<p>❌ Error processing new query.</p>';
@@ -492,7 +688,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 // Start new recommendation stream with the new query
                 const recommendationsContainer = document.getElementById('recommendationsContainer');
-                fetchRecommendationsStream(newQuery, thoughtsContainer, recommendationsContainer)
+                fetchRecommendationsStream(newQuery, recommendationsContainer)
                     .catch(error => {
                         console.error("Error fetching recommendations for new query:", error);
                         thoughtsContainer.innerHTML += '<p>❌ Error processing new query.</p>';
@@ -824,4 +1020,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     handleRouting();
+
+    // Only initialize if the agent reasoning card exists
+    if (document.getElementById('agentReasoningCard')) {
+        window.agentInterface = new AgentInterface();
+    }
+
+    // Wire up to project page or search form
+    const projectTitleDisplay = document.getElementById('projectTitleDisplay');
+    const projectDescriptionDisplay = document.getElementById('projectDescriptionDisplay');
+    if (window.agentInterface && projectDescriptionDisplay) {
+        // Use the project description as the query
+        const query = projectDescriptionDisplay.textContent || '';
+        window.agentInterface.startWorkflow(query);
+    }
+
+    // Example: If you have a search form for new queries
+    const newQueryForm = document.getElementById('newQueryForm');
+    if (window.agentInterface && newQueryForm) {
+        newQueryForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const input = document.getElementById('newQueryInput');
+            if (input && input.value.trim()) {
+                window.agentInterface.startWorkflow(input.value.trim());
+            }
+        });
+    }
 });

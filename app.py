@@ -91,6 +91,27 @@ def get_recommendations():
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 
+@app.route('/agent/progress')
+def agent_progress():
+    user_query = request.args.get('query', 'machine learning in healthcare')  # Or get from session/user input
+
+    def event_stream():
+        for step in trigger_stategraph_agent_show_thoughts(user_query):
+            # Map your step dict to the frontend format
+            step_data = {
+                "id": step.get("thought", "step")[:32].replace(" ", "_").replace(".", "").replace(",", "").lower(),
+                "title": step.get("thought", "Processing..."),
+                "status": "processing" if not step.get("is_final") else "completed",
+                "description": step.get("thought", ""),
+                "icon": "🧠",
+                "is_final": step.get("is_final", False)
+            }
+            yield f"data: {json.dumps(step_data)}\n\n"
+            if step.get("is_final"):
+                break
+    return Response(stream_with_context(event_stream()), mimetype='text/event-stream')
+
+
 @app.route('/api/extract-pdf-text', methods=['POST'])
 def extract_pdf_text():
     if 'file' not in request.files:
