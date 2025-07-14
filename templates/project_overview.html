@@ -26,17 +26,35 @@
             </div>
         </div>
 
-        <div class="agent-thoughts-section">
-            <h2>Agent's Thoughts</h2>
-            <ul id="agentThoughtsContainer" class="agent-thoughts-list">
-                </ul>
-        </div>
-
-        <div class="recommendations-section">
-            <h2>Recommendations</h2>
-            <div id="recommendationsContainer" class="recommendations-grid">
+        <!-- Agent Reasoning UI -->
+        <div class="card full-width" id="agentReasoningCard">
+            <div class="card-header">
+                <div class="card-title">
+                    <img id="brainIcon" src="{{ url_for('static', filename='brain.png') }}" alt="Brain" style="width: 24px; height: 24px; vertical-align: middle;">
+                    Agent Processing
+                    <div id="loadingDots" class="bounce-dots hidden">
+                        <div class="bounce-dot"></div>
+                        <div class="bounce-dot"></div>
+                        <div class="bounce-dot"></div>
+                    </div>
                 </div>
+            </div>
+            <div class="card-content">
+                <div class="progress-container">
+                    <div class="progress-header">
+                        <span>Progress</span>
+                        <span id="progressText">0% Complete</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div id="stepsContainer"></div>
+            </div>
         </div>
+        <!-- End Agent Reasoning UI -->
+
+        <div id="recommendations" class="recommendations-section"></div>
     </div>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
