@@ -68,7 +68,7 @@ function renderPubSubPapers(papers, container) {
               return alert('Error creating project');
             }
             const { projectId } = await res.json();
-            window.location.href = `/project/${projectId}`;
+            window.location.href = `/project/${projectId}?updateRecommendations=true`;
           });
 
 
@@ -91,42 +91,43 @@ function renderPubSubPapers(papers, container) {
 
             const container = document.getElementById('pubsubPapersContainer');
 
-            // clear and wire up form
-            renderPubSubSection();               //
-            setupPubSubForm();                   //
+            renderPubSubSection();
+            setupPubSubForm();
 
-            // tell backend to update newsletter papers. Try to update but not break UI if fails
-        try {
-            //todo update newsletter papers only on project creation or once a week
-            const updateRes = await fetch('/api/pubsub/update_newsletter_papers', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ projectId })
-            });
-            const updateJson = await updateRes.json();
-            if (!updateRes.ok) {
-              console.warn('⚠️ update_newsletter_papers status failed:', updateRes.status, updateJson);
+            const params= new URLSearchParams(window.location.search);
+            const updateRecommendations = params.get('updateRecommendations') === 'true';
+            loadProjectOverviewData(projectId, project.description, updateRecommendations);
+            if (updateRecommendations) {
+                history.replaceState({}, '', window.location.pathname);
             }
-          } catch (err) {
-            console.error('Error when calling update_newsletter_papers:', err);
-          }
-            // 3. fetch them back. Read papers even if update failed
-            const papers = await fetch(
-                `/api/pubsub/get_newsletter_papers?projectId=${projectId}`
-            ).then(r => r.json());
-            console.log('PubSub papers fetched:', papers);
-            console.log('pubsubPapersContainer is', container);
-            //4. render - first test if comes empty, then always shows the real ones
-        if (papers.length === 0) {
-            // Instead of rendering test cards, show a placeholder message
-            container.innerHTML = '<p class="no-papers-placeholder">Here the newest papers will be shown later.</p>';
-        } else {
-            console.log('📬 Rendering real PubSub papers:', papers);
-            renderPubSubPapers(papers, container);
-        }
 
-            //5. Load rest of UI
-            loadProjectOverviewData(projectId, project.description);
+            try {
+                //todo update newsletter papers only on project creation or once a week
+                const updateRes = await fetch('/api/pubsub/update_newsletter_papers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ projectId })
+                });
+                const updateJson = await updateRes.json();
+                if (!updateRes.ok) {
+                  console.warn('⚠️ update_newsletter_papers status failed:', updateRes.status, updateJson);
+                }
+              } catch (err) {
+                console.error('Error when calling update_newsletter_papers:', err);
+              }
+                const papers = await fetch(
+                    `/api/pubsub/get_newsletter_papers?projectId=${projectId}`
+                ).then(r => r.json());
+                console.log('PubSub papers fetched:', papers);
+                console.log('pubsubPapersContainer is', container);
+            if (papers.length === 0) {
+                // Instead of rendering test cards, show a placeholder message
+                container.innerHTML = '<p class="no-papers-placeholder">Here the newest papers will be shown later.</p>';
+            } else {
+                console.log('📬 Rendering real PubSub papers:', papers);
+                renderPubSubPapers(papers, container);
+            }
+
 
         } else if (path === '/') {
             const createProjectBtn = document.getElementById('createProjectBtn');
@@ -265,7 +266,7 @@ function renderPubSubPapers(papers, container) {
         }
     }
 
-    function loadProjectOverviewData (projectId, projectDescription) {
+    function loadProjectOverviewData (projectId, projectDescription,  updateRecommendations = false) {
         const recommendationsContainer = document.getElementById('recommendationsContainer');
         const agentThoughtsContainer = document.getElementById('agentThoughtsContainer');
 
@@ -273,7 +274,7 @@ function renderPubSubPapers(papers, container) {
             agentThoughtsContainer.innerHTML = '<p>🧠 Agent is thinking...</p>';
             recommendationsContainer.innerHTML = '<p>⌛ Waiting for agent to provide recommendations...</p>';
 
-            fetchRecommendationsStream(projectId, projectDescription, agentThoughtsContainer, recommendationsContainer)
+            fetchRecommendationsStream(projectId, projectDescription, agentThoughtsContainer, recommendationsContainer, updateRecommendations)
                 .catch(error => {
                     console.error("Error fetching recommendations stream:", error);
                     agentThoughtsContainer.innerHTML += '<p>❌ Error communicating with the agent.</p>';
@@ -281,7 +282,7 @@ function renderPubSubPapers(papers, container) {
                 });
         }
 
-    async function fetchRecommendationsStream(projectId, projectDescription, thoughtsContainer, recommendationsContainer) {
+    async function fetchRecommendationsStream(projectId, projectDescription, thoughtsContainer, recommendationsContainer,  updateRecommendations = false) {
         console.log(`Starting to stream recommendations based on project description...`);
         thoughtsContainer.innerHTML = ''; // Clear for new thoughts
 
@@ -291,7 +292,7 @@ function renderPubSubPapers(papers, container) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     projectId: projectId,
-                    update_recommendations : true //todo set this to true only if new project or if future 'refresh recommendations' button pressed
+                    update_recommendations : updateRecommendations //todo set this to true only if new project or if future 'refresh recommendations' button pressed
                 }),
             });
 
