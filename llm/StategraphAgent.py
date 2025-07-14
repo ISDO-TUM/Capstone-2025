@@ -311,6 +311,28 @@ def out_of_scope_handler_node(state):
 
     return state
 
+
+def expand_subqueries_node(state):
+    """
+    If the QC decision was 'split', extract subqueries and keywords from the multi_step_reasoning tool result.
+    """
+    qc_tool_result = state.get("qc_tool_result")
+    subqueries = []
+    if qc_tool_result:
+        try:
+            parsed = json.loads(qc_tool_result) if isinstance(qc_tool_result, str) else qc_tool_result
+            if parsed.get("status") == "success" and "subqueries" in parsed:
+                for sub in parsed["subqueries"]:
+                    subqueries.append({
+                        "description": sub.get("sub_description", ""),
+                        "keywords": sub.get("keywords", [])
+                    })
+        except Exception as e:
+            logger.error(f"Error parsing subqueries: {e}")
+    state["subqueries"] = subqueries
+    logger.info(f"Extracted {len(subqueries)} subqueries from split.")
+    return state
+
 # --- Update Papers Node ---
 
 
@@ -320,30 +342,41 @@ def update_papers_node(state):
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
     update_papers_tool = tool_map.get("update_papers")
     update_papers_result = None
+    all_papers = []
     try:
-        # Use reformulated query or user_query as input
-        queries = []
-        if state.get("qc_decision") == "reformulate" and state.get("qc_tool_result"):
-            try:
-                qc_result = json.loads(state["qc_tool_result"])
-                if "result" in qc_result and "refined_keywords" in qc_result["result"]:
-                    queries = qc_result["result"]["refined_keywords"]
-                elif "reformulated_description" in qc_result:
-                    queries = [qc_result["reformulated_description"]]
-            except Exception:
-                queries = [state.get("user_query", "")]
-        elif state.get("qc_decision") == "split" and state.get("qc_tool_result"):
-            try:
-                qc_result = json.loads(state["qc_tool_result"])
-                if "subqueries" in qc_result:
-                    queries = [subq["sub_description"] for subq in qc_result["subqueries"]]
-            except Exception:
-                queries = [state.get("user_query", "")]
+        # If subqueries exist, process each
+        subqueries = state.get("subqueries", [])
+        if subqueries:
+            update_results = []
+            for sub in subqueries:
+                keywords = sub.get("keywords", [])
+                if update_papers_tool:
+                    result = update_papers_tool.invoke({"queries": keywords})
+                    update_results.append(result)
+                    # Optionally, collect papers from result if available
+                    # all_papers.extend(parse_papers_from_result(result))
+            update_papers_result = update_results
         else:
-            queries = [state.get("user_query", "")]
-        if update_papers_tool:
-            update_papers_result = update_papers_tool.invoke({"queries": queries})
+            # Fallback: single query as before
+            queries = []
+            if state.get("qc_decision") == "reformulate" and state.get("qc_tool_result"):
+                try:
+                    qc_result = json.loads(state["qc_tool_result"])
+                    if "result" in qc_result and "refined_keywords" in qc_result["result"]:
+                        queries = qc_result["result"]["refined_keywords"]
+                    elif "reformulated_description" in qc_result:
+                        queries = [qc_result["reformulated_description"]]
+                except Exception:
+                    queries = [state.get("user_query", "")]
+            elif state.get("qc_decision") == "split" and state.get("qc_tool_result"):
+                # Should not happen, handled above
+                queries = [state.get("user_query", "")]
+            else:
+                queries = [state.get("user_query", "")]
+            if update_papers_tool:
+                update_papers_result = update_papers_tool.invoke({"queries": queries})
         state["update_papers_result"] = update_papers_result
+        state["all_papers"] = all_papers
     except Exception as e:
         state["error"] = f"Update papers node error: {e}"
     return state
@@ -538,6 +571,9 @@ def run_stategraph_agent(user_query: str):
             logger.error("Error parsing out_of_scope_result")
 
     state = quality_control_node(state)
+    # Branch: if split, expand subqueries before updating papers
+    if state.get("qc_decision") == "split":
+        state = expand_subqueries_node(state)
     state = update_papers_node(state)
     state = get_best_papers_node(state)
     state = filter_papers_node(state)
@@ -595,6 +631,11 @@ def trigger_stategraph_agent_show_thoughts(user_message: str):
                 })
             }
             return
+
+        # If split, expand subqueries
+        if qc_decision == "split":
+            yield {"thought": "Splitting query into subqueries...", "is_final": False, "final_content": None}
+            state = expand_subqueries_node(state)
 
         # Step 4: Update papers
         yield {"thought": "Updating paper database with latest research...", "is_final": False, "final_content": None}

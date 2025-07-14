@@ -1,4 +1,3 @@
-
 from llm.tools.paper_handling_tools import (
     update_papers_for_project,
     accept,
@@ -8,7 +7,8 @@ from llm.tools.paper_handling_tools import (
     detect_out_of_scope_query,
     filter_papers_by_nl_criteria,
     store_papers_for_project,
-    find_closest_paper_metrics
+    find_closest_paper_metrics,
+    multi_step_reasoning,
 )
 from llm.tools.paper_ranker import get_best_papers
 
@@ -22,7 +22,8 @@ tools = [
     store_papers_for_project,
     detect_out_of_scope_query,
     filter_papers_by_nl_criteria,
-    find_closest_paper_metrics
+    find_closest_paper_metrics,
+    multi_step_reasoning
 ]
 
 
