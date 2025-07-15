@@ -157,8 +157,26 @@ ALWAYS include a list of paper lists and their summaries in the 'papers' paramet
 • Never fabricate paper content – only use data returned by get_best_papers (or the filtered list).
 
 💬 Output Format
-You do not talk to the user you are just responsible for using the tools to keep projects up to date.
-Output a summary of your operations for debugging purposes.
+Return **only** a JSON payload to the frontend:
+
+{
+  "papers": [
+    {
+      "title": "...",
+      "link":  "...",
+    },
+    …
+  ]
+}
+
+Each description must:
+• Explain succinctly why the paper fits the user’s interests.
+• Summarise key contributions/findings from the abstract.
+• Remain precise, relevant, and engaging.
+
+If get_best_papers (after any filtering) returns no papers, respond with:
+
+{ "papers": [] }
 """)
 
 quality_check_decision_prompt = SystemMessage(content="""

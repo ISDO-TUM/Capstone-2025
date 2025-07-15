@@ -102,7 +102,6 @@ function renderPubSubPapers(papers, container) {
             }
 
             try {
-                //todo update newsletter papers only on project creation or once a week
                 const updateRes = await fetch('/api/pubsub/update_newsletter_papers', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -295,7 +294,7 @@ function renderPubSubPapers(papers, container) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     projectId: projectId,
-                    update_recommendations : updateRecommendations //todo set this to true only if new project or if future 'refresh recommendations' button pressed
+                    update_recommendations : updateRecommendations //set this to true only if new project or if future 'refresh recommendations' button pressed
                 }),
             });
 
@@ -320,7 +319,8 @@ function renderPubSubPapers(papers, container) {
                     if (line.startsWith('data: ')) {
                         const jsonString = line.substring(6);
                         const data = JSON.parse(jsonString);
-
+                        console.info("Received agent message")
+                        console.info(data)
                         if (data.thought) {
                             const thoughtEl = document.createElement('li');
 

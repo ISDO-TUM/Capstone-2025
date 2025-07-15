@@ -10,9 +10,9 @@ from database.projectpaper_database_handler import get_papers_for_project, shoul
     delete_project_rows
 from database.projects_database_handler import get_project_by_id, get_queries_for_project
 from database.projects_database_handler import add_new_project_to_db, get_all_projects
-from llm.Agent import trigger_agent_show_thoughts
 from pypdf import PdfReader
 
+from llm.StategraphAgent import trigger_stategraph_agent_show_thoughts
 from pubsub.pubsub_main import update_newsletter_papers
 from database.projectpaper_database_handler import get_pubsub_papers_for_project
 from pubsub.pubsub_params import DAYS_FOR_UPDATE
@@ -103,27 +103,30 @@ def get_recommendations():
         def generate():
             try:
                 if update_recommendations:
-                    # todo before calling the agent delete ALL papers for the project in paperprojects_table
                     removed = delete_project_rows(project_id)
                     print(f"Deleted {removed} row(s).")
-                    for response_part in trigger_agent_show_thoughts(user_description + "project ID: " + project_id):
-                        yield f"data: {json.dumps({'thought': response_part['thought']})}\n\n"
-                        if response_part['is_final']:
+                    for response_part in trigger_stategraph_agent_show_thoughts(user_description + "project ID: " + project_id):
+                        logger.info(f"Getting agent response: {response_part}")
+                        if response_part['final_content']:
                             try:
                                 llm_response_content = response_part['final_content']
                                 response_data = json.loads(llm_response_content)
 
                                 # Check if this is an out-of-scope response
                                 if response_data.get('type') == 'out_of_scope':
+                                    logger.info("Agent detected out of scope query")
                                     yield f"data: {json.dumps({'out_of_scope': response_data})}\n\n"
-                                    return
+
                                 elif response_data.get('type') == 'no_results':
+                                    logger.info("Agent couldn't find any results")
                                     yield f"data: {json.dumps({'no_results': response_data})}\n\n"
-                                    return
+
                             except json.JSONDecodeError:
                                 print(f"Failed to parse LLM response: {llm_response_content}")
                                 error_payload = json.dumps({"error": "Failed to parse recommendations from LLM."})
                                 yield f"data: {error_payload}\n\n"
+                        else:
+                            yield f"data: {json.dumps({'thought': response_part['thought']})}\n\n"
                 recs_basic_data = get_papers_for_project(project_id)
                 recommendations = []
                 for rec in recs_basic_data:

@@ -3,7 +3,7 @@ import logging
 from llm.Embeddings import embed_user_profile
 from langchain_core.tools import tool
 from chroma_db.chroma_vector_db import chroma_db
-from paper_handling.database_handler import get_papers_by_hash, get_all_papers
+from database.papers_database_handler import get_papers_by_hash, get_all_papers
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,8 @@ def get_best_papers(user_profile: str, num_candidates: int = 10) -> list[dict]:
             logger.info(f"Agent requested {num_candidates} candidates, which is different than the default of 10. This will allow for more filtering.")
 
         paper_hashes = chroma_db.perform_similarity_search(num_candidates, embedded_profile)
-        logger.info(f"Similarity search returned {len(paper_hashes) if paper_hashes else 0} hashes (requested: {count})")
+        logger.info(
+            f"Similarity search returned {len(paper_hashes) if paper_hashes else 0} hashes (requested: {num_candidates})")
 
     except Exception as e:
         logger.error(f"Error performing similarity search: {e}")
