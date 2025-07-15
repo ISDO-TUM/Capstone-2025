@@ -125,13 +125,14 @@ def get_recommendations():
         def generate():
             try:
                 if update_recommendations:
-                    # todo before calling the agent delete ALL papers for the project in paperprojects_table
-                    removed = delete_project_rows(project_id)
+
+                    removed = delete_project_rows(project_id)  # In the future there might be a refresh papers button, so we would need to empty the database to reload a new set of recommendations
                     print(f"Deleted {removed} row(s).")
                     for response_part in trigger_agent_show_thoughts(user_description + "project ID: " + project_id):
                         yield f"data: {json.dumps({'thought': response_part['thought']})}\n\n"
 
                 recs_basic_data = get_papers_for_project(project_id)
+                logger.info(f"Sending {len(recs_basic_data)} papers to the frontend.")
                 recommendations = []
                 for rec in recs_basic_data:
                     paper = get_paper_by_hash(rec['paper_hash'])

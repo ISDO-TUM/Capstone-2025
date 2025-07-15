@@ -344,7 +344,7 @@ function setupPDFUpload() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     projectId: projectId,
-                    update_recommendations : updateRecommendations //todo set this to true only if new project or if future 'refresh recommendations' button pressed
+                    update_recommendations : updateRecommendations //set this to true only if new project or if future 'refresh recommendations' button pressed
                 }),
             });
 
@@ -455,7 +455,7 @@ function renderRecommendations(recommendations, container) {
     }
 
     window.currentRecommendations = recommendations;
-    window.currentDisplayCount = 10;
+    window.currentDisplayCount = recommendations.length;
     window.originalCardOrder = [];
 
     const papersToShow = recommendations.slice(0, window.currentDisplayCount);
