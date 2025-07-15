@@ -107,7 +107,7 @@ def get_recommendations():
                     print(f"Deleted {removed} row(s).")
                     for response_part in trigger_stategraph_agent_show_thoughts(user_description + "project ID: " + project_id):
                         logger.info(f"Getting agent response: {response_part}")
-                        if response_part['final_content']:
+                        if response_part['is_final']:
                             try:
                                 llm_response_content = response_part['final_content']
                                 response_data = json.loads(llm_response_content)
@@ -116,15 +116,18 @@ def get_recommendations():
                                 if response_data.get('type') == 'out_of_scope':
                                     logger.info("Agent detected out of scope query")
                                     yield f"data: {json.dumps({'out_of_scope': response_data})}\n\n"
+                                    return
 
                                 elif response_data.get('type') == 'no_results':
                                     logger.info("Agent couldn't find any results")
                                     yield f"data: {json.dumps({'no_results': response_data})}\n\n"
+                                    return
 
                             except json.JSONDecodeError:
                                 print(f"Failed to parse LLM response: {llm_response_content}")
                                 error_payload = json.dumps({"error": "Failed to parse recommendations from LLM."})
                                 yield f"data: {error_payload}\n\n"
+                                return
                         else:
                             yield f"data: {json.dumps({'thought': response_part['thought']})}\n\n"
                 recs_basic_data = get_papers_for_project(project_id)
