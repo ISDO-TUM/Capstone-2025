@@ -344,13 +344,14 @@ def expand_subqueries_node(state):
 # --- Update Papers Node ---
 
 
-@node_logger("update_papers", input_keys=["user_query", "qc_decision", "qc_tool_result"], output_keys=["update_papers_result"])
+@node_logger("update_papers", input_keys=["user_query", "qc_decision", "qc_tool_result", "project_id"], output_keys=["update_papers_result"])
 def update_papers_node(state):
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
-    update_papers_tool = tool_map.get("update_papers")
+    update_papers_tool = tool_map.get("update_papers_for_project")
     update_papers_result = None
     all_papers = []
+    project_id = state.get("project_id")
     try:
         # If subqueries exist, process each
         subqueries = state.get("subqueries", [])
@@ -358,11 +359,9 @@ def update_papers_node(state):
             update_results = []
             for sub in subqueries:
                 keywords = sub.get("keywords", [])
-                if update_papers_tool:
-                    result = update_papers_tool.invoke({"queries": keywords})
+                if update_papers_tool and project_id:
+                    result = update_papers_tool.invoke({"queries": keywords, "project_id": project_id})
                     update_results.append(result)
-                    # Optionally, collect papers from result if available
-                    # all_papers.extend(parse_papers_from_result(result))
             update_papers_result = update_results
         else:
             # Fallback: single query as before
@@ -381,8 +380,8 @@ def update_papers_node(state):
                 queries = [state.get("user_query", "")]
             else:
                 queries = [state.get("user_query", "")]
-            if update_papers_tool:
-                update_papers_result = update_papers_tool.invoke({"queries": queries})
+            if update_papers_tool and project_id:
+                update_papers_result = update_papers_tool.invoke({"queries": queries, "project_id": project_id})
         state["update_papers_result"] = update_papers_result
         state["all_papers"] = all_papers
     except Exception as e:
