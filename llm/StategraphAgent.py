@@ -550,6 +550,34 @@ def no_results_handler_node(state):
     return state
 
 
+@node_logger("store_papers", input_keys=["project_id", "papers_filtered", "papers_raw", "user_query"], output_keys=["store_papers_result"])
+def store_papers_node(state):
+    tools = get_tools()
+    tool_map = {getattr(tool, 'name', None): tool for tool in tools}
+    store_papers_tool = tool_map.get("store_papers_for_project")
+    project_id = state.get("project_id")
+    # Use filtered papers if available, else raw
+    papers = state.get("papers_filtered") or state.get("papers_raw") or []
+    user_query = state.get("user_query", "")
+    # Prepare papers for storage: must include paper_hash and summary
+    papers_to_store = []
+    for paper in papers:
+        paper_hash = paper.get("hash") or paper.get("paper_hash")
+        summary = paper.get("summary")
+        if not summary:
+            # Fallback: generate a simple summary
+            summary = f"Relevant to project query: {user_query}"
+        if paper_hash:
+            papers_to_store.append({"paper_hash": paper_hash, "summary": summary})
+    result = None
+    if store_papers_tool and project_id and papers_to_store:
+        result = store_papers_tool.invoke({"project_id": project_id, "papers": papers_to_store})
+    else:
+        result = "No papers to store or missing project_id."
+    state["store_papers_result"] = result
+    return state
+
+
 def run_stategraph_agent(user_query: str):
     """
     Run the complete Stategraph agent workflow and return the final results.
@@ -584,7 +612,8 @@ def run_stategraph_agent(user_query: str):
     state = update_papers_node(state)
     state = get_best_papers_node(state)
     state = filter_papers_node(state)
-
+    # Final node: store papers for project
+    state = store_papers_node(state)
     return state
 
 
@@ -657,7 +686,8 @@ def trigger_stategraph_agent_show_thoughts(user_message: str):
         state = filter_papers_node(state)
 
         # Check for no results
-        if not state.get("papers_filtered"):
+        papers_filtered = state.get("papers_filtered", [])
+        if not papers_filtered:
             yield {"thought": "No papers found after filtering. Generating smart no-results explanation...", "is_final": False, "final_content": None}
             state = no_results_handler_node(state)
             no_results_message = state.get("no_results_message", {})
@@ -672,21 +702,11 @@ def trigger_stategraph_agent_show_thoughts(user_message: str):
             }
             return
 
-        # Prepare final response
-        papers_filtered = state.get("papers_filtered", [])
-        final_recommendations = []
-
-        for paper in papers_filtered:
-            final_recommendations.append({
-                "title": paper.get("title", "N/A"),
-                "link": paper.get("landing_page_url", paper.get("pdf_url", "N/A")),
-                "description": f"Relevant paper on {paper.get('title', 'this topic')} with {paper.get('cited_by_count', 0)} citations."
-            })
-
-        final_response = {"papers": final_recommendations}
-
-        yield {"thought": "Finalizing recommendations...", "is_final": True, "final_content": json.dumps(final_response)}
-
+        # Final step: store papers for project
+        yield {"thought": "Storing recommended papers for this project...", "is_final": False, "final_content": None}
+        state = store_papers_node(state)
+        store_result = state.get("store_papers_result", "No result")
+        yield {"thought": "Agent workflow complete.", "is_final": True, "final_content": json.dumps({"status": store_result})}
     except Exception as e:
         logger.error(f"Error in Stategraph agent: {e}")
         yield {"thought": f"An error occurred: {str(e)}", "is_final": True, "final_content": None}
