@@ -56,17 +56,25 @@ def node_logger(node_name, input_keys=None, output_keys=None):
 def input_node(state):
     # Initialize the state with the user query
     user_query = state["user_query"]
+    # Extract project_id if appended to the user_query (e.g., '... project ID: <id>')
+    project_id = None
+    if "project ID:" in user_query:
+        parts = user_query.rsplit("project ID:", 1)
+        user_query = parts[0].strip()
+        project_id = parts[1].strip()
     # If the query is a single word or phrase, use it as the initial keyword
     keywords = []
     if user_query and len(user_query.split()) == 1:
         keywords = [user_query]
+    # Add project_id to state
     return {
         "user_query": user_query,
         "keywords": keywords,
         "reformulated_query": None,
         "papers_raw": [],
         "papers_filtered": [],
-        "final_output": None
+        "final_output": None,
+        "project_id": project_id
     }
 
 # --- Out-of-Scope Check Node ---
