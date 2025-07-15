@@ -380,7 +380,7 @@ function setupPDFUpload() {
                             content = content.replace('Calling tool:', '<strong>Calling tool:</strong>');
                         } else if (content.startsWith('Tool response received:')) {
                             icon = '✅';
-                            content = `<p>${content.replace('Tool response received:', '<strong>Tool response received:</strong>')}</p>`;
+                            content = content.replace('Tool response received:', '<strong>Tool response received:</strong>');
                         } else if (content.startsWith('Receiving user input')) {
                             icon = '👤';
                         } else if (content.startsWith('Final response')) {
