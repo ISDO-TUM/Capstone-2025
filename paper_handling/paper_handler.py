@@ -2,6 +2,9 @@ import re
 
 from pyalex import Works
 from utils.status import Status
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _fetch_works_single_query(query, from_publication_date=None):
@@ -26,7 +29,7 @@ def _fetch_works_single_query(query, from_publication_date=None):
         )
         if from_publication_date:
             works_query = works_query.filter(from_publication_date=from_publication_date)
-        works = works_query.get(per_page=5)
+        works = works_query.get(per_page=50)
     except Exception as e:
         print(f"Error fetching works for query '{query}': {e}")
         return [], Status.FAILURE
@@ -130,6 +133,7 @@ def fetch_works_multiple_queries(queries, from_publication_date=None):
         except Exception as e:
             print(f"Error fetching works for query '{query}': {e}")
             any_failure = True
+    logger.info(f"Fetched {len(all_works)} papers")
     return all_works, Status.FAILURE if any_failure else Status.SUCCESS
 
 

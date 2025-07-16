@@ -5,7 +5,7 @@ from database.database_connection import connect_to_db
 from datetime import datetime, timedelta
 
 
-def assign_paper_to_project(paper_hash: str, project_id: str, summary: str, newsletter: bool = False, seen: bool = False):
+def assign_paper_to_project(paper_hash: str, project_id: str, agent_summary: str, newsletter: bool = False, seen: bool = False):
     """
     After papers for a project have been chosen with similarity search, the papers are linked to a project
     in paperprojects_table one by one using this function which adds entries to that table.
@@ -23,7 +23,7 @@ def assign_paper_to_project(paper_hash: str, project_id: str, summary: str, news
     cursor = connection.cursor()
 
     cursor.execute("""INSERT INTO paperprojects_table (project_id, paper_hash, summary, newsletter, seen) VALUES (%s, %s, %s, %s, %s)""",
-                   (project_id, paper_hash, summary, newsletter, seen))
+                   (project_id, paper_hash, agent_summary, newsletter, seen))
     connection.commit()
     cursor.close()
     connection.close()

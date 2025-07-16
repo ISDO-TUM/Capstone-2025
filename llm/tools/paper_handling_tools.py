@@ -267,9 +267,6 @@ def check_relevance_threshold(papers_with_relevance_scores: list[dict], threshol
     return all(paper.get("similarity_score", 0.0) >= threshold for paper in top_papers)
 
 
-logger = logging.getLogger(__name__)
-
-
 @tool
 def accept(confirmation: str) -> str:
     """
@@ -921,6 +918,35 @@ def find_closest_paper_metrics(papers: List[Dict[str, Any]], filter_spec: Dict[s
                     "filter_operator": filter_op
                 }
     return json.dumps(result)
+
+
+@tool
+def generate_relevance_summary(user_query: str, title: str, abstract: str) -> str:
+    """
+    Generate a short, precise explanation of why the paper is relevant to the user's query.
+    Each description must:
+    • Explain succinctly why the paper fits the user’s interests.
+    • Summarise key contributions/findings from the abstract.
+    • Remain precise, relevant, and engaging.
+    """
+    prompt = (
+        f'User query: "{user_query}"\n'
+        f'Paper title: "{title}"\n'
+        f'Abstract: "{abstract}"\n'
+        '\nWrite a 1-2 sentence explanation for the user, following these rules:\n'
+        '• Explain succinctly why the paper fits the user’s interests.\n'
+        '• Summarise key contributions/findings from the abstract.\n'
+        '• Remain precise, relevant, and engaging.'
+    )
+    try:
+        llm_response = LLM.invoke(prompt)
+        content = llm_response.content
+        if isinstance(content, str):
+            return content.strip()
+        else:
+            return str(content)
+    except Exception:
+        return f"Relevant to project query: {user_query}"
 
 
 def main():

@@ -9,6 +9,7 @@ import json
 # from langchain_core.messages import HumanMessage
 from llm.LLMDefinition import LLM
 from llm.tools.Tools_aggregator import get_tools
+from llm.tools.paper_handling_tools import generate_relevance_summary
 
 # --- State schema ---
 # The state is a dict with the following keys:
@@ -555,17 +556,25 @@ def store_papers_node(state):
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
     store_papers_tool = tool_map.get("store_papers_for_project")
-    project_id = state.get("project_id")
     # Use filtered papers if available, else raw
+    project_id = state.get("project_id")
     papers = state.get("papers_filtered") or state.get("papers_raw") or []
     user_query = state.get("user_query", "")
-    # Prepare papers for storage: must include paper_hash and summary
+    # Prepare papers for storage: must include paper_hash and agent_summary
     papers_to_store = []
     for paper in papers:
         paper_hash = paper.get("hash") or paper.get("paper_hash")
-        summary = paper.get("summary")
-        if not summary:
-            # Fallback: generate a simple summary
+
+        title = paper.get("title", "")
+        abstract = paper.get("abstract", "")
+        # Use the tool version (invoke as a tool)
+        try:
+            summary = generate_relevance_summary.invoke({
+                "user_query": user_query,
+                "title": title,
+                "abstract": abstract
+            })
+        except Exception:
             summary = f"Relevant to project query: {user_query}"
         if paper_hash:
             papers_to_store.append({"paper_hash": paper_hash, "summary": summary})
