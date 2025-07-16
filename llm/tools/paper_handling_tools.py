@@ -1,20 +1,22 @@
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any, Dict, List
-import json
-from llm.LLMDefinition import LLM
+
 from langchain_core.tools import tool
 
 from chroma_db.chroma_vector_db import chroma_db
-from utils.status import Status
-from llm.Embeddings import embed_papers
+from database.database_connection import connect_to_db
 from database.papers_database_handler import insert_papers
-from paper_handling.paper_handler import fetch_works_multiple_queries
+from database.projectpaper_database_handler import assign_paper_to_project, get_papers_for_project
+from database.projects_database_handler import add_queries_to_project_db, get_project_data, get_user_profile_embedding
+from llm.Embeddings import embed_papers
+from llm.LLMDefinition import LLM
 from llm.util.agent_custom_filter import _matches, _OPERATORS
+from paper_handling.paper_handler import fetch_works_multiple_queries, generate_paper_summary, search_and_filter_papers
+from utils.status import Status
 
-from database.projects_database_handler import add_queries_to_project_db
-from database.projectpaper_database_handler import assign_paper_to_project
 logger = logging.getLogger(__name__)
 
 
@@ -63,20 +65,52 @@ def update_papers_for_project(queries: list[str], project_id: str) -> str:
         Use this tool when you want to refresh the paper database with the latest research and ensure
         that all relevant papers have updated embeddings for ranking or similarity comparison tasks.
     Input:
-        queries (list[str]): A list of strings corresponding to the user's interests to search for relevant papers.
-        When generating search queries based on the user's interests, make sure to preserve meaningful multi-word expressions as single, coherent search terms. For example, if the user mentions "ice cream," do not split this into "ice" and "cream" — treat it as a unified concept: "ice cream."
-        Generate search queries that reflect the actual intent of the user's interest, emphasizing quality over quantity. Avoid breaking compound phrases into individual words unless they are clearly independent concepts.
-        Use concise and targeted queries that represent whole ideas, domains, or research topics. Only split input into multiple queries if doing so improves the relevance or diversity of the results without losing semantic meaning.
+        queries (list[str]): A list of *distinct, focused search queries* corresponding to the user's interests.
+        When creating these queries:
+
+        1. Each query should represent **one meaningful research topic, domain, or concept**.
+
+        2. Avoid combining unrelated or loosely related topics into a single query.
+        For example, do **not** use:
+            "algorithmic pricing Gaussian Process Bandits"
+        Instead, split into:
+            "algorithmic pricing"
+            "Gaussian Process Bandits"
+
+        3. Keep **multi-word expressions intact** when they form a single concept (e.g., "Bayesian optimization",
+        "Gaussian Process", "Bertrand markets").
+
+        4. Prioritize clarity and focus over quantity — a smaller set of clean queries works better than many mixed queries.
 
         Examples:
             - User: "I'm interested in machine learning and neural networks"
-            queries: ["machine learning", "neural networks"]
+              Good queries:
+                ["machine learning", "neural networks"]
 
             - User: "I like ice cream and computer vision"
-            queries: ["ice cream", "computer vision"]
+              Good queries:
+                ["ice cream", "computer vision"]
+              Bad queries:
+                ["ice", "cream", "computer", "vision"]
 
-        Avoid:
-            - ["ice", "cream", "computer", "vision"]
+            - User: "I'm interested in papers on algorithmic pricing using Gaussian Process Bandits,
+                     including Bayesian optimization in Bertrand markets, the impact of acquisition functions
+                     (e.g., GP-UCB, GP-EI), the role of GP kernels and hyperparameters in shaping market outcomes,
+                     and memory loss strategies for computational efficiency."
+              Good queries:
+                ["algorithmic pricing",
+                 "Gaussian Process Bandits",
+                 "Bayesian optimization",
+                 "Bertrand markets",
+                 "GP-UCB",
+                 "GP-EI",
+                 "Gaussian Process kernels",
+                 "GP hyperparameters",
+                 "memory loss strategies"]
+              Bad queries:
+                ["algorithmic pricing Gaussian Process Bandits",
+                 "Bayesian optimization Bertrand markets",
+                 "acquisition functions GP-UCB GP-EI pricing"]
 
         project_id (str): The project ID provided by the user
     Output:
@@ -734,6 +768,112 @@ def filter_papers_by_nl_criteria(
 
     result = apply_filter_spec_to_papers(papers, filter_spec)
     return json.dumps(result)
+
+
+@tool
+def replace_low_rated_paper(project_id: str, low_rated_paper_hash: str) -> str:
+    """
+    Tool Name: replace_low_rated_paper
+
+    This tool replaces a low-rated paper (1 or 2 stars) with a better alternative paper.
+    It uses the latest user_profile_embedding from the projects_table to perform similarity search
+    and find a paper that's not already displayed in the project dashboard.
+
+    Args:
+        project_id (str): The project ID where the paper should be replaced
+        low_rated_paper_hash (str): The hash of the low-rated paper to replace
+
+    Returns:
+        str: JSON string with status and details about the replacement operation
+    """
+    # Get the user profile embedding
+    user_profile_embedding = get_user_profile_embedding(project_id)
+    if not user_profile_embedding:
+        return json.dumps({
+            "status": "error",
+            "message": "No user profile embedding found for this project. Cannot perform similarity search."
+        })
+
+    # Get current papers and verify the low-rated paper exists
+    current_papers = get_papers_for_project(project_id)
+    current_paper_hashes = {paper['paper_hash'] for paper in current_papers}
+
+    if low_rated_paper_hash not in current_paper_hashes:
+        return json.dumps({
+            "status": "error",
+            "message": f"Paper with hash {low_rated_paper_hash} not found in project {project_id}"
+        })
+
+    # Get excluded papers and pubsub papers
+    connection = connect_to_db()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT paper_hash, excluded, newsletter
+        FROM paperprojects_table
+        WHERE project_id = %s AND (excluded = TRUE OR newsletter = TRUE)
+    """, (project_id,))
+
+    excluded_papers = set()
+    pubsub_papers = set()
+    for row in cursor.fetchall():
+        if row[1]:  # excluded = TRUE
+            excluded_papers.add(row[0])
+        if row[2]:  # newsletter = TRUE
+            pubsub_papers.add(row[0])
+
+    cursor.close()
+    connection.close()
+
+    # Search for replacement papers
+    available_papers = search_and_filter_papers(chroma_db, user_profile_embedding, current_paper_hashes, -0.4)
+
+    # Filter out excluded and pubsub papers
+    filtered_papers = []
+    for paper in available_papers:
+        if (paper.get('paper_hash') not in excluded_papers and paper.get('paper_hash') not in pubsub_papers):
+            filtered_papers.append(paper)
+            if len(filtered_papers) >= 1:  # Only need one replacement
+                break
+
+    if not filtered_papers:
+        return json.dumps({
+            "status": "error",
+            "message": "No papers available to replace the low-rated paper. Consider adding more papers to the database."
+        })
+
+    replacement_paper = filtered_papers[0]
+
+    # Get data for the replacement paper
+    project_data = get_project_data(project_id)
+    project_description = project_data.get('description', '') if project_data else ''
+    replacement_summary = generate_paper_summary(replacement_paper, project_description)
+
+    # Perform the replacement
+    connection = connect_to_db()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        UPDATE paperprojects_table
+        SET excluded = TRUE
+        WHERE project_id = %s AND paper_hash = %s
+    """, (project_id, low_rated_paper_hash))
+
+    assign_paper_to_project(replacement_paper['paper_hash'], project_id, replacement_summary, is_replacement=True)
+
+    connection.commit()
+    cursor.close()
+    connection.close()
+
+    return json.dumps({
+        "status": "success",
+        "message": "Successfully replaced low-rated paper with better alternative",
+        "replaced_paper_hash": low_rated_paper_hash,
+        "replacement_paper_hash": replacement_paper['paper_hash'],
+        "replacement_title": replacement_paper.get('title', 'Unknown'),
+        "replacement_summary": replacement_summary,
+        "replacement_url": replacement_paper.get('landing_page_url', 'N/A')
+    })
 
 
 def main():
