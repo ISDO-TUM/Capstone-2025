@@ -10,7 +10,9 @@ from database.projectpaper_database_handler import get_papers_for_project, shoul
     delete_project_rows
 from database.projects_database_handler import get_project_by_id, get_queries_for_project
 from database.projects_database_handler import add_new_project_to_db, get_all_projects
+from database.projects_database_handler import update_project_description
 from pypdf import PdfReader
+from utils.status import Status
 
 from llm.StategraphAgent import trigger_stategraph_agent_show_thoughts
 from pubsub.pubsub_main import update_newsletter_papers
@@ -280,6 +282,23 @@ def api_get_project(project_id):
         "email": proj["email"],
         # etc
     }), 200
+
+# Endpoint to update project prompt/description
+
+
+@app.route('/api/project/<project_id>/update_prompt', methods=['POST'])
+def api_update_project_prompt(project_id):
+    data = request.get_json() or {}
+    new_prompt = data.get('prompt')
+    if not new_prompt:
+        return jsonify({'error': 'Missing prompt'}), 400
+    status = update_project_description(project_id, new_prompt)
+    if status == Status.SUCCESS:
+        # Fetch updated project to return new description
+        project = get_project_by_id(project_id)
+        return jsonify({'success': True, 'description': project.get('description', new_prompt)})
+    else:
+        return jsonify({'error': 'Failed to update project prompt'}), 500
 
 
 if __name__ == '__main__':

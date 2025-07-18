@@ -473,10 +473,19 @@ function renderPubSubPapers(papers, container) {
                 agentThoughtsContainer.innerHTML = '<p>🧠 Agent is thinking...</p>';
                 recommendationsContainer.innerHTML = '<p>⌛ Waiting for agent to provide recommendations...</p>';
 
-                // Start new recommendation stream with the new query
-                fetchRecommendationsStream(projectId, newQuery, agentThoughtsContainer, recommendationsContainer, true)
+                // Update project prompt in backend, then update UI and start new recommendation stream
+                updateProjectPrompt(projectId, newQuery)
+                    .then(data => {
+                        // Update the description in the UI
+                        const descDisplay = document.getElementById('projectDescriptionDisplay');
+                        if (descDisplay && data.description) {
+                            descDisplay.textContent = data.description;
+                        }
+                        // Now start the new recommendation stream
+                        return fetchRecommendationsStream(projectId, newQuery, agentThoughtsContainer, recommendationsContainer, true);
+                    })
                     .catch(error => {
-                        console.error("Error fetching recommendations for new query:", error);
+                        console.error("Error updating project prompt or fetching recommendations:", error);
                         agentThoughtsContainer.innerHTML += '<p>❌ Error processing new query.</p>';
                     });
             } else {
@@ -593,10 +602,19 @@ function renderPubSubPapers(papers, container) {
                 agentThoughtsContainer.innerHTML = '<p>🧠 Agent is thinking...</p>';
                 recommendationsContainer.innerHTML = '<p>⌛ Waiting for agent to provide recommendations...</p>';
 
-                // Start new recommendation stream with the new query
-                fetchRecommendationsStream(projectId, newQuery, agentThoughtsContainer, recommendationsContainer, true)
+                // Update project prompt in backend, then update UI and start new recommendation stream
+                updateProjectPrompt(projectId, newQuery)
+                    .then(data => {
+                        // Update the description in the UI
+                        const descDisplay = document.getElementById('projectDescriptionDisplay');
+                        if (descDisplay && data.description) {
+                            descDisplay.textContent = data.description;
+                        }
+                        // Now start the new recommendation stream
+                        return fetchRecommendationsStream(projectId, newQuery, agentThoughtsContainer, recommendationsContainer, true);
+                    })
                     .catch(error => {
-                        console.error("Error fetching recommendations for new query:", error);
+                        console.error("Error updating project prompt or fetching recommendations:", error);
                         agentThoughtsContainer.innerHTML += '<p>❌ Error processing new query.</p>';
                     });
             } else {
@@ -766,3 +784,13 @@ function renderPubSubPapers(papers, container) {
 
     handleRouting();
 });
+
+// Utility to update project prompt in backend and UI
+function updateProjectPrompt(projectId, newPrompt) {
+    return fetch(`/api/project/${projectId}/update_prompt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: newPrompt })
+    })
+    .then(response => response.json());
+}

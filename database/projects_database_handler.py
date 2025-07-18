@@ -171,3 +171,30 @@ def get_project_by_id(project_id: str):
     cursor.close()
     conn.close()
     return dict(row) if row else None
+
+
+def update_project_description(project_id: str, new_description: str):
+    """
+    Updates the project description (prompt) for the given project_id.
+    Args:
+        project_id: the project's id
+        new_description: the new project description
+    Returns: operation status
+    """
+    conn = connect_to_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            UPDATE projects_table
+            SET description = %s
+            WHERE project_id = %s
+        """, (new_description, project_id))
+        conn.commit()
+        status = Status.SUCCESS
+    except Exception as e:
+        logger.error(f"Error updating project description: {e}")
+        conn.rollback()
+        status = Status.FAILURE
+    cursor.close()
+    conn.close()
+    return status
