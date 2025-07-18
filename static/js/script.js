@@ -457,18 +457,27 @@ function renderPubSubPapers(papers, container) {
             if (newQuery) {
                 // Remove the subunit and restart
                 if (subunit.parentNode) subunit.parentNode.removeChild(subunit);
-                thoughtsContainer.innerHTML = '<p>🧠 Processing new query...</p>';
+
                 // Update the top input field to reflect the new query
                 const topInput = document.querySelector('input#projectTitle, textarea#projectDescription, input[type="text"], textarea');
                 if (topInput) {
                     topInput.value = newQuery;
                 }
-                // Start new recommendation stream with the new query
+
+                // Get projectId and other context
+                const projectId = window.location.pathname.split('/').pop();
                 const recommendationsContainer = document.getElementById('recommendationsContainer');
-                fetchRecommendationsStream(newQuery, thoughtsContainer, recommendationsContainer)
+                const agentThoughtsContainer = document.getElementById('agentThoughtsContainer');
+
+                // Clear previous thoughts and recommendations
+                agentThoughtsContainer.innerHTML = '<p>🧠 Agent is thinking...</p>';
+                recommendationsContainer.innerHTML = '<p>⌛ Waiting for agent to provide recommendations...</p>';
+
+                // Start new recommendation stream with the new query
+                fetchRecommendationsStream(projectId, newQuery, agentThoughtsContainer, recommendationsContainer, true)
                     .catch(error => {
                         console.error("Error fetching recommendations for new query:", error);
-                        thoughtsContainer.innerHTML += '<p>❌ Error processing new query.</p>';
+                        agentThoughtsContainer.innerHTML += '<p>❌ Error processing new query.</p>';
                     });
             } else {
                 alert('Please enter a new query.');
@@ -568,18 +577,27 @@ function renderPubSubPapers(papers, container) {
             if (newQuery) {
                 // Remove the subunit and restart
                 if (subunit.parentNode) subunit.parentNode.removeChild(subunit);
-                thoughtsContainer.innerHTML = '<p>🧠 Processing new query...</p>';
+
                 // Update the top input field to reflect the new query
                 const topInput = document.querySelector('input#projectTitle, textarea#projectDescription, input[type="text"], textarea');
                 if (topInput) {
                     topInput.value = newQuery;
                 }
-                // Start new recommendation stream with the new query
+
+                // Get projectId and other context
+                const projectId = window.location.pathname.split('/').pop();
                 const recommendationsContainer = document.getElementById('recommendationsContainer');
-                fetchRecommendationsStream(newQuery, thoughtsContainer, recommendationsContainer)
+                const agentThoughtsContainer = document.getElementById('agentThoughtsContainer');
+
+                // Clear previous thoughts and recommendations
+                agentThoughtsContainer.innerHTML = '<p>🧠 Agent is thinking...</p>';
+                recommendationsContainer.innerHTML = '<p>⌛ Waiting for agent to provide recommendations...</p>';
+
+                // Start new recommendation stream with the new query
+                fetchRecommendationsStream(projectId, newQuery, agentThoughtsContainer, recommendationsContainer, true)
                     .catch(error => {
                         console.error("Error fetching recommendations for new query:", error);
-                        thoughtsContainer.innerHTML += '<p>❌ Error processing new query.</p>';
+                        agentThoughtsContainer.innerHTML += '<p>❌ Error processing new query.</p>';
                     });
             } else {
                 alert('Please enter a new query.');
