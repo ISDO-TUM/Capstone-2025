@@ -342,15 +342,15 @@ def expand_subqueries_node(state):
     logger.info(f"Extracted {len(subqueries)} subqueries from split.")
     return state
 
-# --- Update Papers Node ---
+# --- Update Papers by Project Node ---
 
 
-@node_logger("update_papers", input_keys=["user_query", "qc_decision", "qc_tool_result", "project_id"], output_keys=["update_papers_result"])
-def update_papers_node(state):
+@node_logger("update_papers_by_project", input_keys=["user_query", "qc_decision", "qc_tool_result", "project_id"], output_keys=["update_papers_by_project_result"])
+def update_papers_by_project_node(state):
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
-    update_papers_tool = tool_map.get("update_papers_for_project")
-    update_papers_result = None
+    update_papers_by_project_tool = tool_map.get("update_papers_by_project")
+    update_papers_by_project_result = None
     all_papers = []
     project_id = state.get("project_id")
     try:
@@ -360,10 +360,10 @@ def update_papers_node(state):
             update_results = []
             for sub in subqueries:
                 keywords = sub.get("keywords", [])
-                if update_papers_tool and project_id:
-                    result = update_papers_tool.invoke({"queries": keywords, "project_id": project_id})
+                if update_papers_by_project_tool and project_id:
+                    result = update_papers_by_project_tool.invoke({"queries": keywords, "project_id": project_id})
                     update_results.append(result)
-            update_papers_result = update_results
+            update_papers_by_project_result = update_results
         else:
             # Fallback: single query as before
             queries = []
@@ -381,12 +381,12 @@ def update_papers_node(state):
                 queries = [state.get("user_query", "")]
             else:
                 queries = [state.get("user_query", "")]
-            if update_papers_tool and project_id:
-                update_papers_result = update_papers_tool.invoke({"queries": queries, "project_id": project_id})
-        state["update_papers_result"] = update_papers_result
+            if update_papers_by_project_tool and project_id:
+                update_papers_by_project_result = update_papers_by_project_tool.invoke({"queries": queries, "project_id": project_id})
+        state["update_papers_by_project_result"] = update_papers_by_project_result
         state["all_papers"] = all_papers
     except Exception as e:
-        state["error"] = f"Update papers node error: {e}"
+        state["error"] = f"Update papers by project node error: {e}"
     return state
 
 # --- Get Best Papers Node ---
@@ -618,7 +618,7 @@ def run_stategraph_agent(user_query: str):
     # Branch: if split, expand subqueries before updating papers
     if state.get("qc_decision") == "split":
         state = expand_subqueries_node(state)
-    state = update_papers_node(state)
+    state = update_papers_by_project_node(state)
     state = get_best_papers_node(state)
     state = filter_papers_node(state)
     # Final node: store papers for project
@@ -684,7 +684,7 @@ def trigger_stategraph_agent_show_thoughts(user_message: str):
 
         # Step 4: Update papers
         yield {"thought": "Updating paper database with latest research...", "is_final": False, "final_content": None}
-        state = update_papers_node(state)
+        state = update_papers_by_project_node(state)
 
         # Step 5: Get best papers
         yield {"thought": "Retrieving most relevant papers...", "is_final": False, "final_content": None}
@@ -755,8 +755,8 @@ if __name__ == "__main__":
         state = quality_control_node(state)
         print("After quality_control_node:", state)
         # Step 4: Update papers node
-        state = update_papers_node(state)
-        print("After update_papers_node:", state)
+        state = update_papers_by_project_node(state)
+        print("After update_papers_by_project_node:", state)
         # Step 5: Get best papers node
         state = get_best_papers_node(state)
         print("After get_best_papers_node:", state)
