@@ -99,6 +99,40 @@ def out_of_scope_check_node(state):
     state["out_of_scope_result"] = result
     return state
 
+
+# --- Keyword Generation Node ---
+
+
+@node_logger("generate_keywords", input_keys=["user_query"], output_keys=["keywords"])
+def generate_keywords_node(state):
+    """
+    Node: Generate keywords from the user query using the explicit tool.
+    """
+    tools = get_tools()
+    generate_keywords_tool = None
+    for tool in tools:
+        if hasattr(tool, 'name') and tool.name == 'generate_keywords_from_query':
+            generate_keywords_tool = tool
+            break
+    if generate_keywords_tool is None:
+        state["error"] = "generate_keywords_from_query tool not found"
+        state["keywords"] = []
+        return state
+
+    user_query = state.get("user_query", "")
+    try:
+        result_json = generate_keywords_tool.invoke({"query_description": user_query})
+        result = json.loads(result_json)
+        if result.get("status") == "success" and "keywords" in result["result"]:
+            state["keywords"] = result["result"]["keywords"]
+        else:
+            state["keywords"] = []
+    except Exception as e:
+        logger.error(f"[generate_keywords] Exception: {e}")
+        state["keywords"] = []
+        state["error"] = f"Keyword generation error: {e}"
+    return state
+
 # --- Quality Control Node (QC) ---
 
 
@@ -349,7 +383,9 @@ def expand_subqueries_node(state):
 def update_papers_by_project_node(state):
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
-    update_papers_by_project_tool = tool_map.get("update_papers_by_project")
+    update_papers_for_project_tool = tool_map.get("update_papers_for_project")
+    logger.info(f"Available tool names: {list(tool_map.keys())}")
+    logger.info(f"Looking for tool: update_papers_for_project, found: {update_papers_for_project_tool is not None}")
     update_papers_by_project_result = None
     all_papers = []
     project_id = state.get("project_id")
@@ -360,8 +396,8 @@ def update_papers_by_project_node(state):
             update_results = []
             for sub in subqueries:
                 keywords = sub.get("keywords", [])
-                if update_papers_by_project_tool and project_id:
-                    result = update_papers_by_project_tool.invoke({"queries": keywords, "project_id": project_id})
+                if update_papers_for_project_tool and project_id:
+                    result = update_papers_for_project_tool.invoke({"queries": keywords, "project_id": project_id})
                     update_results.append(result)
             update_papers_by_project_result = update_results
         else:
@@ -380,9 +416,15 @@ def update_papers_by_project_node(state):
                 # Should not happen, handled above
                 queries = [state.get("user_query", "")]
             else:
-                queries = [state.get("user_query", "")]
-            if update_papers_by_project_tool and project_id:
-                update_papers_by_project_result = update_papers_by_project_tool.invoke({"queries": queries, "project_id": project_id})
+                # Use keywords if available, otherwise fall back to user query
+                if state.get("keywords"):
+                    queries = state["keywords"]
+                else:
+                    queries = [state.get("user_query", "")]
+            if update_papers_for_project_tool and project_id:
+                logger.info(f"Calling update_papers_for_project with queries: {queries} and project_id: {project_id}")
+                update_papers_by_project_result = update_papers_for_project_tool.invoke({"queries": queries, "project_id": project_id})
+                logger.info(f"update_papers_for_project result: {update_papers_by_project_result}")
         state["update_papers_by_project_result"] = update_papers_by_project_result
         state["all_papers"] = all_papers
     except Exception as e:
@@ -411,10 +453,10 @@ def get_best_papers_node(state):
         retrieval_count = 50 if has_filter_instructions else 10  # More papers if filtering will be applied
 
         if get_best_papers_tool:
-            # Use count parameter based on filter instructions
+            # Use num_candidates parameter based on filter instructions
             papers_raw = get_best_papers_tool.invoke({
                 "user_profile": user_profile,
-                "count": retrieval_count
+                "num_candidates": retrieval_count
             })
 
             logger.info(f"Retrieved {len(papers_raw)} papers (filter instructions: {has_filter_instructions}, requested: {retrieval_count})")

@@ -23,7 +23,7 @@ tools = [
     detect_out_of_scope_query,
     filter_papers_by_nl_criteria,
     find_closest_paper_metrics,
-    multi_step_reasoning
+    multi_step_reasoning,
 ]
 
 

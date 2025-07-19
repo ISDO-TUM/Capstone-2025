@@ -86,17 +86,21 @@ def update_papers_for_project(queries: list[str], project_id: str) -> str:
         str: A human-readable summary of the update operation's result.
     """
     try:
+        logger.info(f"Starting update_papers_for_project with queries: {queries} and project_id: {project_id}")
         fetched_papers, status_fetch = fetch_works_multiple_queries(queries)
+        logger.info(f"Fetched {len(fetched_papers)} papers from OpenAlex, status: {status_fetch}")
 
         status_postgres, deduplicated_papers = insert_papers(fetched_papers)
+        logger.info(f"Inserted {len(deduplicated_papers)} papers into database, status: {status_postgres}")
 
         logger.info(f"Adding queries for project {project_id}")
 
         status_queries = add_queries_to_project_db(queries, project_id)
 
-        logger.info("Updated queries for project {project_id")
+        logger.info(f"Updated queries for project {project_id}")
 
         embedded_papers = []
+        logger.info(f"Creating embeddings for {len(deduplicated_papers)} papers")
         for paper in deduplicated_papers:
             embedding = embed_papers(paper['title'],
                                      paper['abstract'])
@@ -106,7 +110,9 @@ def update_papers_for_project(queries: list[str], project_id: str) -> str:
             }
             embedded_papers.append(embedded_paper)
 
+        logger.info(f"Storing {len(embedded_papers)} embeddings in ChromaDB")
         status_chroma = chroma_db.store_embeddings(embedded_papers)
+        logger.info(f"ChromaDB storage status: {status_chroma}")
 
         if all([
             status_queries == Status.SUCCESS,
@@ -444,8 +450,18 @@ def detect_out_of_scope_query(query_description: str) -> str:
     for a scientific literature search or if it is out-of-scope (e.g., a greeting,
     joke, personal opinion, or unrelated to science).
 
-    If the query is valid, extract a list of 2-5 expressive, domain-relevant keywords
-    that best capture the research intent. Do not include generic words like 'paper', 'research', 'study', etc.
+    If the query is valid, extract a list of 2-5 concise, domain-relevant keyword phrases (each 2-4 words) that best capture the research intent.
+
+    Guidelines for keyword extraction:
+    - Prefer multi-word, context-rich phrases over single words, but keep each phrase concise (2-4 words).
+    - Avoid full sentences or overly detailed descriptions.
+    - Do NOT repeat the same context in every keyword (e.g., don't add "in digital health" to every phrase).
+    - Avoid generic or overly broad terms (e.g., "deep learning", "artificial intelligence", "healthcare").
+    - Do NOT simply list synonyms or related fields.
+    - Each keyword should be a phrase that could be used as a precise search query for this specific research interest.
+    - Focus on specificity and informativeness, not quantity.
+
+    Given the following research query, extract 2-5 highly relevant, expressive academic keyword phrases (each 2-4 words) that would maximize the quality of a literature search. Avoid generic terms, full sentences, and focus on specificity.
 
     Query: "{query_description}"
 
@@ -453,7 +469,7 @@ def detect_out_of_scope_query(query_description: str) -> str:
     {{
         "status": "valid" | "out_of_scope",
         "reason": "...",  // explanation for decision
-        "keywords": [ ... ] // list of keywords (empty if out_of_scope)
+        "keywords": [ ... ] // list of keyword phrases (empty if out_of_scope)
     }}
     """
 
