@@ -551,11 +551,11 @@ def no_results_handler_node(state):
     return state
 
 
-@node_logger("store_papers", input_keys=["project_id", "papers_filtered", "papers_raw", "user_query"], output_keys=["store_papers_result"])
-def store_papers_node(state):
+@node_logger("store_papers_for_project", input_keys=["project_id", "papers_filtered", "papers_raw", "user_query"], output_keys=["store_papers_for_project_result"])
+def store_papers_for_project_node(state):
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
-    store_papers_tool = tool_map.get("store_papers_for_project")
+    store_papers_for_project_tool = tool_map.get("store_papers_for_project")
     # Use filtered papers if available, else raw
     project_id = state.get("project_id")
     papers = state.get("papers_filtered") or state.get("papers_raw") or []
@@ -564,7 +564,6 @@ def store_papers_node(state):
     papers_to_store = []
     for paper in papers:
         paper_hash = paper.get("hash") or paper.get("paper_hash")
-
         title = paper.get("title", "")
         abstract = paper.get("abstract", "")
         # Use the tool version (invoke as a tool)
@@ -579,11 +578,11 @@ def store_papers_node(state):
         if paper_hash:
             papers_to_store.append({"paper_hash": paper_hash, "summary": summary})
     result = None
-    if store_papers_tool and project_id and papers_to_store:
-        result = store_papers_tool.invoke({"project_id": project_id, "papers": papers_to_store})
+    if store_papers_for_project_tool and project_id and papers_to_store:
+        result = store_papers_for_project_tool.invoke({"project_id": project_id, "papers": papers_to_store})
     else:
         result = "No papers to store or missing project_id."
-    state["store_papers_result"] = result
+    state["store_papers_for_project_result"] = result
     return state
 
 
@@ -622,7 +621,7 @@ def run_stategraph_agent(user_query: str):
     state = get_best_papers_node(state)
     state = filter_papers_node(state)
     # Final node: store papers for project
-    state = store_papers_node(state)
+    state = store_papers_for_project_node(state)
     return state
 
 
@@ -713,7 +712,7 @@ def trigger_stategraph_agent_show_thoughts(user_message: str):
 
         # Final step: store papers for project
         yield {"thought": "Storing recommended papers for this project...", "is_final": False, "final_content": None}
-        state = store_papers_node(state)
+        state = store_papers_for_project_node(state)
         store_result = state.get("store_papers_result", "No result")
         yield {"thought": "Agent workflow complete.", "is_final": True, "final_content": json.dumps({"status": store_result})}
     except Exception as e:
