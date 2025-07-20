@@ -835,11 +835,8 @@ def filter_papers_by_nl_criteria(
     "<metric>": {{"op": "<operator>", "value": <number|string|list>}}
 
     Guidelines for similarity_score (normalized 0-1 scale):
-    - "high similarity" or "very similar" → use ">=" with 0.7
-    - "very high similarity" or "extremely similar" → use ">=" with 0.8
-    - "moderate similarity" → use ">=" with 0.6
-    - "low similarity" → use ">=" with 0.5
-    - "any similarity" → use ">=" with 0.1
+    - Only add a similarity_score filter if the user explicitly specifies a similarity threshold (e.g., "similarity above 0.7", "similarity >= 0.8").
+    - If the user just says "papers similar to this" or "find similar papers" without a number, do NOT add a similarity_score filter.
 
     Examples
     --------
