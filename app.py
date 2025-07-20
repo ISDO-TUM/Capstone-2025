@@ -21,6 +21,7 @@ from pubsub.pubsub_main import update_newsletter_papers
 from pubsub.pubsub_params import DAYS_FOR_UPDATE
 from utils.status import Status
 from evaluation.keyword_based_evaluation import evaluate_keyword_based_relevance
+from evaluation.bm25_lexical_matching import evaluate_bm25_lexical_matching
 
 logger = logging.getLogger(__name__)
 
@@ -165,6 +166,7 @@ def get_recommendations():
                 # Run keyword evaluation
                 if papers_for_evaluation:
                     evaluate_keyword_based_relevance(user_description, papers_for_evaluation)
+                    evaluate_bm25_lexical_matching(user_description, papers_for_evaluation)
 
                 yield f"data: {json.dumps({'recommendations': recommendations})}\n\n"
             except Exception as e:
