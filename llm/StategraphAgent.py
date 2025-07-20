@@ -434,7 +434,7 @@ def update_papers_by_project_node(state):
 # --- Get Best Papers Node ---
 
 
-@node_logger("get_best_papers", input_keys=["user_query", "keywords", "has_filter_instructions"], output_keys=["papers_raw"])
+@node_logger("get_best_papers", input_keys=["project_id", "has_filter_instructions"], output_keys=["papers_raw"])
 def get_best_papers_node(state):
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
@@ -442,11 +442,8 @@ def get_best_papers_node(state):
     papers_raw = []
     try:
         # Prefer keywords if available, else use user_query
-        user_profile = None
-        if state.get("keywords"):
-            user_profile = ", ".join(state["keywords"])
-        else:
-            user_profile = state.get("user_query", "")
+
+        project_id = state.get("project_id", "")
 
         # Determine retrieval count based on filter instructions
         has_filter_instructions = state.get("has_filter_instructions", False)
@@ -455,7 +452,7 @@ def get_best_papers_node(state):
         if get_best_papers_tool:
             # Use num_candidates parameter based on filter instructions
             papers_raw = get_best_papers_tool.invoke({
-                "user_profile": user_profile,
+                "project_id": project_id,
                 "num_candidates": retrieval_count
             })
 
