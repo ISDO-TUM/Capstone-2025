@@ -510,7 +510,11 @@ def filter_papers_node(state):
                 papers_filtered = papers_raw
                 state["applied_filter_criteria"] = {}
 
+        # Limit filtered papers to top 10 to maintain consistency with other recommendation flows
+        original_count = len(papers_filtered)
+        papers_filtered = papers_filtered[:10]
         state["papers_filtered"] = papers_filtered
+        logger.info(f"Limited filtered papers from {original_count} to {len(papers_filtered)} (top 10)")
 
     except Exception as e:
         state["error"] = f"Filter papers node error: {e}"
