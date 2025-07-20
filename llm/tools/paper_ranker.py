@@ -1,9 +1,8 @@
-import json
 import logging
 from llm.Embeddings import embed_user_profile
 from langchain_core.tools import tool
 from chroma_db.chroma_vector_db import chroma_db
-from database.papers_database_handler import get_papers_by_hash
+from database.papers_database_handler import get_papers_by_hash, get_all_papers
 from database.projects_database_handler import get_user_profile_embedding, add_user_profile_embedding, get_project_data
 
 logger = logging.getLogger(__name__)
@@ -58,6 +57,8 @@ def get_best_papers(project_id: str, num_candidates: int = 10) -> list[dict]:
             logger.info(f"Agent requested {num_candidates} candidates, which is different than the default of 10. This will allow for more filtering.")
 
         paper_hashes = chroma_db.perform_similarity_search(num_candidates, embedded_profile)
+        logger.info(
+            f"Similarity search returned {len(paper_hashes) if paper_hashes else 0} hashes (requested: {num_candidates})")
 
     except Exception as e:
         logger.error(f"Error performing similarity search: {e}")
@@ -68,54 +69,31 @@ def get_best_papers(project_id: str, num_candidates: int = 10) -> list[dict]:
         return []
 
     try:
+        # Debug: Check what hashes we're looking for
+        logger.info(f"Looking for hashes: {paper_hashes[:3]}...")  # Show first 3
+
         paper_metadata = get_papers_by_hash(paper_hashes)
         logger.info(f"Paper metadata: {paper_metadata}")
+        logger.info(f"Number of papers found: {len(paper_metadata) if paper_metadata else 0}")
+
+        # Debug: Check if any of the hashes exist in the database
+        if not paper_metadata and paper_hashes:
+            all_papers = get_all_papers()
+            all_hashes = [p.get('paper_hash') for p in all_papers if p.get('paper_hash')]
+            logger.info(f"Sample hashes in database: {all_hashes[:3]}")
+            logger.info(f"Any matching hashes: {any(h in all_hashes for h in paper_hashes[:3])}")
+
     except Exception as e:
         logger.error(f"Error linking hashes to metadata: {e}")
         return []
 
-    return paper_metadata if paper_metadata else []
-
-# DEPRECATED
-
-
-@tool
-def select_relevant_titles(input: str) -> str:
-    """
-    Input str should be a JSON string with:
-      - 'papers': a list of paper titles and links dict
-      - 'query': the user query or research interest
-
-    Example:
-    {
-      "papers": [
-        {
-            "title":"Deep Learning in Medicine",
-            "link": "example link"
-        },
-        {
-            "title" : "Climate Change Models",
-            "link": "example link"
-        },
-        {
-            "title": "Transformer Architectures",
-            "link": "example link"
-        }],
-      "query": "machine learning for healthcare"
-    }
-
-    Returns a comma-separated string of titles and links most relevant to the query.
-    """
-
+    # Debug: Check if there are any papers in the database
     try:
-        data = json.loads(input)
-        papers = data.get("papers", [])
-        query = data.get("query", "")
-
-        if not papers or not query:
-            return "Missing 'papers' or 'query' in input."
-
-        return f"Filter these papers: {papers} based on this query: '{query}', select the 5-10 most relevant ones"
-
+        all_papers = get_all_papers()
+        logger.info(f"Total papers in database: {len(all_papers)}")
+        if all_papers:
+            logger.info(f"Sample paper hash: {all_papers[0].get('paper_hash', 'N/A')}")
     except Exception as e:
-        return f"Error parsing input: {e}"
+        logger.error(f"Error checking database state: {e}")
+
+    return paper_metadata if paper_metadata else []

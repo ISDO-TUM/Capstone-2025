@@ -6,6 +6,9 @@ from database.papers_database_handler import get_papers_by_hash
 from database.projectpaper_database_handler import assign_paper_to_project
 from llm.LLMDefinition import LLM
 from utils.status import Status
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _fetch_works_single_query(query, from_publication_date=None, per_page=10):
@@ -136,6 +139,7 @@ def fetch_works_multiple_queries(queries, from_publication_date=None, per_page=1
         except Exception as e:
             print(f"Error fetching works for query '{query}': {e}")
             any_failure = True
+    logger.info(f"Fetched {len(all_works)} papers")
     return all_works, Status.FAILURE if any_failure else Status.SUCCESS
 
 

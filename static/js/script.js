@@ -139,7 +139,6 @@ async function handleRouting () {
         }
 
         try {
-            //todo update newsletter papers only on project creation or once a week
             const updateRes = await fetch('/api/pubsub/update_newsletter_papers', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -338,6 +337,9 @@ function setupPDFUpload() {
         console.log(`Starting to stream recommendations based on project description...`);
         thoughtsContainer.innerHTML = ''; // Clear for new thoughts
 
+        // Track the last thought element for subunit rendering
+        let lastThoughtEl = null;
+
         try {
             const response = await fetch('/api/recommendations', {
                 method: 'POST',
@@ -369,29 +371,41 @@ function setupPDFUpload() {
                 if (line.startsWith('data: ')) {
                     const jsonString = line.substring(6);
                     const data = JSON.parse(jsonString);
-
+                    console.info("Received agent message")
+                    console.info(data)
                     if (data.thought) {
                         const thoughtEl = document.createElement('li');
 
-                        let content = data.thought;
-                        let icon = '🧠';
-                        if (content.startsWith('Calling tool:')) {
-                            icon = '🛠️';
-                            content = content.replace('Calling tool:', '<strong>Calling tool:</strong>');
-                        } else if (content.startsWith('Tool response received:')) {
-                            icon = '✅';
-                            content = content.replace('Tool response received:', '<strong>Tool response received:</strong>');
-                        } else if (content.startsWith('Receiving user input')) {
-                            icon = '👤';
-                        } else if (content.startsWith('Final response')) {
-                            icon = '🏁';
-                        }
+                    let content = data.thought;
+                    let icon = '🧠';
+                    if (content.startsWith('Calling tool:')) {
+                        icon = '🛠️';
+                        content = content.replace('Calling tool:', '<strong>Calling tool:</strong>');
+                    } else if (content.startsWith('Tool response received:')) {
+                        icon = '✅';
+                        content = content.replace('Tool response received:', '<strong>Tool response received:</strong>');
+                    } else if (content.startsWith('Receiving user input')) {
+                        icon = '👤';
+                    } else if (content.startsWith('Final response')) {
+                        icon = '🏁';
+                    }
 
                         thoughtEl.innerHTML = `${icon} ${content}`;
                         thoughtsContainer.appendChild(thoughtEl);
                         thoughtsContainer.scrollTop = thoughtsContainer.scrollHeight;
+                        lastThoughtEl = thoughtEl;
                     } else if (data.recommendations) {
                         renderRecommendations(data.recommendations, recommendationsContainer);
+                    } else if (data.out_of_scope) {
+                        // Render out-of-scope as a subunit under the last agent thought
+                        renderOutOfScopeInThoughts(data.out_of_scope, lastThoughtEl, thoughtsContainer);
+                        // Clear recommendations section
+                        recommendationsContainer.innerHTML = '';
+                    } else if (data.no_results) {
+                        // Render no-results as a subunit under the last agent thought
+                        renderNoResultsInThoughts(data.no_results, lastThoughtEl, thoughtsContainer);
+                        // Clear recommendations section
+                        recommendationsContainer.innerHTML = '';
                     } else if (data.error) {
                         console.error('Server-side error:', data.error);
                         recommendationsContainer.innerHTML = `<p>Error: ${data.error}</p>`;
@@ -567,6 +581,242 @@ function setupLoadMoreButton(projectId, recommendationsContainer, thoughtsContai
         loadMoreBtn.addEventListener('click', () => {
             loadMorePapers(projectId, recommendationsContainer, thoughtsContainer);
         });
+    }
+}
+
+// Render out-of-scope as a subunit under the last agent thought
+function renderOutOfScopeInThoughts(outOfScopeData, lastThoughtEl, thoughtsContainer) {
+    const message = outOfScopeData.message;
+    // Create out-of-scope subunit
+    const subunit = document.createElement('div');
+    subunit.classList.add('out-of-scope-thought-subunit');
+
+    // Short explanation (top)
+    const shortEl = document.createElement('div');
+    shortEl.classList.add('out-of-scope-short');
+    shortEl.textContent = message.short_explanation;
+    subunit.appendChild(shortEl);
+
+    // Show details button (now below short explanation)
+    const expandBtn = document.createElement('button');
+    expandBtn.classList.add('out-of-scope-expand-btn');
+    expandBtn.textContent = 'Show details';
+    subunit.appendChild(expandBtn);
+
+    // Expand/collapse for full explanation
+    const fullEl = document.createElement('div');
+    fullEl.classList.add('out-of-scope-full');
+    fullEl.textContent = message.explanation;
+    fullEl.style.display = 'none';
+    expandBtn.addEventListener('click', () => {
+        if (fullEl.style.display === 'none') {
+            fullEl.style.display = 'block';
+            expandBtn.textContent = 'Hide details';
+        } else {
+            fullEl.style.display = 'none';
+            expandBtn.textContent = 'Show details';
+        }
+    });
+    subunit.appendChild(fullEl);
+
+    // Suggestion
+    const suggestionEl = document.createElement('div');
+    suggestionEl.classList.add('out-of-scope-suggestion-inline');
+    suggestionEl.innerHTML = `<strong>Suggestion:</strong> ${message.suggestion}`;
+    subunit.appendChild(suggestionEl);
+
+    // New query input
+    const inputContainer = document.createElement('div');
+    inputContainer.classList.add('new-query-inline-container');
+    const inputLabel = document.createElement('label');
+    inputLabel.textContent = 'Please provide a new query:';
+    inputLabel.setAttribute('for', 'newQueryInput');
+    const inputEl = document.createElement('textarea');
+    inputEl.id = 'newQueryInput';
+    inputEl.placeholder = 'Enter a new research query focused on academic topics, technologies, or fields of study...';
+    inputEl.rows = 3;
+    const submitBtn = document.createElement('button');
+    submitBtn.textContent = 'Submit New Query';
+    submitBtn.classList.add('btn', 'btn-primary');
+    submitBtn.addEventListener('click', () => {
+        const newQuery = inputEl.value.trim();
+        if (newQuery) {
+            // Remove the subunit and restart
+            if (subunit.parentNode) subunit.parentNode.removeChild(subunit);
+
+            // Update the top input field to reflect the new query
+            const topInput = document.querySelector('input#projectTitle, textarea#projectDescription, input[type="text"], textarea');
+            if (topInput) {
+                topInput.value = newQuery;
+            }
+
+            // Get projectId and other context
+            const projectId = window.location.pathname.split('/').pop();
+            const recommendationsContainer = document.getElementById('recommendationsContainer');
+            const agentThoughtsContainer = document.getElementById('agentThoughtsContainer');
+
+            // Clear previous thoughts and recommendations
+            agentThoughtsContainer.innerHTML = '<p>🧠 Agent is thinking...</p>';
+            recommendationsContainer.innerHTML = '<p>⌛ Waiting for agent to provide recommendations...</p>';
+
+            // Update project prompt in backend, then update UI and start new recommendation stream
+            updateProjectPrompt(projectId, newQuery)
+                .then(data => {
+                    // Update the description in the UI
+                    const descDisplay = document.getElementById('projectDescriptionDisplay');
+                    if (descDisplay && data.description) {
+                        descDisplay.textContent = data.description;
+                    }
+                    // Now start the new recommendation stream
+                    return fetchRecommendationsStream(projectId, newQuery, agentThoughtsContainer, recommendationsContainer, true);
+                })
+                .catch(error => {
+                    console.error("Error updating project prompt or fetching recommendations:", error);
+                    agentThoughtsContainer.innerHTML += '<p>❌ Error processing new query.</p>';
+                });
+        } else {
+            alert('Please enter a new query.');
+        }
+    });
+    inputContainer.appendChild(inputLabel);
+    inputContainer.appendChild(inputEl);
+    inputContainer.appendChild(submitBtn);
+    subunit.appendChild(inputContainer);
+
+    // Insert subunit under the last thought or at the end
+    if (lastThoughtEl) {
+        lastThoughtEl.appendChild(subunit);
+    } else {
+        thoughtsContainer.appendChild(subunit);
+    }
+}
+
+// Render no-results as a subunit under the last agent thought
+function renderNoResultsInThoughts(noResultsData, lastThoughtEl, thoughtsContainer) {
+    const message = noResultsData.message;
+
+    // Create no-results subunit
+    const subunit = document.createElement('div');
+    subunit.classList.add('no-results-thought-subunit');
+
+    // Explanation (top)
+    const explanationEl = document.createElement('div');
+    explanationEl.classList.add('no-results-explanation');
+    explanationEl.innerHTML = message.explanation;
+    subunit.appendChild(explanationEl);
+
+    // Show filter details button
+    const expandBtn = document.createElement('button');
+    expandBtn.classList.add('no-results-expand-btn');
+    expandBtn.textContent = 'Show filter details';
+    subunit.appendChild(expandBtn);
+
+    // Expand/collapse for filter details
+    const filterDetailsEl = document.createElement('div');
+    filterDetailsEl.classList.add('no-results-filter-details');
+    filterDetailsEl.style.display = 'none';
+
+    // Build filter details content
+    let filterDetailsContent = '<h4>Applied Filters:</h4><ul>';
+    if (message.filter_criteria) {
+        Object.entries(message.filter_criteria).forEach(([key, value]) => {
+            const operator = value.op || '=';
+            filterDetailsContent += `<li><strong>${key}:</strong> ${operator} ${value.value}</li>`;
+        });
+    }
+    filterDetailsContent += '</ul>';
+
+    if (message.closest_values && Object.keys(message.closest_values).length > 0) {
+        filterDetailsContent += '<h4>Closest Available Values:</h4><ul>';
+        Object.entries(message.closest_values).forEach(([key, value]) => {
+            const direction = value.direction || 'unknown';
+            filterDetailsContent += `<li><strong>${key}:</strong> ${value.value} (${direction})</li>`;
+        });
+        filterDetailsContent += '</ul>';
+    }
+
+    filterDetailsEl.innerHTML = filterDetailsContent;
+
+    expandBtn.addEventListener('click', () => {
+        if (filterDetailsEl.style.display === 'none') {
+            filterDetailsEl.style.display = 'block';
+            expandBtn.textContent = 'Hide filter details';
+        } else {
+            filterDetailsEl.style.display = 'none';
+            expandBtn.textContent = 'Show filter details';
+        }
+    });
+    subunit.appendChild(filterDetailsEl);
+
+    // Suggestion for new query
+    const suggestionEl = document.createElement('div');
+    suggestionEl.classList.add('no-results-suggestion-inline');
+    suggestionEl.innerHTML = '<strong>💡 Tip:</strong> Try adjusting your filters or broadening your search terms.';
+    subunit.appendChild(suggestionEl);
+
+    // New query input
+    const inputContainer = document.createElement('div');
+    inputContainer.classList.add('new-query-inline-container');
+    const inputLabel = document.createElement('label');
+    inputLabel.textContent = 'Try a new search:';
+    inputLabel.setAttribute('for', 'newQueryInput');
+    const inputEl = document.createElement('textarea');
+    inputEl.id = 'newQueryInput';
+    inputEl.placeholder = 'Enter a new research query with different filters or broader terms...';
+    inputEl.rows = 3;
+    const submitBtn = document.createElement('button');
+    submitBtn.textContent = 'Submit New Query';
+    submitBtn.classList.add('btn', 'btn-primary');
+    submitBtn.addEventListener('click', () => {
+        const newQuery = inputEl.value.trim();
+        if (newQuery) {
+            // Remove the subunit and restart
+            if (subunit.parentNode) subunit.parentNode.removeChild(subunit);
+
+            // Update the top input field to reflect the new query
+            const topInput = document.querySelector('input#projectTitle, textarea#projectDescription, input[type="text"], textarea');
+            if (topInput) {
+                topInput.value = newQuery;
+            }
+
+            // Get projectId and other context
+            const projectId = window.location.pathname.split('/').pop();
+            const recommendationsContainer = document.getElementById('recommendationsContainer');
+            const agentThoughtsContainer = document.getElementById('agentThoughtsContainer');
+
+            // Clear previous thoughts and recommendations
+            agentThoughtsContainer.innerHTML = '<p>🧠 Agent is thinking...</p>';
+            recommendationsContainer.innerHTML = '<p>⌛ Waiting for agent to provide recommendations...</p>';
+
+            // Update project prompt in backend, then update UI and start new recommendation stream
+            updateProjectPrompt(projectId, newQuery)
+                .then(data => {
+                    // Update the description in the UI
+                    const descDisplay = document.getElementById('projectDescriptionDisplay');
+                    if (descDisplay && data.description) {
+                        descDisplay.textContent = data.description;
+                    }
+                    // Now start the new recommendation stream
+                    return fetchRecommendationsStream(projectId, newQuery, agentThoughtsContainer, recommendationsContainer, true);
+                })
+                .catch(error => {
+                    console.error("Error updating project prompt or fetching recommendations:", error);
+                    agentThoughtsContainer.innerHTML += '<p>❌ Error processing new query.</p>';
+                });
+        } else {
+            alert('Please enter a new query.');
+        }
+    });
+    inputContainer.appendChild(inputLabel);
+    inputContainer.appendChild(inputEl);
+    inputContainer.appendChild(submitBtn);
+    subunit.appendChild(inputContainer);
+
+    // Insert subunit under the last thought or at the end
+    if (lastThoughtEl) {
+        lastThoughtEl.appendChild(subunit);
+    } else {
+        thoughtsContainer.appendChild(subunit);
     }
 }
 
@@ -1115,4 +1365,14 @@ function debounce(func, wait) {
 // Function to refresh recommendations (fallback for replacements)
 function refreshRecommendations(container, projectId) {
     fetchRecommendationsStream(projectId, document.getElementById('agentThoughtsContainer'), container);
+}
+
+// Utility to update project prompt in backend and UI
+function updateProjectPrompt(projectId, newPrompt) {
+    return fetch(`/api/project/${projectId}/update_prompt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: newPrompt })
+    })
+    .then(response => response.json());
 }

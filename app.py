@@ -6,13 +6,12 @@ import io
 
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context
 from pypdf import PdfReader
-
+from llm.StategraphAgent import trigger_stategraph_agent_show_thoughts
 from chroma_db.chroma_vector_db import chroma_db
 from database.database_connection import connect_to_db
 from database.papers_database_handler import get_paper_by_hash, insert_papers
 from database.projectpaper_database_handler import get_papers_for_project, get_pubsub_papers_for_project, delete_project_rows, should_update, mark_paper_seen
-from database.projects_database_handler import add_new_project_to_db, get_all_projects, get_project_data, get_project_by_id, get_queries_for_project, get_user_profile_embedding
-from llm.Agent import trigger_agent_show_thoughts
+from database.projects_database_handler import add_new_project_to_db, get_all_projects, get_project_data, get_project_by_id, get_queries_for_project, get_user_profile_embedding, update_project_description
 from llm.Embeddings import embed_papers
 from llm.feedback import update_user_profile_embedding_from_rating
 from llm.tools.paper_handling_tools import replace_low_rated_paper
@@ -27,24 +26,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
                                              '..')))
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
-
-MOCK_NEWSLETTER = [
-    {
-        "title": "Weekly AI Research Digest - Healthcare Focus",
-        "link": "https://arxiv.org/abs/2301.22222",
-        "description": "Latest breakthroughs in AI applications for healthcare diagnostics."
-    },
-    {
-        "title": "Emerging Trends in Medical AI Ethics",
-        "link": "https://arxiv.org/abs/2301.33333",
-        "description": "Discussion on ethical considerations in medical AI deployment."
-    },
-    {
-        "title": "Real-world Clinical AI Implementation Case Studies",
-        "link": "https://arxiv.org/abs/2301.44444",
-        "description": "Practical insights from successful clinical AI integrations."
-    }
-]
 
 
 @app.errorhandler(413)
@@ -128,9 +109,31 @@ def get_recommendations():
 
                     removed = delete_project_rows(project_id)  # In the future there might be a refresh papers button, so we would need to empty the database to reload a new set of recommendations
                     print(f"Deleted {removed} row(s).")
-                    for response_part in trigger_agent_show_thoughts(user_description + "project ID: " + project_id):
-                        yield f"data: {json.dumps({'thought': response_part['thought']})}\n\n"
+                    for response_part in trigger_stategraph_agent_show_thoughts(user_description + "project ID: " + project_id):
+                        logger.info(f"Getting agent response: {response_part}")
+                        if response_part['is_final']:
+                            try:
+                                llm_response_content = response_part['final_content']
+                                response_data = json.loads(llm_response_content)
 
+                                # Check if this is an out-of-scope response
+                                if response_data.get('type') == 'out_of_scope':
+                                    logger.info("Agent detected out of scope query")
+                                    yield f"data: {json.dumps({'out_of_scope': response_data})}\n\n"
+                                    return
+
+                                elif response_data.get('type') == 'no_results':
+                                    logger.info("Agent couldn't find any results")
+                                    yield f"data: {json.dumps({'no_results': response_data})}\n\n"
+                                    return
+
+                            except json.JSONDecodeError:
+                                print(f"Failed to parse LLM response: {llm_response_content}")
+                                error_payload = json.dumps({"error": "Failed to parse recommendations from LLM."})
+                                yield f"data: {error_payload}\n\n"
+                                return
+                        else:
+                            yield f"data: {json.dumps({'thought': response_part['thought']})}\n\n"
                 recs_basic_data = get_papers_for_project(project_id)
                 logger.info(f"Sending {len(recs_basic_data)} papers to the frontend.")
                 recommendations = []
@@ -175,7 +178,7 @@ def extract_pdf_text():
     if file.filename == '':
         return jsonify({"error": "No file selected"}), 400
 
-    if not file.filename.lower().endswith('.pdf'):
+    if not file.filename or not file.filename.lower().endswith('.pdf'):
         return jsonify({"error": "File must be a PDF"}), 400
 
     try:
@@ -356,6 +359,23 @@ def api_get_project(project_id):
         "email": proj["email"],
         # etc
     }), 200
+
+# Endpoint to update project prompt/description
+
+
+@app.route('/api/project/<project_id>/update_prompt', methods=['POST'])
+def api_update_project_prompt(project_id):
+    data = request.get_json() or {}
+    new_prompt = data.get('prompt')
+    if not new_prompt:
+        return jsonify({'error': 'Missing prompt'}), 400
+    status = update_project_description(project_id, new_prompt)
+    if status == Status.SUCCESS:
+        # Fetch updated project to return new description
+        project = get_project_by_id(project_id)
+        return jsonify({'success': True, 'description': project.get('description', new_prompt)})
+    else:
+        return jsonify({'error': 'Failed to update project prompt'}), 500
 
 
 @app.route('/api/load_more_papers', methods=['POST'])
