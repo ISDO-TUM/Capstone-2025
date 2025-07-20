@@ -4,31 +4,52 @@ from llm.Embeddings import embed_user_profile
 from langchain_core.tools import tool
 from chroma_db.chroma_vector_db import chroma_db
 from database.papers_database_handler import get_papers_by_hash, get_all_papers
+from database.projects_database_handler import get_user_profile_embedding, add_user_profile_embedding, get_project_data
 
 logger = logging.getLogger(__name__)
 
 
 @tool
-def get_best_papers(user_profile: str, num_candidates: int = 10) -> list[dict]:
+def get_best_papers(project_id: str, num_candidates: int = 10) -> list[dict]:
     """
     Tool Name: get_best_papers
-    Returns a list of recommended papers based on the user profile. If the agent want to apply filtering, the agent will increase the
+    Returns a list of recommended papers based on the project ID. If the agent want to apply filtering, the agent will increase the
     number of candidates to a higher number, e.g. 100 or 1000. To ensure that the agent can still return a reasonable number of papers, the default is set to 10.
 
     Args:
-        user_profile (str): The user's input or research interests.
+        project_id (str): The project ID to get papers for and used to fetch the user profile embedding.
         num_candidates (int): The number of candidate papers to return. Default is 10.
 
     Returns:
         List[Dict]: A list of paper metadata dictionaries.
     """
     try:
-        embedded_profile = embed_user_profile(user_profile)
+        embedded_profile = get_user_profile_embedding(project_id)
+
+        if embedded_profile:
+            logger.info(f"Using stored embedding for project {project_id}")
+        else:
+            logger.info(f"No embedding found for project {project_id}, creating one...")
+            project_data = get_project_data(project_id)
+            description = project_data.get('description') if project_data else None
+
+            if not description:
+                logger.error(f"No project description found for project {project_id}")
+                return []
+
+            embedded_profile = embed_user_profile(description)
+            if not embedded_profile:
+                logger.error(f"Failed to create embedding for project {project_id}")
+                return []
+
+            add_user_profile_embedding(project_id, embedded_profile)
+            logger.info(f"Created and saved embedding for project {project_id}")
+
     except Exception as e:
-        logger.error(f"User profile could not be embedded: {e}")
+        logger.error(f"Error getting or creating user profile embedding for project {project_id}: {e}")
         return []
 
-    if embedded_profile is None:
+    if not embedded_profile:
         logger.warning("Embedded profile is None, aborting process.")
         return []
 

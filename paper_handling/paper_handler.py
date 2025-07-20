@@ -1,19 +1,24 @@
 import re
 
 from pyalex import Works
+
+from database.papers_database_handler import get_papers_by_hash
+from database.projectpaper_database_handler import assign_paper_to_project
+from llm.LLMDefinition import LLM
 from utils.status import Status
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-def _fetch_works_single_query(query, from_publication_date=None):
+def _fetch_works_single_query(query, from_publication_date=None, per_page=10):
     """
     Fetch works from OpenAlex matching a query.
 
     Parameters:
     - query (str): Search keyword or phrase.
     - from_publication_date (str, optional): Filter works published on or after this date (YYYY-MM-DD format).
+    - per_page (int): Number of papers to fetch per query (default: 10).
 
     Returns:
     - List[dict]: Each dict contains id, title, abstract, authors, publication_date, landing_page_url, pdf_url.
@@ -29,7 +34,7 @@ def _fetch_works_single_query(query, from_publication_date=None):
         )
         if from_publication_date:
             works_query = works_query.filter(from_publication_date=from_publication_date)
-        works = works_query.get(per_page=5)
+        works = works_query.get(per_page=per_page)
     except Exception as e:
         print(f"Error fetching works for query '{query}': {e}")
         return [], Status.FAILURE
@@ -93,7 +98,7 @@ def _fetch_works_single_query(query, from_publication_date=None):
     return results, Status.SUCCESS
 
 
-def fetch_works_multiple_queries(queries, from_publication_date=None):
+def fetch_works_multiple_queries(queries, from_publication_date=None, per_page=10):
     """
     This function takes a list of search queries and retrieves scientific papers from the OpenAlex API
     for each query. It returns a single flattened list of dictionaries, each representing one paper.
@@ -116,6 +121,7 @@ def fetch_works_multiple_queries(queries, from_publication_date=None):
     - queries (List[str]): Search keywords or phrases.
     - from_publication_date (str, optional): Filter works published on or after this
       date (YYYY-MM-DD).
+    - per_page (int): Number of papers to fetch per query (default: 10).
 
     Returns:
     - Tuple[List[dict], int]: A tuple containing:
@@ -126,7 +132,7 @@ def fetch_works_multiple_queries(queries, from_publication_date=None):
     any_failure = False
     for query in queries:
         try:
-            works, status = _fetch_works_single_query(query, from_publication_date)
+            works, status = _fetch_works_single_query(query, from_publication_date, per_page)
             all_works.extend(works)
             if status == Status.FAILURE:
                 any_failure = True
@@ -196,6 +202,81 @@ def is_valid_abstract(text, min_words=50, max_words=500):
         return False
 
     return True
+
+
+def search_and_filter_papers(chroma_db, user_profile_embedding, current_paper_hashes, min_similarity=0.3):
+    """Search for papers and filter out already shown ones."""
+    candidate_result = chroma_db.perform_similarity_search(
+        1000, user_profile_embedding, return_scores=True, min_similarity=min_similarity
+    )
+
+    if not candidate_result:
+        return []
+
+    candidate_hashes, similarity_scores = candidate_result
+    print(f"ChromaDB returned {len(candidate_hashes)} candidate hashes with similarity >= {min_similarity}")
+    all_papers = get_papers_by_hash(candidate_hashes)
+
+    # Filter out already shown papers and take first 10
+    available_papers = []
+    for paper in all_papers:
+        if paper.get('paper_hash') not in current_paper_hashes:
+            available_papers.append(paper)
+            if len(available_papers) >= 10:
+                break
+
+    return available_papers
+
+
+def generate_paper_summary(paper, project_description):
+    """Generate a summary for a paper explaining its relevance to the project."""
+    summary_prompt = f"""
+    Generate a concise summary explaining why this paper is relevant to the user's research interests.
+
+    User's research interests: {project_description}
+    Paper title: {paper.get('title', 'Unknown')}
+    Paper abstract: {paper.get('abstract', 'No abstract available')}
+
+    Write a brief summary (2 short sentences).
+    """
+    try:
+        summary_response = LLM.invoke(summary_prompt)
+        if hasattr(summary_response, 'content'):
+            content = summary_response.content
+            summary = content.strip() if isinstance(content, str) else str(content).strip()
+        else:
+            summary = str(summary_response).strip()
+        if not summary:
+            summary = "Relevant based on user interests."
+    except Exception:
+        summary = "Relevant based on user interests."
+    return summary
+
+
+def create_paper_dict(paper, summary):
+    """Create a standardized paper dictionary."""
+    return {
+        'title': paper.get("title", "N/A"),
+        'link': paper.get("landing_page_url", "N/A"),
+        'description': summary,
+        'hash': paper['paper_hash'],
+        'is_replacement': False
+    }
+
+
+def process_available_papers(available_papers, project_id, project_description, max_papers=10):
+    """Process available papers and return recommendations."""
+    if not available_papers:
+        return []
+
+    new_recommendations = []
+    for paper in available_papers[:max_papers]:
+        summary = generate_paper_summary(paper, project_description)
+        assign_paper_to_project(paper['paper_hash'], project_id, summary)
+        paper_dict = create_paper_dict(paper, summary)
+        new_recommendations.append(paper_dict)
+
+    return new_recommendations
 
 
 if __name__ == "__main__":
