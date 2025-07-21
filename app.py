@@ -19,9 +19,6 @@ from paper_handling.paper_handler import fetch_works_multiple_queries, process_a
 from pubsub.pubsub_main import update_newsletter_papers
 from pubsub.pubsub_params import DAYS_FOR_UPDATE
 from utils.status import Status
-from evaluation.keyword_based_evaluation import evaluate_keyword_based_relevance
-from evaluation.bm25_lexical_matching import evaluate_bm25_lexical_matching
-from evaluation.bertscore_evaluation import evaluate_bertscore_relevance
 
 logger = logging.getLogger(__name__)
 
@@ -140,9 +137,6 @@ def get_recommendations():
                 recs_basic_data = get_papers_for_project(project_id)
                 logger.info(f"Sending {len(recs_basic_data)} papers to the frontend.")
                 recommendations = []
-
-                # Prepare papers for evaluation
-                papers_for_evaluation = []
                 for rec in recs_basic_data:
                     paper = get_paper_by_hash(rec['paper_hash'])
                     if paper is not None:
@@ -153,10 +147,6 @@ def get_recommendations():
                             'hash': rec['paper_hash'],
                             'is_replacement': rec.get('is_replacement', False)
                         }
-                        papers_for_evaluation.append({
-                            'title': paper.get("title", "N/A"),
-                            'abstract': paper.get("abstract", "") or rec.get("summary", "Relevant based on user interest.")
-                        })
                     else:
                         paper_dict = {
                             'title': "N/A",
@@ -166,13 +156,6 @@ def get_recommendations():
                             'is_replacement': False
                         }
                     recommendations.append(paper_dict)
-
-                # Run keyword evaluation
-                if papers_for_evaluation:
-                    evaluate_keyword_based_relevance(user_description, papers_for_evaluation)
-                    evaluate_bm25_lexical_matching(user_description, papers_for_evaluation)
-                    evaluate_bertscore_relevance(user_description, papers_for_evaluation)
-
                 yield f"data: {json.dumps({'recommendations': recommendations})}\n\n"
             except Exception as e:
                 logger.error(f"Error in recommendations generation: {e}")
