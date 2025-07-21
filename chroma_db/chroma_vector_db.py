@@ -90,6 +90,10 @@ class ChromaVectorDB:
             # Get total number of documents in collection
             total_docs = self.collection.count()
 
+            if total_docs == 0:
+                logger.warning("ChromaDB collection is empty!")
+                return []
+
             # If we're filtering by similarity, get ALL papers to check their similarity
             if min_similarity > 0:
                 n_results = total_docs
@@ -109,6 +113,7 @@ class ChromaVectorDB:
 
             ids_result = results.get("ids", [[]])
             ids = ids_result[0] if ids_result else []
+            logger.info(f"Similarity search returned {len(ids)} results: {ids}")
 
             if not ids:
                 return None
@@ -162,9 +167,7 @@ class ChromaVectorDB:
 
             embeddings = results.get("embeddings", [])
             logger.debug(
-                f"Raw embeddings result for {paper_hash}: {
-                    type(embeddings)}, length: {
-                    len(embeddings) if embeddings is not None else 'None'}")
+                f"Raw embeddings result for {paper_hash}: {type(embeddings)}, length: {len(embeddings) if embeddings is not None else 'None'}")
 
             if embeddings is not None and len(embeddings) > 0:
                 embedding = embeddings[0]

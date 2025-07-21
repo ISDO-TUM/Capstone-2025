@@ -271,7 +271,14 @@ def get_papers_by_hash(paper_hashes_to_find):
 
     try:
         cur.execute(sql, (paper_hashes_to_find,))
-        papers = [dict(row) for row in cur.fetchall()]
+        papers_dict = {row['paper_hash']: dict(row) for row in cur.fetchall()}
+
+        # Preserve the order of the input hashes
+        papers = []
+        for hash_value in paper_hashes_to_find:
+            if hash_value in papers_dict:
+                papers.append(papers_dict[hash_value])
+
         return papers
     except psycopg2.Error as e:
         print(f"Error fetching papers by hashes {paper_hashes_to_find}: {e}")

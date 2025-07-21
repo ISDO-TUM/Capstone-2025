@@ -120,17 +120,21 @@ def update_papers_for_project(queries: list[str], project_id: str) -> str:
         str: A human-readable summary of the update operation's result.
     """
     try:
+        logger.info(f"Starting update_papers_for_project with queries: {queries} and project_id: {project_id}")
         fetched_papers, status_fetch = fetch_works_multiple_queries(queries)
+        logger.info(f"Fetched {len(fetched_papers)} papers from OpenAlex, status: {status_fetch}")
 
         status_postgres, deduplicated_papers = insert_papers(fetched_papers)
+        logger.info(f"Inserted {len(deduplicated_papers)} papers into database, status: {status_postgres}")
 
         logger.info(f"Adding queries for project {project_id}")
 
         status_queries = add_queries_to_project_db(queries, project_id)
 
-        logger.info("Updated queries for project {project_id")
+        logger.info(f"Updated queries for project {project_id}")
 
         embedded_papers = []
+        logger.info(f"Creating embeddings for {len(deduplicated_papers)} papers")
         for paper in deduplicated_papers:
             embedding = embed_papers(paper['title'],
                                      paper['abstract'])
@@ -140,7 +144,9 @@ def update_papers_for_project(queries: list[str], project_id: str) -> str:
             }
             embedded_papers.append(embedded_paper)
 
+        logger.info(f"Storing {len(embedded_papers)} embeddings in ChromaDB")
         status_chroma = chroma_db.store_embeddings(embedded_papers)
+        logger.info(f"ChromaDB storage status: {status_chroma}")
 
         if all([
             status_queries == Status.SUCCESS,
@@ -162,120 +168,6 @@ def update_papers_for_project(queries: list[str], project_id: str) -> str:
                 "Ignore the errors and proceed with ranking the papers.")
 
 
-# DEPRECATED
-
-@tool
-def update_papers(queries: list[str]) -> str:
-    """
-    Tool Name: update_papers
-    Description:
-        This tool updates the paper database with the latest research papers and their embeddings
-        based on a list of search queries. It performs the following steps:
-        1. Fetches new papers using the provided list of queries.
-        2. Stores the fetched papers in a PostgreSQL database, removing any duplicates.
-        3. Computes and stores embeddings for the newly stored papers.
-    Use Case:
-        Use this tool when you want to refresh the paper database with the latest research and ensure
-        that all relevant papers have updated embeddings for ranking or similarity comparison tasks.
-    Input:
-        queries (list[str]): A list of strings corresponding to the user's interests to search for relevant papers.
-        When generating search queries based on the user's interests, make sure to preserve meaningful multi-word expressions as single, coherent search terms. For example, if the user mentions "ice cream," do not split this into "ice" and "cream" — treat it as a unified concept: "ice cream."
-        Generate search queries that reflect the actual intent of the user's interest, emphasizing quality over quantity. Avoid breaking compound phrases into individual words unless they are clearly independent concepts.
-        Use concise and targeted queries that represent whole ideas, domains, or research topics. Only split input into multiple queries if doing so improves the relevance or diversity of the results without losing semantic meaning.
-
-        Examples:
-            - User: "I'm interested in machine learning and neural networks"
-            queries: ["machine learning", "neural networks"]
-
-            - User: "I like ice cream and computer vision"
-            queries: ["ice cream", "computer vision"]
-
-        Avoid:
-            - ["ice", "cream", "computer", "vision"]
-    Output:
-        A status message string indicating whether the process completed successfully without errors,
-        or completed with some errors that can be ignored.
-    Returns:
-        str: A human-readable summary of the update operation's result.
-    """
-    try:
-        fetched_papers, status_fetch = fetch_works_multiple_queries(queries)
-
-        status_postgres, deduplicated_papers = insert_papers(fetched_papers)
-        embedded_papers = []
-        for paper in deduplicated_papers:
-            embedding = embed_papers(paper['title'],
-                                     paper['abstract'])
-            embedded_paper = {
-                'embedding': embedding,
-                'hash': paper['hash'],
-            }
-            embedded_papers.append(embedded_paper)
-
-        status_chroma = chroma_db.store_embeddings(embedded_papers)
-
-        if all([
-            status_fetch == Status.SUCCESS,
-            status_postgres == Status.SUCCESS,
-            status_chroma == Status.SUCCESS
-        ]):
-            logger.info("Updating paper database successfully.")
-            return ("Paper database has been updated with the latest papers & embeddings. There were no errors. "
-                    "Now you can rank the papers.")
-        else:
-            logger.error("Updating paper database failed.")
-            return ("Paper database has been updated with the latest papers & embeddings. There were some errors. "
-                    "Ignore the errors and proceed with ranking the papers.")
-
-    except Exception as e:
-        logger.error(f"Updating paper database failed: {e}")
-        return ("Paper database has been updated with the latest papers & embeddings. There were some errors. "
-                "Ignore the errors and proceed with ranking the papers.")
-
-
-def get_paper_basic_data(queries: list[str]) -> list[dict[str, Any]]:
-    """
-    This function takes a list of queries and returns a list of paper titles.
-    Args:
-        queries: A list of queries in form of string keywords corresponding to the user's interests.
-        each query corresponds to a different interest field. Like: ['generative models', 'renewable energies', ...]
-    Example input:
-    {
-      "queries": ["agriculture in Costa Rica", "Use of pesticides in central America", ...],
-    }
-    Returns:
-        A list of paper data (title, link) with corresponding to papers related to all the queries.
-    """
-    paper_metadata = fetch_works_multiple_queries(queries)
-    paper_titles = [work["title"] for work in paper_metadata]
-    paper_links = [_get_link(work) for work in paper_metadata]
-
-    paper_basic_data = [{'title': title, 'link': link} for title, link in zip(paper_titles, paper_links)]
-    return paper_basic_data
-
-
-def _get_link(work):
-    """
-    This function takes a paper work object and returns its link
-    Args:
-        work: an open alex work object
-
-    Returns: the link of the work either doi, oa_url, open alex url or None.
-
-    """
-    link = work.get('doi')
-    if not link:
-        link = work.get('open_access', {}).get('oa_url')
-    if not link:
-        link = work.get('landing_page_url')
-    if not link:
-        if work.get('id') and work.get('id').startswith('http'):
-            link = work.get('id')
-        else:
-            link = "#"
-    return link
-
-
 def check_relevance_threshold(papers_with_relevance_scores: list[dict], threshold: float, min_papers: int = 3) -> bool:
     """
     Checks if the similarity scores in the list of papers meet the specified threshold.
@@ -294,9 +186,6 @@ def check_relevance_threshold(papers_with_relevance_scores: list[dict], threshol
 
     top_papers = papers_with_relevance_scores[:min_papers]
     return all(paper.get("similarity_score", 0.0) >= threshold for paper in top_papers)
-
-
-logger = logging.getLogger(__name__)
 
 
 @tool
@@ -448,7 +337,8 @@ def reformulate_query(keywords: list[str], query_description: str = "") -> str:
 @tool
 def detect_out_of_scope_query(query_description: str) -> str:
     """
-    Checks whether a user query is nonsensical or unrelated to scientific research.
+    Checks whether a user query is nonsensical or unrelated to scientific research,
+    and if valid, extracts a list of expressive keywords.
 
     Input:
     {
@@ -458,12 +348,14 @@ def detect_out_of_scope_query(query_description: str) -> str:
     Output:
         JSON object with:
         - status: "valid" or "out_of_scope"
-        - reason: explanation if out_of_scope
+        - reason: explanation if out_of_scope or why valid
+        - keywords: list of expressive keywords (empty if out_of_scope)
     """
-    if not query_description.strip():
+    if not isinstance(query_description, str) or not query_description.strip():
         return json.dumps({
             "status": "out_of_scope",
-            "reason": "Query is empty or whitespace."
+            "reason": "Query is empty or whitespace.",
+            "keywords": []
         })
 
     prompt = f"""
@@ -473,25 +365,57 @@ def detect_out_of_scope_query(query_description: str) -> str:
     for a scientific literature search or if it is out-of-scope (e.g., a greeting,
     joke, personal opinion, or unrelated to science).
 
+    If the query is valid, extract a list of 2-5 concise, domain-relevant keyword phrases (each 2-4 words) that best capture the research intent.
+
+    Guidelines for keyword extraction:
+    - Prefer multi-word, context-rich phrases over single words, but keep each phrase concise (2-4 words).
+    - Avoid full sentences or overly detailed descriptions.
+    - Do NOT repeat the same context in every keyword (e.g., don't add "in digital health" to every phrase).
+    - Avoid generic or overly broad terms (e.g., "deep learning", "artificial intelligence", "healthcare").
+    - Do NOT simply list synonyms or related fields.
+    - Each keyword should be a phrase that could be used as a precise search query for this specific research interest.
+    - Focus on specificity and informativeness, not quantity.
+
+    Given the following research query, extract 2-5 highly relevant, expressive academic keyword phrases (each 2-4 words) that would maximize the quality of a literature search. Avoid generic terms, full sentences, and focus on specificity.
+
     Query: "{query_description}"
 
     Respond with a JSON object like:
     {{
         "status": "valid" | "out_of_scope",
-        "reason": "..."  // explanation for decision
+        "reason": "...",  // explanation for decision
+        "keywords": [ ... ] // list of keyword phrases (empty if out_of_scope)
     }}
     """
 
     response = LLM.invoke(prompt)
 
     try:
-        logger.info("Checking if query is out of scope.")
-        return json.dumps(json.loads(response.content))
+        logger.info("Checking if query is out of scope and extracting keywords.")
+        content = response.content
+        if isinstance(content, str):
+            try:
+                return json.dumps(json.loads(content))
+            except Exception:
+                return json.dumps({
+                    "status": "error",
+                    "reason": "Failed to parse response. Raw content: " + content,
+                    "keywords": []
+                })
+        elif isinstance(content, (dict, list)):
+            return json.dumps(content)
+        else:
+            return json.dumps({
+                "status": "error",
+                "reason": "Unexpected response type.",
+                "keywords": []
+            })
     except Exception as e:
         logger.error(f"Failed to parse response: {e}")
         return json.dumps({
             "status": "error",
-            "reason": "Failed to parse response. Raw content: " + response.content
+            "reason": "Failed to parse response. Raw content: " + str(response.content),
+            "keywords": []
         })
 
 
@@ -653,6 +577,59 @@ def multi_step_reasoning(query_description: str,
         })
 
 
+def normalize_similarity_scores(papers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Normalize similarity scores from OpenAlex's large relevance scores to 0-1 range.
+    This makes filtering more intuitive and consistent with typical similarity score expectations.
+
+    Args:
+        papers: List of paper dictionaries with 'similarity_score' field
+
+    Returns:
+        List of papers with normalized similarity scores (0-1 range)
+    """
+    if not papers:
+        return papers
+
+    # Extract all similarity scores
+    scores = []
+    for paper in papers:
+        score = paper.get('similarity_score')
+        if score is not None and isinstance(score, (int, float)):
+            scores.append(float(score))
+
+    if not scores:
+        return papers
+
+    # Calculate min and max for normalization
+    min_score = min(scores)
+    max_score = max(scores)
+
+    # Avoid division by zero
+    if max_score == min_score:
+        # All scores are the same, set to 0.5
+        normalized_papers = []
+        for paper in papers:
+            paper_copy = paper.copy()
+            if paper_copy.get('similarity_score') is not None:
+                paper_copy['similarity_score'] = 0.5
+            normalized_papers.append(paper_copy)
+        return normalized_papers
+
+    # Normalize to 0-1 range
+    normalized_papers = []
+    for paper in papers:
+        paper_copy = paper.copy()
+        score = paper_copy.get('similarity_score')
+        if score is not None and isinstance(score, (int, float)):
+            normalized_score = (float(score) - min_score) / (max_score - min_score)
+            paper_copy['similarity_score'] = normalized_score
+        normalized_papers.append(paper_copy)
+
+    logger.info(f"Normalized {len(scores)} similarity scores from range [{min_score:.2f}, {max_score:.2f}] to [0.0, 1.0]")
+    return normalized_papers
+
+
 def apply_filter_spec_to_papers(
     papers: List[Dict[str, Any]],
     filter_spec: Dict[str, Dict[str, Any]]
@@ -677,8 +654,11 @@ def apply_filter_spec_to_papers(
                 "message": f"Unsupported operator '{rule['op']}'"
             }
 
+    # Normalize similarity scores before filtering
+    normalized_papers = normalize_similarity_scores(papers)
+
     kept_papers: list[dict] = []
-    for paper in papers:
+    for paper in normalized_papers:
         try:
             if all(_matches(paper.get(metric), rule["op"], rule["value"])
                    for metric, rule in filter_spec.items()):
@@ -735,6 +715,10 @@ def filter_papers_by_nl_criteria(
     Schema per entry:
     "<metric>": {{"op": "<operator>", "value": <number|string|list>}}
 
+    Guidelines for similarity_score (normalized 0-1 scale):
+    - Only add a similarity_score filter if the user explicitly specifies a similarity threshold (e.g., "similarity above 0.7", "similarity >= 0.8").
+    - If the user just says "papers similar to this" or "find similar papers" without a number, do NOT add a similarity_score filter.
+
     Examples
     --------
     NL:  Keep papers after 2022 with similarity above 0.8
@@ -742,6 +726,12 @@ def filter_papers_by_nl_criteria(
     {{
     "publication_date": {{"op": ">", "value": 2022}},
     "similarity_score": {{"op": ">", "value": 0.8}}
+    }}
+
+    NL:  Find papers similar to X with high similarity
+    JSON:
+    {{
+    "similarity_score": {{"op": ">=", "value": 0.7}}
     }}
 
     NL:  Only papers with >25 citations from Nature
@@ -768,6 +758,123 @@ def filter_papers_by_nl_criteria(
 
     result = apply_filter_spec_to_papers(papers, filter_spec)
     return json.dumps(result)
+
+
+@tool
+def find_closest_paper_metrics(papers: List[Dict[str, Any]], filter_spec: Dict[str, Dict[str, Any]]) -> str:
+    """
+    For each filterable/rankable metric in the filter_spec, analyzes the available values and provides detailed insights.
+    Returns a dict with closest values, best available values, and whether individual filters would have yielded results.
+    Only processes numeric/date metrics (not authors, journals, etc.).
+    """
+    # Normalize similarity scores for analysis
+    normalized_papers = normalize_similarity_scores(papers)
+
+    result = {}
+    for metric, rule in filter_spec.items():
+        if metric in ["publication_date", "citations", "fwci", "impact_factor", "percentile", "similarity_score", "cited_by_count", "citation_normalized_percentile"]:
+            filter_value = rule.get("value")
+            filter_op = rule.get("op", ">")
+            if filter_value is None:
+                continue
+            available_values = []
+            for paper in normalized_papers:
+                val = paper.get(metric)
+                if val is not None:
+                    # For publication_date, extract year
+                    if metric == "publication_date":
+                        try:
+                            val = int(str(val)[:4])
+                        except (ValueError, TypeError):
+                            continue
+                    elif metric in ["citations", "cited_by_count", "percentile", "citation_normalized_percentile"]:
+                        try:
+                            val = int(val)
+                        except (ValueError, TypeError):
+                            continue
+                    else:
+                        try:
+                            val = float(val)
+                        except (ValueError, TypeError):
+                            continue
+                    available_values.append(val)
+
+            if available_values:
+                # Find the closest value to the threshold
+                closest = min(available_values, key=lambda x: abs(x - filter_value))
+
+                # Find the best available value (highest for >/>=, lowest for </<=)
+                if filter_op in [">", ">="]:
+                    best_value = max(available_values)
+                elif filter_op in ["<", "<="]:
+                    best_value = min(available_values)
+                else:
+                    best_value = closest
+
+                # Determine if any papers would match this filter individually
+                matching_values = []
+                for val in available_values:
+                    if filter_op == ">" and val > filter_value:
+                        matching_values.append(val)
+                    elif filter_op == ">=" and val >= filter_value:
+                        matching_values.append(val)
+                    elif filter_op == "<" and val < filter_value:
+                        matching_values.append(val)
+                    elif filter_op == "<=" and val <= filter_value:
+                        matching_values.append(val)
+                    elif filter_op == "==" and val == filter_value:
+                        matching_values.append(val)
+                    elif filter_op == "!=" and val != filter_value:
+                        matching_values.append(val)
+
+                # Determine direction of closest value
+                if closest == filter_value:
+                    direction = "equal"
+                elif closest < filter_value:
+                    direction = "below"
+                else:
+                    direction = "above"
+
+                result[metric] = {
+                    "closest_value": closest,
+                    "direction": direction,
+                    "best_available_value": best_value,
+                    "would_match_individually": len(matching_values) > 0,
+                    "matching_count": len(matching_values),
+                    "available_values": sorted(available_values),
+                    "filter_threshold": filter_value,
+                    "filter_operator": filter_op
+                }
+    return json.dumps(result)
+
+
+@tool
+def generate_relevance_summary(user_query: str, title: str, abstract: str) -> str:
+    """
+    Generate a short, precise explanation of why the paper is relevant to the user's query.
+    Each description must:
+    • Explain succinctly why the paper fits the user’s interests.
+    • Summarise key contributions/findings from the abstract.
+    • Remain precise, relevant, and engaging.
+    """
+    prompt = (
+        f'User query: "{user_query}"\n'
+        f'Paper title: "{title}"\n'
+        f'Abstract: "{abstract}"\n'
+        '\nWrite a 1-2 sentence explanation for the user, following these rules:\n'
+        '• Explain succinctly why the paper fits the user’s interests.\n'
+        '• Summarise key contributions/findings from the abstract.\n'
+        '• Remain precise, relevant, and engaging.'
+    )
+    try:
+        llm_response = LLM.invoke(prompt)
+        content = llm_response.content
+        if isinstance(content, str):
+            return content.strip()
+        else:
+            return str(content)
+    except Exception:
+        return f"Relevant to project query: {user_query}"
 
 
 @tool
