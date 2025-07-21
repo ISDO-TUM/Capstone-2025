@@ -853,45 +853,46 @@ def trigger_stategraph_agent_show_thoughts(user_message: str):
         yield {"thought": f"An error occurred: {str(e)}", "is_final": True, "final_content": None}
 
 
-if __name__ == "__main__":
-    # Example usage (stepwise test)
-    queries = [
-        "I am looking for papers in the field of machine learning in healthcare published after 2018.",  # accept
-        # "Hello world",  # out_of_scope
-        # "Biology",  # reformulate (too short/vague)
-        # "Deep learning for genomics and climate change adaptation",  # split (multi-topic)
-        # "Quantum entanglement in nitrogen-vacancy centers at 4K in diamond nanostructures",  # broaden (very narrow)
-        # "Recent advances in science and technology"  # narrow (too broad)
-    ]
-    for user_query in queries:
-        print(f"\n=== Testing query: '{user_query}' ===")
-        # Step 1: Input node
-        state = {"user_query": user_query}
-        state = input_node(state)
-        print("After input_node:", state)
-        # Step 2: Out-of-scope check node
-        state = out_of_scope_check_node(state)
-        print("After out_of_scope_check_node:", state)
-        out_of_scope_result = state.get("out_of_scope_result")
-        if out_of_scope_result:
-            try:
-                parsed = json.loads(out_of_scope_result)
-                if parsed.get("status") == "valid" and "keywords" in parsed:
-                    state["keywords"] = parsed["keywords"]
-            except Exception:
-                # Optionally log or handle parsing errors
-                logger.error("Error parsing out_of_scope_result")
-                pass
-        print("After out_of_scope_check_node:", state)
-        # Step 3: Quality control node
-        state = quality_control_node(state)
-        print("After quality_control_node:", state)
-        # Step 4: Update papers node
-        state = update_papers_by_project_node(state)
-        print("After update_papers_by_project_node:", state)
-        # Step 5: Get best papers node
-        state = get_best_papers_node(state)
-        print("After get_best_papers_node:", state)
-        # Step 6: Filter papers node
-        state = filter_papers_node(state)
-        print("After filter_papers_node:", state)
+# NOTE: This block is for local testing only. Uncomment to run local tests.
+# if __name__ == "__main__":
+#     # Example usage (stepwise test)
+#     queries = [
+#         "I am looking for papers in the field of machine learning in healthcare published after 2018.",  # accept
+#         # "Hello world",  # out_of_scope
+#         # "Biology",  # reformulate (too short/vague)
+#         # "Deep learning for genomics and climate change adaptation",  # split (multi-topic)
+#         # "Quantum entanglement in nitrogen-vacancy centers at 4K in diamond nanostructures",  # broaden (very narrow)
+#         # "Recent advances in science and technology"  # narrow (too broad)
+#     ]
+#     for user_query in queries:
+#         print(f"\n=== Testing query: '{user_query}' ===")
+#         # Step 1: Input node
+#         state = {"user_query": user_query}
+#         state = input_node(state)
+#         print("After input_node:", state)
+#         # Step 2: Out-of-scope check node
+#         state = out_of_scope_check_node(state)
+#         print("After out_of_scope_check_node:", state)
+#         out_of_scope_result = state.get("out_of_scope_result")
+#         if out_of_scope_result:
+#             try:
+#                 parsed = json.loads(out_of_scope_result)
+#                 if parsed.get("status") == "valid" and "keywords" in parsed:
+#                     state["keywords"] = parsed["keywords"]
+#             except Exception:
+#                 # Optionally log or handle parsing errors
+#                 logger.error("Error parsing out_of_scope_result")
+#                 pass
+#         print("After out_of_scope_check_node:", state)
+#         # Step 3: Quality control node
+#         state = quality_control_node(state)
+#         print("After quality_control_node:", state)
+#         # Step 4: Update papers node
+#         state = update_papers_by_project_node(state)
+#         print("After update_papers_by_project_node:", state)
+#         # Step 5: Get best papers node
+#         state = get_best_papers_node(state)
+#         print("After get_best_papers_node:", state)
+#         # Step 6: Filter papers node
+#         state = filter_papers_node(state)
+#         print("After filter_papers_node:", state)

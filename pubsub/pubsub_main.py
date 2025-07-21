@@ -194,5 +194,8 @@ def get_update_date(days_for_update: int | float) -> str:
     """
     target_date = (datetime.now(timezone.utc) - timedelta(days=days_for_update)).date()
     return target_date.isoformat()
+
+
+# NOTE: This block is for local testing only. Uncomment to run local tests.
 # if __name__ == '__main__':
     # update_newsletter_papers("babbab43-0323-423e-ba29-f74ec07e2d57")

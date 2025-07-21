@@ -1,3 +1,6 @@
+import json   # needed for pretty-printing input payloads
+
+
 def main():
     # --- lazy imports inside main so standalone execution works -------------
     from langgraph.prebuilt import create_react_agent
@@ -165,6 +168,6 @@ def main():
         stream_agent_reasoning(q)
 
 
-if __name__ == "__main__":
-    import json   # needed for pretty-printing input payloads
-    main()
+# NOTE: This block is for local testing only. Uncomment to run local tests.
+# if __name__ == "__main__":
+#     main()

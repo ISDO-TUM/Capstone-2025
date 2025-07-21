@@ -308,5 +308,6 @@ def process_available_papers(available_papers, project_id, project_description, 
     return new_recommendations
 
 
-if __name__ == "__main__":
-    print(fetch_works_multiple_queries(["biomedical", "LLMs"], "2025-06-01"))
+# NOTE: This block is for local testing only. Uncomment to run local tests.
+# if __name__ == "__main__":
+#     print(fetch_works_multiple_queries(["biomedical", "LLMs"], "2025-06-01"))

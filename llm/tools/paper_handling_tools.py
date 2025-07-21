@@ -1212,5 +1212,6 @@ def main():
         stream_agent_reasoning(agent, query)
 
 
-if __name__ == "__main__":
-    main()
+# NOTE: This block is for local testing only. Uncomment to run local tests.
+# if __name__ == "__main__":
+#     main()

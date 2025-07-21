@@ -64,12 +64,12 @@ def trigger_agent_show_thoughts(user_message: str):
                "final_content": None}
 
 
-# Left here to test the agent alone
-if __name__ == '__main__':
-    # for step in agent.stream(
-    #     {"messages": [system_prompt, HumanMessage(content=user_message)]},
-    #     {"recursion_limit": RECURSION_LIMIT},
-    #     stream_mode="values",
-    # ):
-    #     step["messages"][-1].pretty_print()
-    print(trigger_agent(user_message)['messages'][-1].content)
+# NOTE: This block is for local testing only. Uncomment to run local tests.
+# if __name__ == '__main__':
+#     # for step in agent.stream(
+#     #     {"messages": [system_prompt, HumanMessage(content=user_message)]},
+#     #     {"recursion_limit": RECURSION_LIMIT},
+#     #     stream_mode="values",
+#     # ):
+#     #     step["messages"][-1].pretty_print()
+#     print(trigger_agent(user_message)['messages'][-1].content)
