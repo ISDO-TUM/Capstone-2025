@@ -1,3 +1,13 @@
+"""
+OpenAlex API and paper metadata utilities for the Capstone project.
+
+Responsibilities:
+- Fetches and processes papers from OpenAlex based on queries
+- Cleans and validates paper metadata for ingestion and recommendation
+- Provides utilities for searching, filtering, and summarizing papers
+- Used throughout the agent and ingestion flows for paper retrieval and processing
+"""
+
 import re
 
 from pyalex import Works
@@ -14,14 +24,13 @@ logger = logging.getLogger(__name__)
 def _fetch_works_single_query(query, from_publication_date=None, per_page=10):
     """
     Fetch works from OpenAlex matching a query.
-
-    Parameters:
-    - query (str): Search keyword or phrase.
-    - from_publication_date (str, optional): Filter works published on or after this date (YYYY-MM-DD format).
-    - per_page (int): Number of papers to fetch per query (default: 10).
-
+    Args:
+        query (str): Search keyword or phrase.
+        from_publication_date (str, optional): Filter works published on or after this date (YYYY-MM-DD format).
+        per_page (int): Number of papers to fetch per query (default: 10).
     Returns:
-    - List[dict]: Each dict contains id, title, abstract, authors, publication_date, landing_page_url, pdf_url.
+        list[dict]: List of paper metadata dicts.
+        int: Status.SUCCESS if successful, Status.FAILURE otherwise.
     """
     try:
         works_query = (
@@ -100,33 +109,13 @@ def _fetch_works_single_query(query, from_publication_date=None, per_page=10):
 
 def fetch_works_multiple_queries(queries, from_publication_date=None, per_page=10):
     """
-    This function takes a list of search queries and retrieves scientific papers from the OpenAlex API
-    for each query. It returns a single flattened list of dictionaries, each representing one paper.
-
-    Each dictionary includes the following fields:
-    - id: OpenAlex ID of the paper
-    - title: Title of the paper
-    - abstract: Abstract text reconstructed from the inverted index
-    - authors: A comma-separated list of author names
-    - publication_date: Date of publication
-    - landing_page_url: URL to the paper's landing page
-    - pdf_url: Direct URL to the PDF, if available
-    - similarity_score: OpenAlex relevance_score (float) – renamed for clarity
-    - fwci: Field-Weighted Citation Impact (float or None)
-    - citation_normalized_percentile: Citation percentile within field/year (float or None)
-    - cited_by_count: Raw citation count (int or None)
-    - counts_by_year: Year-by-year citation breakdown (list of dicts or None)
-
-    Parameters:
-    - queries (List[str]): Search keywords or phrases.
-    - from_publication_date (str, optional): Filter works published on or after this
-      date (YYYY-MM-DD).
-    - per_page (int): Number of papers to fetch per query (default: 10).
-
+    Fetch papers from OpenAlex for a list of queries, returning a flattened list of paper metadata dicts.
+    Args:
+        queries (list[str]): Search keywords or phrases.
+        from_publication_date (str, optional): Filter works published on or after this date (YYYY-MM-DD).
+        per_page (int): Number of papers to fetch per query (default: 10).
     Returns:
-    - Tuple[List[dict], int]: A tuple containing:
-        • A combined list of work-metadata dictionaries (schema above)
-        • Status code (Status.SUCCESS if all queries succeeded, Status.FAILURE if any failed)
+        tuple: (list[dict], int) - List of paper metadata dicts, status code.
     """
     all_works = []
     any_failure = False
@@ -145,12 +134,9 @@ def fetch_works_multiple_queries(queries, from_publication_date=None, per_page=1
 
 def clean_topics_field(topics: list[dict]) -> list[dict]:
     """
-    Cleans a list of OpenAlex topic dictionaries for prompt-efficient use by an agent.
-    Handles multiple subfields/fields/domains per topic if they exist as lists.
-
+    Clean a list of OpenAlex topic dictionaries for prompt-efficient use by an agent.
     Args:
         topics (list[dict]): Original list of topic entries from OpenAlex.
-
     Returns:
         list[dict]: Cleaned list of topic information.
     """
@@ -176,6 +162,15 @@ def clean_topics_field(topics: list[dict]) -> list[dict]:
 
 
 def is_valid_abstract(text, min_words=50, max_words=500):
+    """
+    Validate if a text is a plausible scientific abstract.
+    Args:
+        text (str): The abstract text to validate.
+        min_words (int): Minimum word count.
+        max_words (int): Maximum word count.
+    Returns:
+        bool: True if valid, False otherwise.
+    """
     lower_text = text.lower()
     word_count = len(text.split())
 
@@ -205,7 +200,16 @@ def is_valid_abstract(text, min_words=50, max_words=500):
 
 
 def search_and_filter_papers(chroma_db, user_profile_embedding, current_paper_hashes, min_similarity=0.3):
-    """Search for papers and filter out already shown ones."""
+    """
+    Search for papers using vector similarity and filter out already shown ones.
+    Args:
+        chroma_db: ChromaVectorDB instance.
+        user_profile_embedding (list[float]): User profile embedding vector.
+        current_paper_hashes (set): Hashes of already shown papers.
+        min_similarity (float): Minimum similarity threshold.
+    Returns:
+        list[dict]: List of available paper metadata dicts.
+    """
     candidate_result = chroma_db.perform_similarity_search(
         1000, user_profile_embedding, return_scores=True, min_similarity=min_similarity
     )
@@ -229,7 +233,14 @@ def search_and_filter_papers(chroma_db, user_profile_embedding, current_paper_ha
 
 
 def generate_paper_summary(paper, project_description):
-    """Generate a summary for a paper explaining its relevance to the project."""
+    """
+    Generate a summary for a paper explaining its relevance to the project.
+    Args:
+        paper (dict): Paper metadata dict.
+        project_description (str): The user's research interests or project description.
+    Returns:
+        str: Concise summary of the paper's relevance.
+    """
     summary_prompt = f"""
     Generate a concise summary explaining why this paper is relevant to the user's research interests.
 
@@ -254,7 +265,14 @@ def generate_paper_summary(paper, project_description):
 
 
 def create_paper_dict(paper, summary):
-    """Create a standardized paper dictionary."""
+    """
+    Create a standardized paper dictionary for frontend consumption.
+    Args:
+        paper (dict): Paper metadata dict.
+        summary (str): Relevance summary.
+    Returns:
+        dict: Standardized paper dict with title, link, description, hash, and is_replacement.
+    """
     return {
         'title': paper.get("title", "N/A"),
         'link': paper.get("landing_page_url", "N/A"),
@@ -265,7 +283,18 @@ def create_paper_dict(paper, summary):
 
 
 def process_available_papers(available_papers, project_id, project_description, max_papers=10):
-    """Process available papers and return recommendations."""
+    """
+    Process available papers and return recommendations, storing them for the project.
+    Args:
+        available_papers (list[dict]): List of available paper metadata dicts.
+        project_id (str): The project ID.
+        project_description (str): The user's research interests or project description.
+        max_papers (int): Maximum number of papers to process (default: 10).
+    Returns:
+        list[dict]: List of standardized paper dicts for recommendations.
+    Side effects:
+        Stores each recommended paper for the project in the database.
+    """
     if not available_papers:
         return []
 

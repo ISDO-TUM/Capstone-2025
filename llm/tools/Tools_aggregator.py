@@ -1,3 +1,11 @@
+"""
+Tool aggregator for the Capstone project LLM agent.
+
+Responsibilities:
+- Imports and registers all available tools for the agent
+- Provides a single list of tools for agent orchestration and tool selection
+- Used by both the StategraphAgent and legacy agent flows
+"""
 
 from llm.tools.paper_handling_tools import (
     update_papers_for_project,
@@ -31,4 +39,9 @@ tools = [
 
 
 def get_tools():
+    """
+    Return the list of all registered tools for the agent.
+    Returns:
+        list: List of tool objects.
+    """
     return tools

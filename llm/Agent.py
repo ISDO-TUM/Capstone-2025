@@ -1,3 +1,12 @@
+"""
+Legacy agent orchestration for the Capstone project (React agent).
+
+Responsibilities:
+- Provides functions to trigger the agent and stream its thought process
+- Uses a system prompt and tools to invoke the agent
+- Used for testing and legacy flows (superseded by StategraphAgent)
+"""
+
 import llm.Prompts as prompts
 from llm.tools.Tools_aggregator import get_tools
 from langgraph.prebuilt import create_react_agent
@@ -15,12 +24,23 @@ agent = create_react_agent(model=llm, tools=tools)
 
 
 def trigger_agent(user_message: str):
+    """
+    Invoke the agent with a user message and return the final response.
+    Args:
+        user_message (str): The user's input message.
+    Returns:
+        dict: The agent's response object.
+    """
     return agent.invoke({'messages': [system_prompt, HumanMessage(content=user_message)]})
 
 
 def trigger_agent_show_thoughts(user_message: str):
     """
-    A generator that yields each step of the agent's thought process.
+    Generator that yields each step of the agent's thought process for frontend streaming.
+    Args:
+        user_message (str): The user's input message.
+    Yields:
+        dict: Thought and state at each step, including final output.
     """
     last_step = None
 

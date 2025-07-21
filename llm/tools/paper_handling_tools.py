@@ -61,7 +61,6 @@ def store_papers_for_project(project_id: str, papers: list[dict]):
     except Exception as e:
         logger.error(e)
         return "Failed to link papers to project"
-
     return "Operation successful"
 
 

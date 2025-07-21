@@ -43,6 +43,13 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 
 @app.errorhandler(413)
 def request_entity_too_large(error):
+    """
+    Handle HTTP 413 error for requests exceeding the 50MB file size limit.
+    Args:
+        error: The error object from Flask.
+    Returns:
+        Response: JSON error message and HTTP 413 status code.
+    """
     logger.error(f"HTTP Error 413 - Request rejected. Request content length exceeds 50MB limit. Request Content Length: {request.content_length}")
     return jsonify({
         "error": "File size exceeds maximum allowed size (50MB)"
@@ -51,21 +58,43 @@ def request_entity_too_large(error):
 
 @app.route('/')
 def home():
+    """
+    Render the dashboard homepage.
+    Returns:
+        Response: Rendered dashboard.html template.
+    """
     return render_template('dashboard.html')
 
 
 @app.route('/create-project')
 def create_project_page():
+    """
+    Render the create project page.
+    Returns:
+        Response: Rendered create_project.html template.
+    """
     return render_template('create_project.html')
 
 
 @app.route('/project/<project_id>')
 def project_overview_page(project_id):
+    """
+    Render the project overview page for a given project.
+    Args:
+        project_id (str): The project ID.
+    Returns:
+        Response: Rendered project_overview.html template.
+    """
     return render_template('project_overview.html', project_id=project_id)
 
 
 @app.route('/api/projects', methods=['POST'])
 def api_create_project():
+    """
+    Create a new project with the given title and description.
+    Returns:
+        Response: JSON with new projectId or error message.
+    """
     data = request.get_json() or {}
     title = data.get('title')
     desc = data.get('description')
@@ -77,6 +106,11 @@ def api_create_project():
 
 @app.route('/api/getProjects', methods=['GET'])
 def get_projects():
+    """
+    Get all projects with project_id and metadata.
+    Returns:
+        Response: JSON with all projects and their metadata.
+    """
     """Get all projects with project_id and metadata."""
 
     projects = get_all_projects()
@@ -103,6 +137,11 @@ def get_projects():
 
 @app.route('/api/recommendations', methods=['POST'])
 def get_recommendations():
+    """
+    Get recommendations for a project. Streams agent thoughts and recommendations to the frontend.
+    Returns:
+        Response: Server-sent event stream with recommendations or agent thoughts.
+    """
     print("Attempting to get recommendations")
     """Get recommendations for a project. Updated to use project_id and update_recommendations flag."""
     try:
@@ -184,6 +223,11 @@ def get_recommendations():
 
 @app.route('/api/extract-pdf-text', methods=['POST'])
 def extract_pdf_text():
+    """
+    Extract text from an uploaded PDF file.
+    Returns:
+        Response: JSON with extracted text or error message.
+    """
     if 'file' not in request.files:
         return jsonify({"error": "No file provided"}), 400
 
@@ -222,6 +266,11 @@ def extract_pdf_text():
 
 @app.route('/api/pubsub/update_newsletter_papers', methods=['POST'])
 def api_update_newsletter():
+    """
+    Trigger update of newsletter papers for a project using the agent and update newsletter/seen flags in the database.
+    Returns:
+        Response: JSON status message.
+    """
     logger.info("Triggered api_update_newsletter")
     payload = request.get_json() or {}
     project_id = payload.get('projectId')
@@ -258,6 +307,11 @@ def api_update_newsletter():
 # JS then looks up the full paper details via get_paper_by_hash and renders them.
 @app.route('/api/pubsub/get_newsletter_papers', methods=['GET'])
 def api_get_newsletter():
+    """
+    Get the current set of newsletter papers for a project.
+    Returns:
+        Response: JSON list of newsletter papers with metadata.
+    """
     project_id = request.args.get('projectId') or request.args.get('project_id')
     if not project_id:
         return jsonify({"error": "Missing projectId"}), 400
@@ -291,7 +345,11 @@ def api_get_newsletter():
 
 @app.route('/api/rate_paper', methods=['POST'])
 def rate_paper():
-    """Rate a paper, update the user embedding, and replace it if it's low rated"""
+    """
+    Rate a paper, update the user embedding, and replace it if it's low rated.
+    Returns:
+        Response: JSON status message and replacement info if applicable.
+    """
     data = request.get_json()
     if not data:
         return jsonify({"status": "error", "message": "No data provided"}), 400
@@ -361,6 +419,13 @@ def rate_paper():
 
 @app.route('/api/project/<project_id>')
 def api_get_project(project_id):
+    """
+    Get project metadata for a given project_id.
+    Args:
+        project_id (str): The project ID.
+    Returns:
+        Response: JSON with project metadata or error message.
+    """
     proj = get_project_by_id(project_id)
     if not proj:
         return jsonify({"error": "Project not found"}), 404
@@ -378,6 +443,13 @@ def api_get_project(project_id):
 
 @app.route('/api/project/<project_id>/update_prompt', methods=['POST'])
 def api_update_project_prompt(project_id):
+    """
+    Update the project prompt/description for a given project_id.
+    Args:
+        project_id (str): The project ID.
+    Returns:
+        Response: JSON with updated description or error message.
+    """
     data = request.get_json() or {}
     new_prompt = data.get('prompt')
     if not new_prompt:
@@ -393,7 +465,11 @@ def api_update_project_prompt(project_id):
 
 @app.route('/api/load_more_papers', methods=['POST'])
 def load_more_papers():
-    """Load more paper recommendations for user."""
+    """
+    Load more paper recommendations for the user, streaming results as they are found.
+    Returns:
+        Response: Server-sent event stream with more recommendations or error message.
+    """
     try:
         data = request.get_json()
         project_id = data.get('project_id') if data else None

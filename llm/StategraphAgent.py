@@ -40,6 +40,15 @@ logger.setLevel(logging.INFO)
 
 
 def node_logger(node_name, input_keys=None, output_keys=None):
+    """
+    Decorator for logging input and output of stategraph agent nodes.
+    Args:
+        node_name (str): Name of the node for logging.
+        input_keys (list, optional): Keys to log from the input state.
+        output_keys (list, optional): Keys to log from the output state.
+    Returns:
+        function: Wrapped function with logging and error handling.
+    """
     def decorator(func):
         def wrapper(state):
             logger = logging.getLogger("StategraphAgent")
@@ -70,6 +79,10 @@ def node_logger(node_name, input_keys=None, output_keys=None):
 def input_node(state):
     """
     Initialize the state with the user query and extract project_id if present.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with user_query, keywords, and project_id.
     """
     # Initialize the state with the user query
     user_query = state["user_query"]
@@ -101,6 +114,10 @@ def input_node(state):
 def out_of_scope_check_node(state):
     """
     Detect if the user query is out of scope for academic paper recommendations.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with out_of_scope_result.
     """
     # Get the detect_out_of_scope_query tool
     tools = get_tools()
@@ -126,6 +143,10 @@ def out_of_scope_check_node(state):
 def generate_keywords_node(state):
     """
     Generate keywords from the user query using the explicit tool.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with generated keywords.
     """
     tools = get_tools()
     generate_keywords_tool = None
@@ -159,6 +180,10 @@ def generate_keywords_node(state):
 def quality_control_node(state):
     """
     Perform quality control and filter detection on the user query.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with QC decision, tool result, keywords, and filter instructions flag.
     """
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
@@ -313,6 +338,10 @@ def quality_control_node(state):
 def out_of_scope_handler_node(state):
     """
     Handle out-of-scope queries by providing explanation and requesting new input.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with out_of_scope_message and requires_user_input.
     """
     user_query = state.get("user_query", "")
     qc_decision_reason = state.get("qc_decision_reason", "The query was determined to be out of scope.")
@@ -380,6 +409,10 @@ def out_of_scope_handler_node(state):
 def expand_subqueries_node(state):
     """
     If the QC decision was 'split', extract subqueries and keywords from the multi_step_reasoning tool result.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with extracted subqueries.
     """
     qc_tool_result = state.get("qc_tool_result")
     subqueries = []
@@ -405,6 +438,10 @@ def expand_subqueries_node(state):
 def update_papers_by_project_node(state):
     """
     Update the paper database for a specific project based on the user query and QC decision.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with update_papers_by_project_result.
     """
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
@@ -463,6 +500,10 @@ def update_papers_by_project_node(state):
 def get_best_papers_node(state):
     """
     Retrieve the most relevant papers for a project based on filter instructions.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with papers_raw.
     """
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
@@ -497,6 +538,10 @@ def get_best_papers_node(state):
 def filter_papers_node(state):
     """
     Apply natural language filtering to the retrieved papers based on the user query.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with papers_filtered.
     """
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
@@ -562,6 +607,10 @@ def no_results_handler_node(state):
     """
     If no papers are found after filtering, generate a smart explanation using the LLM.
     Finds the closest value for each filterable metric (year, citations, impact factor, etc.) using the find_closest_paper_metrics tool.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with no_results_message.
     """
     user_query = state.get("user_query", "")
     papers_raw = state.get("papers_raw", [])
@@ -629,6 +678,10 @@ def no_results_handler_node(state):
 def store_papers_for_project_node(state):
     """
     Store the recommended papers for a project in the database.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with store_papers_for_project_result.
     """
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
@@ -704,8 +757,11 @@ def run_stategraph_agent(user_query: str):
 
 def trigger_stategraph_agent_show_thoughts(user_message: str):
     """
-    A generator that yields each step of the Stategraph agent's thought process.
-    This replaces the old React agent's trigger_agent_show_thoughts function.
+    Generator that yields each step of the Stategraph agent's thought process for frontend streaming.
+    Args:
+        user_message (str): The user's research query or message.
+    Yields:
+        dict: Thought and state at each step, including final output.
     """
     try:
         # Initialize state

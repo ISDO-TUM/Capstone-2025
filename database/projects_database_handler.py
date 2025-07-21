@@ -23,13 +23,14 @@ logger = logging.getLogger(__name__)
 
 def add_new_project_to_db(title: str, description: str) -> str:
     """
-    Adds a new project to projects_table
+    Add a new project to the projects_table.
     Args:
-        title: project title
-        description: project description
-
-    Returns: void
-
+        title (str): Project title.
+        description (str): Project description.
+    Returns:
+        str: The generated project_id for the new project.
+    Side effects:
+        Inserts a new row into the projects_table in the database.
     """
     project_id = str(uuid.uuid4())
     conn = connect_to_db()
@@ -55,6 +56,16 @@ def add_new_project_to_db(title: str, description: str) -> str:
 
 
 def add_user_profile_embedding(project_id: str, embedding: List[float]):
+    """
+    Add or update the user profile embedding for a project in the database.
+    Args:
+        project_id (str): The project ID.
+        embedding (list[float]): The embedding vector to store.
+    Returns:
+        None
+    Side effects:
+        Updates the user_profile_embedding field in the projects_table.
+    """
     conn = connect_to_db()
     if conn is None:
         raise Exception("Failed to connect to database")
@@ -76,6 +87,13 @@ def add_user_profile_embedding(project_id: str, embedding: List[float]):
 
 
 def get_user_profile_embedding(project_id: str) -> List[float] | None:
+    """
+    Retrieve the user profile embedding for a project.
+    Args:
+        project_id (str): The project ID.
+    Returns:
+        list[float] or None: The embedding vector, or None if not found.
+    """
     conn = connect_to_db()
     if conn is None:
         raise Exception("Failed to connect to database")
@@ -107,14 +125,14 @@ def get_user_profile_embedding(project_id: str) -> List[float] | None:
 
 def add_queries_to_project_db(queries: list[str], project_id: str):
     """
-    Adds search queries to projects_table so that we can reuse them to prevent calling the agent
-    to generate them again
+    Add search queries to a project in the projects_table for reuse.
     Args:
-        queries: search queries for papers related to the project
-        project_id: the project id
-
-    Returns: operation status
-
+        queries (list[str]): List of search queries.
+        project_id (str): The project ID.
+    Returns:
+        Status: Status.SUCCESS if update was successful, Status.FAILURE otherwise.
+    Side effects:
+        Updates the queries field in the projects_table.
     """
     conn = connect_to_db()
     cursor = conn.cursor()
@@ -140,9 +158,11 @@ def add_queries_to_project_db(queries: list[str], project_id: str):
 
 def get_queries_for_project(project_id: str):
     """
-    Returns the list of paper API search queries for a project
+    Retrieve the list of paper API search queries for a project.
     Args:
-        project_id: the project id
+        project_id (str): The project ID.
+    Returns:
+        list or None: The list of queries, or None if not found.
     """
     conn = connect_to_db()
     cursor = conn.cursor()
@@ -155,9 +175,11 @@ def get_queries_for_project(project_id: str):
 
 def get_project_prompt(project_id: str):
     """
-    Returns the project description for the given project
+    Retrieve the project description (prompt) for the given project.
     Args:
-        project_id: the project's id
+        project_id (str): The project ID.
+    Returns:
+        str or None: The project description, or None if not found.
     """
     conn = connect_to_db()
     cursor = conn.cursor()
@@ -172,7 +194,9 @@ def get_project_prompt(project_id: str):
 
 def get_all_projects() -> list[dict]:
     """
-    Returns a list of all projects
+    Retrieve a list of all projects in the database.
+    Returns:
+        list[dict]: List of all project records as dictionaries.
     """
     conn = connect_to_db()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -186,6 +210,13 @@ def get_all_projects() -> list[dict]:
 
 
 def get_project_data(project_id: str):
+    """
+    Retrieve all data for a project by its project_id.
+    Args:
+        project_id (str): The project ID.
+    Returns:
+        dict or None: Dictionary of project data, or None if not found.
+    """
     conn = connect_to_db()
     if conn is None:
         raise Exception("Failed to connect to database")
@@ -208,7 +239,14 @@ def get_project_data(project_id: str):
 
 def add_email_to_project_db(email: str, project_id: str):
     """
-    Adds an email to a project so that we can send newsletter mails with pubsub papers to it
+    Add an email to a project for newsletter mailings.
+    Args:
+        email (str): The email address to add.
+        project_id (str): The project ID.
+    Returns:
+        None
+    Side effects:
+        Updates the queries field in the projects_table (may be a bug, check logic).
     """
     conn = connect_to_db()
     cursor = conn.cursor()
@@ -226,14 +264,12 @@ def add_email_to_project_db(email: str, project_id: str):
 
 def _uuid_exists(project_id: str, cursor) -> bool:
     """
-    Checks if a project with a certain uuid exists.
+    Check if a project with a certain UUID exists in the database.
     Args:
-        project_id: the UUID of the project
-        cursor: cursor to query the projects_table
-
+        project_id (str): The UUID of the project.
+        cursor: Database cursor to query the projects_table.
     Returns:
-        True if a project with uuid exists
-
+        bool: True if a project with the UUID exists, False otherwise.
     """
     cursor.execute("SELECT 1 FROM projects_table WHERE project_id = %s", (project_id,))
     result = cursor.fetchone()
@@ -243,8 +279,11 @@ def _uuid_exists(project_id: str, cursor) -> bool:
 
 def get_project_by_id(project_id: str):
     """
-    Returns a dict with all fields from the row with the project_id = 'project_id' from
-    the projects_table or None if it does not exist.
+    Retrieve all fields for a project by its project_id.
+    Args:
+        project_id (str): The project ID.
+    Returns:
+        dict or None: Dictionary of project data, or None if not found.
     """
     conn = connect_to_db()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -261,11 +300,14 @@ def get_project_by_id(project_id: str):
 
 def update_project_description(project_id: str, new_description: str):
     """
-    Updates the project description (prompt) for the given project_id.
+    Update the project description (prompt) for the given project_id.
     Args:
-        project_id: the project's id
-        new_description: the new project description
-    Returns: operation status
+        project_id (str): The project ID.
+        new_description (str): The new project description.
+    Returns:
+        Status: Status.SUCCESS if update was successful, Status.FAILURE otherwise.
+    Side effects:
+        Updates the description field in the projects_table.
     """
     conn = connect_to_db()
     cursor = conn.cursor()

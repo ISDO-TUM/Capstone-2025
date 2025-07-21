@@ -23,9 +23,11 @@ load_dotenv()
 
 def _generate_paper_hash(paper_data_dict):
     """
-    Generates a SHA256 hash from specific fields of a paper data dictionary.
-    Ensures consistent ordering and handling of None values for hashing.
-    All relevant fields: id, title, abstract, authors, publication_date, landing_page_url, pdf_url
+    Generate a SHA256 hash from specific fields of a paper data dictionary for deduplication.
+    Args:
+        paper_data_dict (dict): Dictionary containing paper metadata fields.
+    Returns:
+        str: SHA256 hash string representing the paper's unique identity.
     """
 
     def s(value):
@@ -49,28 +51,15 @@ def _generate_paper_hash(paper_data_dict):
 
 def insert_papers(papers_data_list):
     """
-    Insert one or more paper records into public.papers_table, including
-    the extra metrics (similarity_score, fwci, citation_normalized_percentile,
-    cited_by_count, counts_by_year).
-
-    Args
-    ----
-    papers_data_list : list[dict]
-        • Required keys:  id, title
-        • Optional keys:  abstract, authors, publication_date,
-                          landing_page_url, pdf_url,
-                          similarity_score, fwci,
-                          citation_normalized_percentile, cited_by_count,
-                          counts_by_year (list/obj → JSONB)
-
-    Returns
-    -------
-    (status_code, inserted_details)
-
-    status_code          : Status.SUCCESS if at least one row inserted,
-                           Status.FAILURE otherwise.
-    inserted_details     : list of {"title": str, "abstract": str, "hash": str}
-                           describing every newly inserted row.
+    Insert one or more paper records into the papers_table, including extra metrics.
+    Args:
+        papers_data_list (list[dict]): List of paper metadata dicts to insert.
+    Returns:
+        tuple: (status_code, inserted_details)
+            - status_code: Status.SUCCESS if at least one row inserted, Status.FAILURE otherwise.
+            - inserted_details: List of dicts with 'title', 'abstract', and 'hash' for each inserted paper.
+    Side effects:
+        Inserts new rows into the database and commits the transaction.
     """
     # ---------------- upfront checks -----------------
     if not isinstance(papers_data_list, list):
@@ -158,8 +147,9 @@ def insert_papers(papers_data_list):
 
 def get_all_papers():
     """
-    Retrieves all papers (all versions) from the papers_table.
-    Returns a list of dictionaries, where each dictionary represents a paper version.
+    Retrieve all papers from the papers_table.
+    Returns:
+        list[dict]: List of all paper records as dictionaries.
     """
     conn = connect_to_db()
     if not conn:
@@ -181,8 +171,11 @@ def get_all_papers():
 
 def get_papers_by_original_id(original_id):
     """
-    Retrieves all versions of a paper from the papers_table by its original ID.
-    Returns a list of dictionaries representing paper versions, or an empty list if not found.
+    Retrieve all versions of a paper from the papers_table by its original ID.
+    Args:
+        original_id (str): The original paper ID.
+    Returns:
+        list[dict]: List of paper versions as dictionaries.
     """
     conn = connect_to_db()
     if not conn:
@@ -204,8 +197,11 @@ def get_papers_by_original_id(original_id):
 
 def get_paper_by_hash(paper_hash_to_find):
     """
-    Retrieves a specific paper version from the papers_table by its unique hash.
-    Returns a dictionary representing the paper, or None if not found.
+    Retrieve a specific paper version from the papers_table by its unique hash.
+    Args:
+        paper_hash_to_find (str): The paper hash to look up.
+    Returns:
+        dict or None: Paper record as a dictionary, or None if not found.
     """
     conn = connect_to_db()
     if not conn:
@@ -227,31 +223,11 @@ def get_paper_by_hash(paper_hash_to_find):
 
 def get_papers_by_hash(paper_hashes_to_find):
     """
-    Retrieve one or more papers from papers_table by their unique hashes.
-
-    Parameters
-    ----------
-    paper_hashes_to_find : list[str]
-        A non-empty list of paper_hash strings.
-
-    Returns
-    -------
-    list[dict]
-        A list of dictionaries (one per paper) with keys:
-        - paper_hash
-        - id
-        - title
-        - abstract
-        - authors
-        - publication_date
-        - landing_page_url
-        - pdf_url
-        - similarity_score
-        - fwci
-        - citation_normalized_percentile
-        - cited_by_count
-        - counts_by_year
-        Returns an empty list if nothing is found or on error.
+    Retrieve one or more papers from papers_table by their unique hashes, preserving input order.
+    Args:
+        paper_hashes_to_find (list[str]): List of paper_hash strings.
+    Returns:
+        list[dict]: List of paper records as dictionaries, in the same order as input hashes.
     """
     if not isinstance(paper_hashes_to_find, list) or not paper_hashes_to_find:
         print("Error: Input must be a non-empty list of paper hashes.")
@@ -302,12 +278,14 @@ def get_papers_by_hash(paper_hashes_to_find):
 
 def update_paper(old_paper_hash, update_data):
     """
-    Updates one or more fields of a specific paper version.
-    This operation involves fetching the paper by 'old_paper_hash',
-    applying 'update_data', generating a 'new_paper_hash',
-    inserting the new version, and deleting the old version.
-    'update_data' is a dictionary of fields to change.
-    Returns True if update was successful, False otherwise.
+    Update one or more fields of a specific paper version.
+    Args:
+        old_paper_hash (str): The hash of the paper to update.
+        update_data (dict): Dictionary of fields to update.
+    Returns:
+        bool: True if update was successful, False otherwise.
+    Side effects:
+        Inserts a new version of the paper and deletes the old version in the database.
     """
     if not update_data:
         print("No data provided for paper update.")
@@ -416,9 +394,13 @@ def update_paper(old_paper_hash, update_data):
 
 def update_paper_field(old_paper_hash, field_name, new_value):
     """
-    Updates a specific field of a paper version identified by 'old_paper_hash'.
-    This is a convenience function that calls 'update_paper'.
-    Returns True if update was successful, False otherwise.
+    Update a specific field of a paper version identified by 'old_paper_hash'.
+    Args:
+        old_paper_hash (str): The hash of the paper to update.
+        field_name (str): The field to update.
+        new_value: The new value for the field.
+    Returns:
+        bool: True if update was successful, False otherwise.
     """
 
     allowed_fields = ["id", "title", "abstract", "authors", "publication_date", "landing_page_url",
@@ -431,8 +413,13 @@ def update_paper_field(old_paper_hash, field_name, new_value):
 
 def delete_paper_by_hash(paper_hash_to_delete):
     """
-    Deletes a specific paper version from the papers_table by its unique hash.
-    Returns True if deletion was successful, False otherwise.
+    Delete a specific paper version from the papers_table by its unique hash.
+    Args:
+        paper_hash_to_delete (str): The hash of the paper to delete.
+    Returns:
+        bool: True if deletion was successful, False otherwise.
+    Side effects:
+        Removes the paper from the database.
     """
     conn = connect_to_db()
     if not conn:
@@ -459,7 +446,9 @@ def delete_paper_by_hash(paper_hash_to_delete):
 
 def list_tables_and_columns():
     """
-    Lists all tables in the 'public' schema and their columns.
+    List all tables in the 'public' schema and their columns, focusing on 'papers_table'.
+    Returns:
+        None. Prints schema information to stdout.
     """
     conn = connect_to_db()
     if not conn:
@@ -511,6 +500,13 @@ def list_tables_and_columns():
 
 # HELPER functions
 def _to_float(val):
+    """
+    Convert a value to float if possible, else return None.
+    Args:
+        val: Value to convert.
+    Returns:
+        float or None
+    """
     try:
         return float(val) if val is not None else None
     except (TypeError, ValueError):
@@ -518,6 +514,13 @@ def _to_float(val):
 
 
 def _to_int(val):
+    """
+    Convert a value to int if possible, else return None.
+    Args:
+        val: Value to convert.
+    Returns:
+        int or None
+    """
     try:
         return int(val) if val is not None else None
     except (TypeError, ValueError):

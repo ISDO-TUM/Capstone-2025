@@ -28,11 +28,12 @@ def get_best_papers(project_id: str, num_candidates: int = 10) -> list[dict]:
     number of candidates to a higher number, e.g. 100 or 1000. To ensure that the agent can still return a reasonable number of papers, the default is set to 10.
 
     Args:
-        project_id (str): The project ID to get papers for and used to fetch the user profile embedding.
-        num_candidates (int): The number of candidate papers to return. Default is 10.
-
+        project_id (str): The project ID to get papers for and to fetch the user profile embedding.
+        num_candidates (int): The number of candidate papers to return (default 10).
     Returns:
-        List[Dict]: A list of paper metadata dictionaries.
+        list[dict]: List of paper metadata dictionaries, ordered by similarity.
+    Side effects:
+        May create and store a new user profile embedding if not present.
     """
     try:
         embedded_profile = get_user_profile_embedding(project_id)
@@ -116,29 +117,11 @@ def get_best_papers(project_id: str, num_candidates: int = 10) -> list[dict]:
 @tool
 def select_relevant_titles(input: str) -> str:
     """
-    Input str should be a JSON string with:
-      - 'papers': a list of paper titles and links dict
-      - 'query': the user query or research interest
-
-    Example:
-    {
-      "papers": [
-        {
-            "title":"Deep Learning in Medicine",
-            "link": "example link"
-        },
-        {
-            "title" : "Climate Change Models",
-            "link": "example link"
-        },
-        {
-            "title": "Transformer Architectures",
-            "link": "example link"
-        }],
-      "query": "machine learning for healthcare"
-    }
-
-    Returns a comma-separated string of titles and links most relevant to the query.
+    Select the most relevant paper titles and links based on a user query.
+    Args:
+        input (str): JSON string with 'papers' (list of dicts) and 'query' (str).
+    Returns:
+        str: Comma-separated string of the most relevant titles and links.
     """
 
     try:
