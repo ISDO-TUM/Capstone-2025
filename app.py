@@ -1,3 +1,16 @@
+"""
+Flask web server and API entrypoint for the Capstone academic paper recommendation system.
+
+Responsibilities:
+- Exposes REST API endpoints for project management, recommendations, ratings, and newsletter
+- Handles file uploads, PDF extraction, and user interactions
+- Orchestrates the Stategraph agent for multi-step academic search and filtering
+- Manages database and ChromaDB connections
+- Provides error handling and logging for all API routes
+
+This is the main entrypoint for running the web application and serving the frontend.
+"""
+
 import json
 import logging
 import os

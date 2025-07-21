@@ -1,3 +1,13 @@
+"""
+This module handles all project-paper linking and rating operations for the Capstone project.
+
+Responsibilities:
+- Linking papers to projects in the paperprojects_table
+- Managing paper ratings, newsletter tags, and seen status
+- Fetching, updating, and deleting project-paper associations
+
+All project-paper operations are designed to be robust, transactional, and reusable by the agent and API layers.
+"""
 
 import psycopg2
 import psycopg2.extras

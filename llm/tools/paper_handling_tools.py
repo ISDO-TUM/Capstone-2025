@@ -1,3 +1,18 @@
+"""
+This module implements the main tools for paper ingestion, filtering, storage, and project management.
+
+Responsibilities:
+- Fetching and updating papers for projects from OpenAlex
+- Storing and linking papers to projects in the database
+- Generating and storing paper embeddings in ChromaDB
+- Filtering papers by natural language or user-defined criteria
+- Generating relevance summaries for recommendations
+- Handling paper replacement, multi-step reasoning, and query reformulation
+- Utility functions for normalization, filtering, and paper metadata
+
+All tools are designed to be modular and reusable by the Stategraph agent and other orchestration flows.
+"""
+
 from __future__ import annotations
 
 import json

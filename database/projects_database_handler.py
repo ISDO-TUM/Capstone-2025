@@ -1,3 +1,14 @@
+"""
+This module handles all project-related database operations for the Capstone project.
+
+Responsibilities:
+- Creating, updating, and deleting project records
+- Managing project metadata, queries, and user profile embeddings
+- Fetching project data and queries for recommendation flows
+
+All project operations are designed to be robust, transactional, and reusable by the agent and API layers.
+"""
+
 import logging
 import uuid
 import json

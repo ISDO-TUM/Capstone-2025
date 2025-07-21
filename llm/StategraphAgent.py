@@ -1,5 +1,18 @@
 """
 Stategraph-based agent entrypoint for orchestrating multi-step academic paper search and filtering.
+
+This module implements the main agent workflow for academic paper recommendation, including:
+- Input handling and state initialization
+- Out-of-scope query detection
+- Query quality control (QC) and reformulation
+- Multi-step reasoning and subquery expansion
+- Paper ingestion and update for projects
+- Vector similarity search and ranking
+- Natural language filtering and top-10 selection
+- Storing recommendations and summaries for projects
+- Robust error handling and logging at each node
+
+The agent is designed to be modular, extensible, and easy to debug or extend for new research flows.
 """
 
 import logging
@@ -55,6 +68,9 @@ def node_logger(node_name, input_keys=None, output_keys=None):
 
 @node_logger("input_node", input_keys=["user_query"], output_keys=["user_query", "keywords"])
 def input_node(state):
+    """
+    Initialize the state with the user query and extract project_id if present.
+    """
     # Initialize the state with the user query
     user_query = state["user_query"]
     # Extract project_id if appended to the user_query (e.g., '... project ID: <id>')
@@ -83,6 +99,9 @@ def input_node(state):
 
 @node_logger("out_of_scope_check", input_keys=["user_query"], output_keys=["out_of_scope_result"])
 def out_of_scope_check_node(state):
+    """
+    Detect if the user query is out of scope for academic paper recommendations.
+    """
     # Get the detect_out_of_scope_query tool
     tools = get_tools()
     detect_out_of_scope_query = None
@@ -106,7 +125,7 @@ def out_of_scope_check_node(state):
 @node_logger("generate_keywords", input_keys=["user_query"], output_keys=["keywords"])
 def generate_keywords_node(state):
     """
-    Node: Generate keywords from the user query using the explicit tool.
+    Generate keywords from the user query using the explicit tool.
     """
     tools = get_tools()
     generate_keywords_tool = None
@@ -138,6 +157,9 @@ def generate_keywords_node(state):
 
 @node_logger("quality_control", input_keys=["user_query", "out_of_scope_result", "keywords"], output_keys=["qc_decision", "qc_tool_result", "keywords", "has_filter_instructions"])
 def quality_control_node(state):
+    """
+    Perform quality control and filter detection on the user query.
+    """
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
     qc_decision = "accept"  # Default
@@ -381,6 +403,9 @@ def expand_subqueries_node(state):
 
 @node_logger("update_papers_by_project", input_keys=["user_query", "qc_decision", "qc_tool_result", "project_id"], output_keys=["update_papers_by_project_result"])
 def update_papers_by_project_node(state):
+    """
+    Update the paper database for a specific project based on the user query and QC decision.
+    """
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
     update_papers_for_project_tool = tool_map.get("update_papers_for_project")
@@ -436,6 +461,9 @@ def update_papers_by_project_node(state):
 
 @node_logger("get_best_papers", input_keys=["project_id", "has_filter_instructions"], output_keys=["papers_raw"])
 def get_best_papers_node(state):
+    """
+    Retrieve the most relevant papers for a project based on filter instructions.
+    """
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
     get_best_papers_tool = tool_map.get("get_best_papers")
@@ -467,6 +495,9 @@ def get_best_papers_node(state):
 # --- Filter Papers Node ---
 @node_logger("filter_papers", input_keys=["user_query", "papers_raw", "has_filter_instructions"], output_keys=["papers_filtered"])
 def filter_papers_node(state):
+    """
+    Apply natural language filtering to the retrieved papers based on the user query.
+    """
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
     filter_tool = tool_map.get("filter_papers_by_nl_criteria")
@@ -596,6 +627,9 @@ def no_results_handler_node(state):
 
 @node_logger("store_papers_for_project", input_keys=["project_id", "papers_filtered", "papers_raw", "user_query"], output_keys=["store_papers_for_project_result"])
 def store_papers_for_project_node(state):
+    """
+    Store the recommended papers for a project in the database.
+    """
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
     store_papers_for_project_tool = tool_map.get("store_papers_for_project")

@@ -1,3 +1,15 @@
+"""
+This module handles all paper-related database operations for the Capstone project.
+
+Responsibilities:
+- Inserting, updating, and deleting paper records in the database
+- Generating and managing paper hashes for deduplication
+- Fetching papers by hash, ID, or project linkage
+- Utility functions for paper metadata normalization and status codes
+
+All database operations are designed to be robust, transactional, and reusable by the agent and API layers.
+"""
+
 import psycopg2
 from psycopg2 import extras
 from dotenv import load_dotenv

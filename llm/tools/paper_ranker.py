@@ -1,3 +1,14 @@
+"""
+This module implements tools for vector search and ranking of academic papers.
+
+Responsibilities:
+- Performing similarity search in ChromaDB using project/user profile embeddings
+- Fetching and returning paper metadata in the correct similarity order
+- Providing ranking and selection utilities for downstream recommendation flows
+
+All ranking and retrieval tools are designed to be used by the Stategraph agent and other orchestration flows.
+"""
+
 import json
 import logging
 from llm.Embeddings import embed_user_profile
