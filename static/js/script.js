@@ -823,41 +823,52 @@ function renderNoResultsInThoughts(noResultsData, lastThoughtEl, thoughtsContain
 function setupCollapsibleDescription(description) {
     const descriptionDisplay = document.getElementById('projectDescriptionDisplay');
     const descriptionWrapper = descriptionDisplay?.parentElement;
-    const toggleButton = document.getElementById('descriptionToggle');
     const fadeOverlay = document.getElementById('descriptionFadeOverlay');
-    const controls = document.getElementById('descriptionControls');
-    const expandText = toggleButton?.querySelector('.expand-text');
+    const oldControls = document.getElementById('descriptionControls');
+    if (oldControls && oldControls.parentNode) oldControls.parentNode.removeChild(oldControls);
 
-    if (!descriptionDisplay || !descriptionWrapper || !toggleButton || !fadeOverlay || !controls || !expandText) return;
+    if (!descriptionDisplay || !descriptionWrapper || !fadeOverlay) return;
 
     const wordCount = description.trim().split(/\s+/).length;
 
     if (wordCount > 500) {
-        const isCollapsed = true;
+        // Create controls and toggle button dynamically
+        const controls = document.createElement('div');
+        controls.className = 'description-controls';
+        controls.id = 'descriptionControls';
+        const toggleButton = document.createElement('button');
+        toggleButton.className = 'expand-btn';
+        toggleButton.id = 'descriptionToggle';
+        toggleButton.innerHTML = `
+            <span class="expand-text">Show full description</span>
+            <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <polyline points="6,9 12,15 18,9"></polyline>
+            </svg>
+        `;
+        controls.appendChild(toggleButton);
+        descriptionWrapper.appendChild(controls);
+        const expandText = toggleButton.querySelector('.expand-text');
 
+        const isCollapsed = true;
         descriptionDisplay.classList.toggle('collapsed', isCollapsed);
         descriptionDisplay.classList.toggle('expanded', !isCollapsed);
         toggleButton.classList.toggle('expanded', !isCollapsed);
         fadeOverlay.classList.toggle('visible', isCollapsed);
         controls.classList.add('visible');
-
         expandText.textContent = isCollapsed ? 'Show full description' : 'Hide full description';
 
         toggleButton.addEventListener('click', () => {
             const currentlyCollapsed = descriptionDisplay.classList.contains('collapsed');
-
             descriptionDisplay.classList.toggle('collapsed', !currentlyCollapsed);
             descriptionDisplay.classList.toggle('expanded', currentlyCollapsed);
             toggleButton.classList.toggle('expanded', currentlyCollapsed);
             fadeOverlay.classList.toggle('visible', !currentlyCollapsed);
-
             expandText.textContent = !currentlyCollapsed ? 'Show full description' : 'Hide full description';
         });
     } else {
         // Short description, no need to use expandable view
         descriptionDisplay.classList.add('expanded');
         fadeOverlay.classList.remove('visible');
-        controls.classList.remove('visible');
     }
 }
 
