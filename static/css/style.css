@@ -651,9 +651,9 @@ body {
     transform: translateY(-1px);
 }
 .project-date {
+    margin-top: auto;
     font-size: 0.99rem;
     color: #6c7a8a;
-    margin-top: 2px;
     letter-spacing: 0.1px;
     font-weight: 500;
 }
