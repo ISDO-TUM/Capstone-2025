@@ -891,13 +891,21 @@ document.addEventListener('DOMContentLoaded', () => {
             card.style.animationDelay = `${idx * 0.04 + 0.1}s`;
             // Truncate description to 120 chars for safety
             const truncatedDescription = truncateText(project.description, 120);
+            // Format date to human-readable string
+            let formattedDate = project.date;
+            if (project.date) {
+                const d = new Date(project.date);
+                if (!isNaN(d)) {
+                    formattedDate = d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                }
+            }
             card.innerHTML = `
                 <div class="project-title">${project.title}</div>
                 <div class="project-description">${truncatedDescription}</div>
                 <div class="project-tags">
                     ${project.tags.map(tag => `<span class="project-tag">${tag}</span>`).join(' ')}
                 </div>
-                <div class="project-date">Created: ${project.date}</div>
+                <div class="project-date">Created: ${formattedDate}</div>
             `;
             // Navigate to project page on click
             card.addEventListener('click', () => {
