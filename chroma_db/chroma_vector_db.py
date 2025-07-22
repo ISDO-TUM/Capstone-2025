@@ -1,3 +1,13 @@
+"""
+ChromaDB vector search wrapper for the Capstone project.
+
+Responsibilities:
+- Provides a class for storing and retrieving paper embeddings in ChromaDB
+- Supports similarity search, filtering, and embedding retrieval by hash
+- Used for all vector search and ranking operations in the agent and ingestion flows
+- Handles both local and Docker-based ChromaDB connections
+"""
+
 import logging
 from typing import List, Optional, TypedDict, Union
 
@@ -30,8 +40,16 @@ CHROMA_PORT = int(os.getenv("CHROMA_PORT", 8000))
 
 
 class ChromaVectorDB:
+    """
+    Wrapper class for ChromaDB operations: storing, searching, and retrieving embeddings.
+    """
 
     def __init__(self, collection_name: str = "research-papers") -> None:
+        """
+        Initialize the ChromaVectorDB client and collection.
+        Args:
+            collection_name (str): The name of the ChromaDB collection to use.
+        """
         # single code-path, host decided by env-var
         self.client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
         self.collection: Collection = self.client.get_or_create_collection(collection_name)
@@ -39,12 +57,12 @@ class ChromaVectorDB:
     def store_embeddings(self, data: List[PaperData]) -> int:
         """
         Store text embeddings in Chroma using OpenAI API.
-
         Args:
-            data: list of dicts like {"hash": str, "embedding": List[float]}
-
+            data (List[PaperData]): List of dicts like {"hash": str, "embedding": List[float]}
         Returns:
-            status_code: Status.SUCCESS if all succeeded, Status.FAILURE if any failed
+            int: Status.SUCCESS if all succeeded, Status.FAILURE if any failed
+        Side effects:
+            Upserts embeddings into the ChromaDB collection.
         """
         any_failure = False
 
@@ -73,18 +91,16 @@ class ChromaVectorDB:
     ) -> Optional[Union[List[str], tuple[List[str], List[float]]]]:
         """
         Perform similarity search on ChromaDB.
-
         Args:
-            k (int): No. of top similar results to return (ignored when min_similarity > 0)
+            k (int): Number of top similar results to return (ignored when min_similarity > 0)
             user_profile_embedding (List[float]): Embedding vector of the user profile
             return_scores (bool): Whether to return similarity scores along with IDs
             min_similarity (float): Minimum similarity score (0-1) to include in results
-
         Returns:
             Union[List[str], tuple[List[str], List[float]]]:
-            - If return_scores=False: List of top-k hashes (ids) of similar items
-            - If return_scores=True: Tuple of (paper_ids, similarity_scores)
-            - None if error occurs
+                - If return_scores=False: List of top-k hashes (ids) of similar items
+                - If return_scores=True: Tuple of (paper_ids, similarity_scores)
+                - None if error occurs
         """
         try:
             # Get total number of documents in collection
@@ -147,17 +163,20 @@ class ChromaVectorDB:
             return None
 
     def count_documents(self) -> int:
+        """
+        Count the number of documents in the ChromaDB collection.
+        Returns:
+            int: Number of documents in the collection.
+        """
         return self.collection.count()
 
     def get_embedding_by_hash(self, paper_hash: str) -> Optional[List[float]]:
         """
         Get embedding for a specific paper hash from ChromaDB.
-
         Args:
             paper_hash (str): The paper hash to look up
-
         Returns:
-            List[float]: The embedding vector for the paper, or None if not found
+            Optional[List[float]]: The embedding vector for the paper, or None if not found
         """
         try:
             results = self.collection.get(
