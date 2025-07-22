@@ -108,7 +108,7 @@ class ChromaVectorDB:
 
             if total_docs == 0:
                 logger.warning("ChromaDB collection is empty!")
-                return []  # todo check if this works
+                return []
 
             # If we're filtering by similarity, get ALL papers to check their similarity
             if min_similarity > 0:

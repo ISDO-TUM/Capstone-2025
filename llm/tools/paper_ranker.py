@@ -110,29 +110,3 @@ def get_best_papers(project_id: str, num_candidates: int = 10) -> list[dict]:
         logger.error(f"Error checking database state: {e}")
 
     return paper_metadata if paper_metadata else []
-
-# DEPRECATED
-
-
-@tool
-def select_relevant_titles(input: str) -> str:
-    """
-    Select the most relevant paper titles and links based on a user query.
-    Args:
-        input (str): JSON string with 'papers' (list of dicts) and 'query' (str).
-    Returns:
-        str: Comma-separated string of the most relevant titles and links.
-    """
-
-    try:
-        data = json.loads(input)
-        papers = data.get("papers", [])
-        query = data.get("query", "")
-
-        if not papers or not query:
-            return "Missing 'papers' or 'query' in input."
-
-        return f"Filter these papers: {papers} based on this query: '{query}', select the 5-10 most relevant ones"
-
-    except Exception as e:
-        return f"Error parsing input: {e}"

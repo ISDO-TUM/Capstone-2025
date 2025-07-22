@@ -139,7 +139,6 @@ async function handleRouting () {
         }
 
         try {
-            //todo update newsletter papers only on project creation or once a week
             const updateRes = await fetch('/api/pubsub/update_newsletter_papers', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
