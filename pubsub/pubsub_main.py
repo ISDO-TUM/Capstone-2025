@@ -42,6 +42,19 @@ def update_newsletter_papers(project_id: str):
     queries = ast.literal_eval(queries_str)
     logger.info(f"    ✓ queries: {queries}")
 
+    # Get prompt + embedded prompt
+    logger.info("  ↳ fetching project prompt…")
+    pp = get_project_prompt(project_id)
+    if not pp:
+        logger.error(f"    ✖ no prompt found for project {project_id}")
+        return
+    project_prompt = pp[0]
+    logger.info(f"    ✓ prompt: {project_prompt[:50]}…")
+
+    logger.info("  ↳ querying embedded project prompt…")
+    embedded_prompt = get_user_profile_embedding(project_id)  # todo handle cases where this is null
+    logger.info("    ✓ prompt embedding acquired")
+
     # 2. Fetch works
     logger.info("  ↳ fetching works from API…")
     papers, _ = fetch_works_multiple_queries(queries, from_publication_date=get_update_date(pubsub_params.DAYS_FOR_UPDATE))
@@ -69,28 +82,18 @@ def update_newsletter_papers(project_id: str):
     _embed_and_store(papers_w_hash)
     logger.info("    ✓ chroma upsert complete")
 
-    # 6. Get prompt + embedded prompt
-    logger.info("  ↳ fetching project prompt…")
-    pp = get_project_prompt(project_id)
-    if not pp:
-        logger.error(f"    ✖ no prompt found for project {project_id}")
-        return
-    project_prompt = pp[0]
-    logger.info(f"    ✓ prompt: {project_prompt[:50]}…")
-
-    logger.info("  ↳ querying embedded project prompt…")
-    embedded_prompt = get_user_profile_embedding(project_id)  # todo handle cases where this is null
-    logger.info("    ✓ prompt embedding acquired")
-
-    # 7. Similarity search
+    # 6. Similarity search
     logger.info(f"  ↳ running similarity search (top {k})…")
     sims = _sim_search(papers_w_hash, embedded_prompt)
     top_results = sims[:k]
     logger.info(f"    ✓ top results: {top_results}")
 
-    # 8. Collect current + new candidates
+    # 7. Collect current + new candidates
     logger.info("  ↳ loading current newsletter-paper hashes…")
+
+    # todo for now this returns all newsletter papers, not the old ones (older than update days threshold) that have not been seen
     current = get_pubsub_papers_for_project(project_id)  # If recommendation is older than the update days threshold but the user has not seen it consider it again
+
     logger.info(f"    ✓ {len(current)} existing newsletter entries")
     potential = []
     for h in current:
@@ -99,7 +102,7 @@ def update_newsletter_papers(project_id: str):
         potential.append(get_paper_by_hash(rid))
     logger.info(f"    ✓ total candidates: {len(potential)}")
 
-    # 9. Call agent
+    # 8. Call agent
     logger.info("  ↳ calling LLM agent to pick+summarize…")
     agent_out = calL_temp_agent(str(potential), project_prompt, str(k)).content
     logger.info(f"    ✓ raw agent output: {agent_out}")
@@ -108,7 +111,7 @@ def update_newsletter_papers(project_id: str):
     recommendation_hashes = []
     summaries = []
 
-    # 10. Persist newsletter tags
+    # 9. Persist newsletter tags
     logger.info("  ↳ resetting old tags…")
     reset_newsletter_tags(project_id)
     logger.info("  ↳ setting new newsletter tags…")
