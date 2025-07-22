@@ -897,11 +897,12 @@ document.addEventListener('DOMContentLoaded', () => {
             card.style.animationDelay = `${idx * 0.04 + 0.1}s`;
             // Truncate description to 120 chars for safety
             const truncatedDescription = truncateText(project.description, 120);
-            // Format date to human-readable string
+            // Format date to human-readable string, add 2 hours for CET
             let formattedDate = project.date;
             if (project.date) {
                 const d = new Date(project.date);
                 if (!isNaN(d)) {
+                    d.setHours(d.getHours() + 2); // Add 2 hours for CET
                     formattedDate = d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                 }
             }
@@ -981,6 +982,19 @@ document.addEventListener('DOMContentLoaded', () => {
         // Animate cards on scroll (again, in case of resize/search)
         window.addEventListener('resize', animateCardsOnScroll);
         window.addEventListener('scroll', animateCardsOnScroll);
+    }
+
+    if (window.location.pathname.startsWith('/project/')) {
+        const params = new URLSearchParams(window.location.search);
+        const isNewProject = params.get('updateRecommendations') === 'true';
+        if (!isNewProject) {
+            const agentThoughtsContainer = document.getElementById('agentThoughtsContainer');
+            if (agentThoughtsContainer) {
+                agentThoughtsContainer.innerHTML = '';
+                const section = document.querySelector('.agent-thoughts-section');
+                if (section) section.style.display = 'none';
+            }
+        }
     }
 
     handleRouting();
