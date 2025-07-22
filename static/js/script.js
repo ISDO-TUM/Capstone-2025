@@ -885,6 +885,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const projectsList = document.getElementById('projectsList');
         if (!projectsList) return;
         projectsList.innerHTML = '';
+        // Sort projects by date descending (latest first)
+        projects = projects.slice().sort((a, b) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            return dateB - dateA;
+        });
         projects.forEach((project, idx) => {
             const card = document.createElement('div');
             card.className = 'project-card';
