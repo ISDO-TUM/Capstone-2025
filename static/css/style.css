@@ -109,8 +109,8 @@ body {
 }
 
 .project-header {
-    margin-bottom: 30px;
-    padding-bottom: 20px;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
     border-bottom: 1px solid #e9ecef;
     width: 100%;
 }
@@ -1733,4 +1733,8 @@ body {
 
 .recommendation-card.hidden {
     display: none;
+}
+
+.recommendations-section + .recommendations-section {
+    margin-top: 20px;
 }
