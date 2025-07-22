@@ -137,6 +137,8 @@ def reset_newsletter_tags(project_id: str):
     cursor.close()
     connection.close()
 
+# todo update this to filter out papers older than (current date - pubsub_params.DAYS_FOR_UPDATE) that have seen == True
+
 
 def get_pubsub_papers_for_project(project_id: str):
     """
