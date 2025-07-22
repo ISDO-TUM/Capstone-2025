@@ -46,6 +46,56 @@ function renderPubSubPapers(papers, container) {
     });
 }
 
+//loadPubSubPapers loads the latest papers after recommendations are loaded
+async function loadPubSubPapers(projectId) {
+    const container = document.getElementById('pubsubPapersContainer');
+    if (!container) return;
+
+    try {
+        // First update the newsletter papers
+        const updateRes = await fetch('/api/pubsub/update_newsletter_papers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectId })
+        });
+        const updateJson = await updateRes.json();
+        if (!updateRes.ok) {
+            console.warn('⚠️ update_newsletter_papers status failed:', updateRes.status, updateJson);
+            // Show user-friendly message for new projects
+            if (updateJson.error && updateJson.error.includes('No search queries found')) {
+                console.log('📝 New project detected - queries will be generated when recommendations are created');
+            }
+        } else {
+            // Add a small delay to ensure database transaction is committed
+            console.log('✅ PubSub update completed successfully, waiting for database commit...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        // Then fetch the papers
+        const papers = await fetch(
+            `/api/pubsub/get_newsletter_papers?projectId=${projectId}`
+        ).then(r => {
+            console.log('📡 PubSub papers response status:', r.status);
+            return r.json();
+        }).catch(err => {
+            console.error('❌ Error fetching PubSub papers:', err);
+            return [];
+        });
+
+        console.log('PubSub papers fetched:', papers);
+        console.log('pubsubPapersContainer is', container);
+        if (papers.length === 0) {
+            // Keep the loading placeholder if no papers are available
+            console.log('📭 No papers available yet');
+        } else {
+            console.log('📬 Rendering real PubSub papers:', papers);
+            renderPubSubPapers(papers, container);
+        }
+    } catch (err) {
+        console.error('Error loading PubSub papers:', err);
+    }
+}
+
 // Helper function to create star rating HTML
 const createStarRatingHTML = () => `
     <span class="star" data-value="1">&#9733;</span>
@@ -131,52 +181,15 @@ async function handleRouting () {
         renderPubSubSection();
         setupPubSubForm();
 
+        // Show loading placeholder immediately
+        container.innerHTML = '<p class="no-papers-placeholder">⌛ Latest papers will appear here soon...</p>';
+
         const params= new URLSearchParams(window.location.search);
         const updateRecommendations = params.get('updateRecommendations') === 'true';
         loadProjectOverviewData(projectId, project.description, updateRecommendations);
         if (updateRecommendations) {
             history.replaceState({}, '', window.location.pathname);
         }
-
-        try {
-            const updateRes = await fetch('/api/pubsub/update_newsletter_papers', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ projectId })
-            });
-            const updateJson = await updateRes.json();
-            if (!updateRes.ok) {
-                console.warn('⚠️ update_newsletter_papers status failed:', updateRes.status, updateJson);
-                // Show user-friendly message for new projects
-                if (updateJson.error && updateJson.error.includes('No search queries found')) {
-                console.log('📝 New project detected - queries will be generated when recommendations are created');
-                }
-            } else {
-                // Add a small delay to ensure database transaction is committed
-                console.log('✅ PubSub update completed successfully, waiting for database commit...');
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-        } catch (err) {
-            console.error('Error when calling update_newsletter_papers:', err);
-        }
-        const papers = await fetch(
-            `/api/pubsub/get_newsletter_papers?projectId=${projectId}`
-        ).then(r => {
-            console.log('📡 PubSub papers response status:', r.status);
-            return r.json();
-        }).catch(err => {
-            console.error('❌ Error fetching PubSub papers:', err);
-            return [];
-        });
-            console.log('PubSub papers fetched:', papers);
-            console.log('pubsubPapersContainer is', container);
-            if (papers.length === 0) {
-                // Instead of rendering test cards, show a placeholder message
-                container.innerHTML = '<p class="no-papers-placeholder">⌛ Latest papers will appear here soon...</p>';
-            } else {
-                console.log('📬 Rendering real PubSub papers:', papers);
-                renderPubSubPapers(papers, container);
-            }
 
 
     } else if (path === '/') {
@@ -489,6 +502,12 @@ function renderRecommendations(recommendations, container) {
             filterAndSortPapers();
         }
     }, 100);
+
+    // Load PubSub papers after recommendations are rendered
+    const projectId = window.location.pathname.split('/').pop();
+    if (projectId) {
+        loadPubSubPapers(projectId);
+    }
 }
 
 async function loadMorePapers(projectId, recommendationsContainer, thoughtsContainer) {
