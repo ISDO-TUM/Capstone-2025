@@ -379,6 +379,8 @@ def detect_out_of_scope_query(query_description: str) -> str:
     for a scientific literature search or if it is out-of-scope (e.g., a greeting,
     joke, personal opinion, or unrelated to science).
 
+    If the query contains an appended paper, extract keywords also based on the paper.
+
     If the query is valid, extract a list of 2-5 concise, domain-relevant keyword phrases (each 2-4 words) that best capture the research intent.
 
     Guidelines for keyword extraction:
