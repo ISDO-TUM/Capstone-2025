@@ -892,10 +892,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderProjects(projects) {
+    function renderProjects(projects, isSearchResult = false) {
         const projectsList = document.getElementById('projectsList');
+        const noProjectsContainer = document.getElementById('noProjectsContainer');
+        const searchBarWrapper = document.querySelector('.search-bar-wrapper');
+
         if (!projectsList) return;
+
+        // Check if there are no projects (only show no projects screen if it's not a search result)
+        if ((!projects || projects.length === 0) && !isSearchResult) {
+            // Hide search bar and projects list, show no projects message
+            if (searchBarWrapper) {
+                searchBarWrapper.classList.add('hidden');
+                searchBarWrapper.style.display = 'none';
+            }
+            if (projectsList) projectsList.style.display = 'none';
+            if (noProjectsContainer) {
+                noProjectsContainer.style.display = 'flex';
+            }
+            return;
+        }
+
+        // Show search bar and projects list, hide no projects message
+        if (searchBarWrapper) {
+            searchBarWrapper.classList.remove('hidden');
+            searchBarWrapper.style.display = 'flex';
+        }
+        if (projectsList) projectsList.style.display = 'grid';
+        if (noProjectsContainer) noProjectsContainer.style.display = 'none';
+
         projectsList.innerHTML = '';
+
+        // If no search results, show empty state but keep search bar visible
+        if (!projects || projects.length === 0) {
+            projectsList.innerHTML = '<div style="text-align: center; color: #6c757d; padding: 40px; font-size: 1.1rem;">No projects found matching your search.</div>';
+            return;
+        }
+
         // Sort projects by date descending (latest first)
         projects = projects.slice().sort((a, b) => {
             const dateA = new Date(a.date);
@@ -980,14 +1013,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Load projects from API
         loadProjectsFromAPI().then(projects => {
             allProjects = projects;
-            renderProjects(allProjects);
+            renderProjects(allProjects, false); // Not a search result
         });
 
         const searchInput = document.getElementById('projectSearchInput');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 const filtered = filterProjectsBySearch(allProjects, e.target.value);
-                renderProjects(filtered);
+                renderProjects(filtered, true); // Mark as search result
             });
         }
         // Animate cards on scroll (again, in case of resize/search)
