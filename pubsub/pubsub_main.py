@@ -79,7 +79,7 @@ def update_newsletter_papers(project_id: str):
     logger.info(f"    ✓ prompt: {project_prompt[:50]}…")
 
     logger.info("  ↳ embedding project prompt…")
-    embedded_prompt = embed_user_profile(project_prompt)
+    embedded_prompt = embed_user_profile(project_prompt)  # todo replace this with the project's embedding
     logger.info("    ✓ prompt embedding complete")
 
     # 7. Similarity search

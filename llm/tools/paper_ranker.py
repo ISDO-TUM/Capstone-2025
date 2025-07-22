@@ -9,7 +9,6 @@ Responsibilities:
 All ranking and retrieval tools are designed to be used by the Stategraph agent and other orchestration flows.
 """
 
-import json
 import logging
 from llm.Embeddings import embed_user_profile
 from langchain_core.tools import tool
