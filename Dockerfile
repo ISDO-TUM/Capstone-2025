@@ -1,13 +1,8 @@
 # Use an official Python runtime as a parent image
 FROM python:3.13-slim
 
-# Install PostgreSQL client tools and build dependencies for LlamaIndex
-RUN apt-get update && apt-get install -y \
-    postgresql-client \
-    gcc \
-    g++ \
-    make \
-    && rm -rf /var/lib/apt/lists/*
+# Install PostgreSQL client tools (psql + pg_isready)
+RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables for Python
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -21,10 +16,6 @@ COPY requirements.txt .
 
 # only production dependencies are typically installed.
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Pre-download bert-base-uncased for BERTScore (HuggingFace Transformers cache)
-RUN pip install --no-cache-dir transformers==4.41.2 torch==2.7.1
-RUN python -c "from transformers import AutoModel, AutoTokenizer; AutoModel.from_pretrained('bert-base-uncased'); AutoTokenizer.from_pretrained('bert-base-uncased')"
 
 # Copy the rest of the application code into the container at /app
 COPY . .
