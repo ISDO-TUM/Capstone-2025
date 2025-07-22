@@ -172,7 +172,7 @@ async function handleRouting () {
             console.log('pubsubPapersContainer is', container);
             if (papers.length === 0) {
                 // Instead of rendering test cards, show a placeholder message
-                container.innerHTML = '<p class="no-papers-placeholder">Here the newest papers will be shown later.</p>';
+                container.innerHTML = '<p class="no-papers-placeholder">⌛ Latest papers will appear here soon...</p>';
             } else {
                 console.log('📬 Rendering real PubSub papers:', papers);
                 renderPubSubPapers(papers, container);
