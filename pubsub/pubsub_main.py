@@ -10,9 +10,9 @@ from pubsub import pubsub_params
 from pubsub.temporary_llm_that_will_be_replaced_soon import calL_temp_agent
 from typing import List, TypedDict
 from database.papers_database_handler import insert_papers, get_papers_by_original_id, get_paper_by_hash
-from database.projects_database_handler import get_queries_for_project, get_project_prompt
+from database.projects_database_handler import get_queries_for_project, get_project_prompt, get_user_profile_embedding
 import ast
-from llm.Embeddings import embed_papers, embed_user_profile
+from llm.Embeddings import embed_papers
 from paper_handling.paper_handler import fetch_works_multiple_queries
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ def update_newsletter_papers(project_id: str):
     _embed_and_store(papers_w_hash)
     logger.info("    ✓ chroma upsert complete")
 
-    # 6. Get prompt + embed
+    # 6. Get prompt + embedded prompt
     logger.info("  ↳ fetching project prompt…")
     pp = get_project_prompt(project_id)
     if not pp:
@@ -78,9 +78,9 @@ def update_newsletter_papers(project_id: str):
     project_prompt = pp[0]
     logger.info(f"    ✓ prompt: {project_prompt[:50]}…")
 
-    logger.info("  ↳ embedding project prompt…")
-    embedded_prompt = embed_user_profile(project_prompt)  # todo replace this with the project's embedding
-    logger.info("    ✓ prompt embedding complete")
+    logger.info("  ↳ querying embedded project prompt…")
+    embedded_prompt = get_user_profile_embedding(project_id)  # todo handle cases where this is null
+    logger.info("    ✓ prompt embedding acquired")
 
     # 7. Similarity search
     logger.info(f"  ↳ running similarity search (top {k})…")
