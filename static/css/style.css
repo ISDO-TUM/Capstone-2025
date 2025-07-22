@@ -856,11 +856,11 @@ body {
     visibility: hidden;
     opacity: 0;
     width: 320px;
-    background-color: #222;
-    color: #fff;
+    background: rgba(255,255,255,0.95);
+    color: #1a237e;
     text-align: left;
-    border-radius: 6px;
-    padding: 12px;
+    border-radius: 12px;
+    padding: 16px;
     position: absolute;
     z-index: 10;
     top: 120%;
@@ -868,7 +868,12 @@ body {
     transform: translateX(-50%);
     transition: opacity 0.2s;
     font-size: 0.95em;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    font-weight: 400;
+    box-shadow: 0 4px 24px 0 rgba(31, 38, 135, 0.15);
+    border: 1.5px solid #b3d1ff;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    line-height: 1.5;
 }
 
 .info-icon:hover .tooltip,
