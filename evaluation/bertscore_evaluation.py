@@ -74,11 +74,20 @@ def dcg_at_k(ranked_papers: List[Dict], bertscore_scores: Dict[str, float], k: i
     return dcg
 
 
-def idcg_at_k(bertscore_scores: Dict[str, float], k: int) -> float:
+def idcg_at_k(ranked_papers: List[Dict], bertscore_scores: Dict[str, float], k: int) -> float:
     """
     Compute IDCG@k (ideal DCG) by sorting papers by BERTScore F1 in descending order.
+    Only considers papers that are actually in the ranked list.
     """
-    sorted_scores = sorted(bertscore_scores.values(), reverse=True)
+    # Get relevance scores for the papers in the ranked list
+    paper_scores = []
+    for paper in ranked_papers:
+        title = paper['title']
+        relevance = bertscore_scores.get(title, 0.0)
+        paper_scores.append(relevance)
+
+    # Sort in descending order to get ideal ranking
+    sorted_scores = sorted(paper_scores, reverse=True)
 
     idcg = 0.0
     for i, relevance in enumerate(sorted_scores[:k]):
@@ -91,7 +100,7 @@ def ndcg_at_k(ranked_papers: List[Dict], bertscore_scores: Dict[str, float], k: 
     Compute nDCG@k using BERTScore F1 as relevance scores.
     """
     dcg = dcg_at_k(ranked_papers, bertscore_scores, k)
-    idcg = idcg_at_k(bertscore_scores, k)
+    idcg = idcg_at_k(ranked_papers, bertscore_scores, k)
 
     if idcg == 0:
         return 0.0
