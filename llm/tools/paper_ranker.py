@@ -1,3 +1,14 @@
+"""
+This module implements tools for vector search and ranking of academic papers.
+
+Responsibilities:
+- Performing similarity search in ChromaDB using project/user profile embeddings
+- Fetching and returning paper metadata in the correct similarity order
+- Providing ranking and selection utilities for downstream recommendation flows
+
+All ranking and retrieval tools are designed to be used by the Stategraph agent and other orchestration flows.
+"""
+
 import logging
 from llm.Embeddings import embed_user_profile
 from langchain_core.tools import tool
@@ -16,11 +27,12 @@ def get_best_papers(project_id: str, num_candidates: int = 10) -> list[dict]:
     number of candidates to a higher number, e.g. 100 or 1000. To ensure that the agent can still return a reasonable number of papers, the default is set to 10.
 
     Args:
-        project_id (str): The project ID to get papers for and used to fetch the user profile embedding.
-        num_candidates (int): The number of candidate papers to return. Default is 10.
-
+        project_id (str): The project ID to get papers for and to fetch the user profile embedding.
+        num_candidates (int): The number of candidate papers to return (default 10).
     Returns:
-        List[Dict]: A list of paper metadata dictionaries.
+        list[dict]: List of paper metadata dictionaries, ordered by similarity.
+    Side effects:
+        May create and store a new user profile embedding if not present.
     """
     try:
         embedded_profile = get_user_profile_embedding(project_id)

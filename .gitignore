@@ -5,3 +5,4 @@ __pycache__/
 *.pyc
 *.idea
 chroma_storage/
+/evaluation_results/

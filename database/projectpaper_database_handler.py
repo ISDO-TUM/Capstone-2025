@@ -1,3 +1,13 @@
+"""
+This module handles all project-paper linking and rating operations for the Capstone project.
+
+Responsibilities:
+- Linking papers to projects in the paperprojects_table
+- Managing paper ratings, newsletter tags, and seen status
+- Fetching, updating, and deleting project-paper associations
+
+All project-paper operations are designed to be robust, transactional, and reusable by the agent and API layers.
+"""
 
 import psycopg2
 import psycopg2.extras
@@ -7,17 +17,18 @@ from datetime import datetime, timedelta
 
 def assign_paper_to_project(paper_hash: str, project_id: str, summary: str, newsletter: bool = False, seen: bool = False, is_replacement: bool = False):
     """
-    After papers for a project have been chosen with similarity search, the papers are linked to a project
-    in paperprojects_table one by one using this function which adds entries to that table.
+    Link a paper to a project in the paperprojects_table, with optional newsletter, seen, and replacement flags.
     Args:
-        paper_hash: The paper's hash
-        project_id: The project's id
-        summary: An agent-generated explanation on why this paper is relevant for the project
-        newsletter: If the paper belongs to pubsub
-        seen: If the paper has been seen by the user in the frontend (must have newsletter = true to have this set to true)
-
-    Returns: void
-
+        paper_hash (str): The paper's hash.
+        project_id (str): The project's id.
+        summary (str): Agent-generated explanation of relevance.
+        newsletter (bool): If the paper belongs to pubsub/newsletter.
+        seen (bool): If the paper has been seen by the user (must have newsletter=True).
+        is_replacement (bool): If the paper is a replacement for a low-rated one.
+    Returns:
+        None
+    Side effects:
+        Inserts or updates a row in paperprojects_table.
     """
     connection = connect_to_db()
     cursor = connection.cursor()
@@ -33,13 +44,11 @@ def assign_paper_to_project(paper_hash: str, project_id: str, summary: str, news
 
 def get_papers_for_project(project_id: str):
     """
-    Returns the list of papers for a project by linking by hash the papers from paperprojects_table
-    with the ones from papers_table. Excludes pubsub papers.
+    Retrieve the list of papers for a project, excluding pubsub papers.
     Args:
-        project_id: The project's id
-
-    Returns: A dict list where each dict contains paper metadata + a summary explaining why the paper is relevant
-
+        project_id (str): The project's id.
+    Returns:
+        list[dict]: List of dicts with paper metadata and relevance summary.
     """
     connection = connect_to_db()
     cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -76,18 +85,15 @@ def get_papers_for_project(project_id: str):
 
 def set_newsletter_tags_for_project(project_id: str, paper_hashes: list, summaries: list):
     """
-    Adds papers to a project in paperprojects_table by setting newsletter to true and seen to false to a set of papers
-    identified by paper_hashes.
-    These papers correspond to the pubsub system.
-    Each paper needs a summary explaining why the paper is relevant to the project even if the paper is already in the table.
-    If a papers is already linked to the paper we just update the values of newsletter and seen and ignore the summary.
+    Add or update newsletter tags for a set of papers in a project.
     Args:
-        project_id: The project's id
-        paper_hashes: List of paper hashes
-        summaries: List of paper summaries
+        project_id (str): The project's id.
+        paper_hashes (list): List of paper hashes.
+        summaries (list): List of paper summaries.
     Returns:
-        void
-
+        None
+    Side effects:
+        Updates newsletter and seen fields in paperprojects_table.
     """
     connection = connect_to_db()
     cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -111,12 +117,13 @@ def set_newsletter_tags_for_project(project_id: str, paper_hashes: list, summari
 
 def reset_newsletter_tags(project_id: str):
     """
-    Resets the newsletter and seen tags to 'False' for a project in paperprojects_table
+    Reset the newsletter and seen tags to False for all papers in a project.
     Args:
-        project_id: The project's id
-
+        project_id (str): The project's id.
     Returns:
-        void
+        None
+    Side effects:
+        Updates newsletter and seen fields in paperprojects_table.
     """
     connection = connect_to_db()
     cursor = connection.cursor()
@@ -130,16 +137,16 @@ def reset_newsletter_tags(project_id: str):
     cursor.close()
     connection.close()
 
+# todo update this to filter out papers older than (current date - pubsub_params.DAYS_FOR_UPDATE) that have seen == True
+
 
 def get_pubsub_papers_for_project(project_id: str):
     """
-    Returns the list of pubsub papers for a project.
+    Retrieve the list of pubsub papers for a project.
     Args:
-        project_id: The project's id
-
+        project_id (str): The project's id.
     Returns:
-        A list of paper hashes and their corresponding summaries. These need to be linked to their
-        metadata using the hashes later if needed.
+        list: List of tuples (paper_hash, summary) for pubsub papers.
     """
     connection = connect_to_db()
     cursor = connection.cursor()
@@ -157,23 +164,12 @@ def get_pubsub_papers_for_project(project_id: str):
 
 def should_update(project_id: str, days_for_update: int | float) -> bool:
     """
-    Return True if *either* of these are true for the given project:
-
-    1. There are **no** rows with newsletter=True.
-    2. The newest newsletter=True row is older than `days_for_update` days.
-
-    Parameters
-    ----------
-    conn : psycopg2.extensions.connection
-        An open connection to the database.
-    project_id : str
-        The project you’re checking.
-    days_for_update : int | float
-        Age threshold in days.
-
-    Returns
-    -------
-    bool
+    Determine if newsletter papers for a project should be updated based on age or absence.
+    Args:
+        project_id (str): The project to check.
+        days_for_update (int | float): Age threshold in days.
+    Returns:
+        bool: True if update is needed, False otherwise.
     """
     conn = connect_to_db()
     with conn.cursor() as cur:
@@ -203,20 +199,13 @@ def should_update(project_id: str, days_for_update: int | float) -> bool:
 def mark_paper_seen(project_id: str, paper_hash: str) -> bool:
     """
     Mark a (project_id, paper_hash) pair as seen in paperprojects_table.
-
-    Parameters
-    ----------
-    conn : psycopg2.extensions.connection
-        An open psycopg2 connection.
-    project_id : str
-        The ID of the project.
-    paper_hash : str
-        The paper's hash.
-
-    Returns
-    -------
-    bool
-        True if one row was updated, False if no matching row existed.
+    Args:
+        project_id (str): The project ID.
+        paper_hash (str): The paper's hash.
+    Returns:
+        bool: True if one row was updated, False otherwise.
+    Side effects:
+        Updates the seen field in paperprojects_table.
     """
     conn = connect_to_db()
     with conn.cursor() as cur:
@@ -238,19 +227,13 @@ def mark_paper_seen(project_id: str, paper_hash: str) -> bool:
 
 def delete_project_rows(project_id: str) -> int:
     """
-    Delete all rows belonging to `project_id` from public.paperprojects_table.
-
-    Parameters
-    ----------
-    conn : psycopg2.extensions.connection
-        An open psycopg2 connection.
-    project_id : str
-        The project whose rows you want to purge.
-
-    Returns
-    -------
-    int
-        How many rows were deleted (0 if none existed).
+    Delete all rows belonging to a project from paperprojects_table.
+    Args:
+        project_id (str): The project whose rows to delete.
+    Returns:
+        int: Number of rows deleted (0 if none existed).
+    Side effects:
+        Removes rows from paperprojects_table.
     """
     conn = connect_to_db()
     with conn.cursor() as cur:

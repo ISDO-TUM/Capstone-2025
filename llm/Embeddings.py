@@ -1,3 +1,13 @@
+"""
+Embedding utilities for the Capstone project.
+
+Responsibilities:
+- Provides functions to embed user profiles, paper titles/abstracts, and arbitrary text
+- Handles summarization of long texts before embedding
+- Uses OpenAI embedding models and the LLM for summarization
+- Used throughout the agent and ingestion flows for vector search and ranking
+"""
+
 import logging
 from openai import OpenAI
 from llm.LLMDefinition import OPENAI_API_KEY, LLM
@@ -8,21 +18,51 @@ logger = logging.getLogger(__name__)
 
 
 def embed_string(text, model="text-embedding-3-small"):
+    """
+    Embed a string using the specified OpenAI embedding model.
+    Args:
+        text (str): The text to embed.
+        model (str): The embedding model to use (default: 'text-embedding-3-small').
+    Returns:
+        list[float]: The embedding vector.
+    """
     text = text.replace("\n", " ")
     return client.embeddings.create(input=[text], model=model).data[0].embedding
 
 
 def embed_user_profile(text):
-    """Embed user profile text, summarize if it's too long."""
+    """
+    Embed user profile text, summarizing if too long.
+    Args:
+        text (str): The user profile text.
+    Returns:
+        list[float]: The embedding vector.
+    """
     return embed_paper_text(text)
 
 
 def embed_papers(title, abstract):
+    """
+    Embed a paper by concatenating its title and abstract.
+    Args:
+        title (str): The paper title.
+        abstract (str): The paper abstract.
+    Returns:
+        list[float]: The embedding vector.
+    """
     return embed_string(title + abstract)
 
 
 def embed_paper_text(paper_text: str) -> list[float]:
-    """Embed paper text, summarize if it's too long."""
+    """
+    Embed paper text, summarizing if too long for the embedding model.
+    Args:
+        paper_text (str): The full paper text.
+    Returns:
+        list[float]: The embedding vector.
+    Side effects:
+        Calls the LLM to summarize if the text exceeds 1500 words.
+    """
     if not paper_text or not paper_text.strip():
         return []
 

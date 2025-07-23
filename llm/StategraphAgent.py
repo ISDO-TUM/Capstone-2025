@@ -1,5 +1,18 @@
 """
 Stategraph-based agent entrypoint for orchestrating multi-step academic paper search and filtering.
+
+This module implements the main agent workflow for academic paper recommendation, including:
+- Input handling and state initialization
+- Out-of-scope query detection
+- Query quality control (QC) and reformulation
+- Multi-step reasoning and subquery expansion
+- Paper ingestion and update for projects
+- Vector similarity search and ranking
+- Natural language filtering and top-10 selection
+- Storing recommendations and summaries for projects
+- Robust error handling and logging at each node
+
+The agent is designed to be modular, extensible, and easy to debug or extend for new research flows.
 """
 
 import logging
@@ -27,6 +40,15 @@ logger.setLevel(logging.INFO)
 
 
 def node_logger(node_name, input_keys=None, output_keys=None):
+    """
+    Decorator for logging input and output of stategraph agent nodes.
+    Args:
+        node_name (str): Name of the node for logging.
+        input_keys (list, optional): Keys to log from the input state.
+        output_keys (list, optional): Keys to log from the output state.
+    Returns:
+        function: Wrapped function with logging and error handling.
+    """
     def decorator(func):
         def wrapper(state):
             logger = logging.getLogger("StategraphAgent")
@@ -55,6 +77,13 @@ def node_logger(node_name, input_keys=None, output_keys=None):
 
 @node_logger("input_node", input_keys=["user_query"], output_keys=["user_query", "keywords"])
 def input_node(state):
+    """
+    Initialize the state with the user query and extract project_id if present.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with user_query, keywords, and project_id.
+    """
     # Initialize the state with the user query
     user_query = state["user_query"]
     # Extract project_id if appended to the user_query (e.g., '... project ID: <id>')
@@ -83,6 +112,13 @@ def input_node(state):
 
 @node_logger("out_of_scope_check", input_keys=["user_query"], output_keys=["out_of_scope_result"])
 def out_of_scope_check_node(state):
+    """
+    Detect if the user query is out of scope for academic paper recommendations.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with out_of_scope_result.
+    """
     # Get the detect_out_of_scope_query tool
     tools = get_tools()
     detect_out_of_scope_query = None
@@ -106,7 +142,11 @@ def out_of_scope_check_node(state):
 @node_logger("generate_keywords", input_keys=["user_query"], output_keys=["keywords"])
 def generate_keywords_node(state):
     """
-    Node: Generate keywords from the user query using the explicit tool.
+    Generate keywords from the user query using the explicit tool.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with generated keywords.
     """
     tools = get_tools()
     generate_keywords_tool = None
@@ -138,6 +178,13 @@ def generate_keywords_node(state):
 
 @node_logger("quality_control", input_keys=["user_query", "out_of_scope_result", "keywords"], output_keys=["qc_decision", "qc_tool_result", "keywords", "has_filter_instructions"])
 def quality_control_node(state):
+    """
+    Perform quality control and filter detection on the user query.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with QC decision, tool result, keywords, and filter instructions flag.
+    """
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
     qc_decision = "accept"  # Default
@@ -291,6 +338,10 @@ def quality_control_node(state):
 def out_of_scope_handler_node(state):
     """
     Handle out-of-scope queries by providing explanation and requesting new input.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with out_of_scope_message and requires_user_input.
     """
     user_query = state.get("user_query", "")
     qc_decision_reason = state.get("qc_decision_reason", "The query was determined to be out of scope.")
@@ -358,6 +409,10 @@ def out_of_scope_handler_node(state):
 def expand_subqueries_node(state):
     """
     If the QC decision was 'split', extract subqueries and keywords from the multi_step_reasoning tool result.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with extracted subqueries.
     """
     qc_tool_result = state.get("qc_tool_result")
     subqueries = []
@@ -381,6 +436,13 @@ def expand_subqueries_node(state):
 
 @node_logger("update_papers_by_project", input_keys=["user_query", "qc_decision", "qc_tool_result", "project_id"], output_keys=["update_papers_by_project_result"])
 def update_papers_by_project_node(state):
+    """
+    Update the paper database for a specific project based on the user query and QC decision.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with update_papers_by_project_result.
+    """
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
     update_papers_for_project_tool = tool_map.get("update_papers_for_project")
@@ -436,6 +498,13 @@ def update_papers_by_project_node(state):
 
 @node_logger("get_best_papers", input_keys=["project_id", "has_filter_instructions"], output_keys=["papers_raw"])
 def get_best_papers_node(state):
+    """
+    Retrieve the most relevant papers for a project based on filter instructions.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with papers_raw.
+    """
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
     get_best_papers_tool = tool_map.get("get_best_papers")
@@ -467,6 +536,13 @@ def get_best_papers_node(state):
 # --- Filter Papers Node ---
 @node_logger("filter_papers", input_keys=["user_query", "papers_raw", "has_filter_instructions"], output_keys=["papers_filtered"])
 def filter_papers_node(state):
+    """
+    Apply natural language filtering to the retrieved papers based on the user query.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with papers_filtered.
+    """
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
     filter_tool = tool_map.get("filter_papers_by_nl_criteria")
@@ -531,6 +607,10 @@ def no_results_handler_node(state):
     """
     If no papers are found after filtering, generate a smart explanation using the LLM.
     Finds the closest value for each filterable metric (year, citations, impact factor, etc.) using the find_closest_paper_metrics tool.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with no_results_message.
     """
     user_query = state.get("user_query", "")
     papers_raw = state.get("papers_raw", [])
@@ -596,6 +676,13 @@ def no_results_handler_node(state):
 
 @node_logger("store_papers_for_project", input_keys=["project_id", "papers_filtered", "papers_raw", "user_query"], output_keys=["store_papers_for_project_result"])
 def store_papers_for_project_node(state):
+    """
+    Store the recommended papers for a project in the database.
+    Args:
+        state (dict): The current agent state.
+    Returns:
+        dict: Updated state with store_papers_for_project_result.
+    """
     tools = get_tools()
     tool_map = {getattr(tool, 'name', None): tool for tool in tools}
     store_papers_for_project_tool = tool_map.get("store_papers_for_project")
@@ -670,8 +757,11 @@ def run_stategraph_agent(user_query: str):
 
 def trigger_stategraph_agent_show_thoughts(user_message: str):
     """
-    A generator that yields each step of the Stategraph agent's thought process.
-    This replaces the old React agent's trigger_agent_show_thoughts function.
+    Generator that yields each step of the Stategraph agent's thought process for frontend streaming.
+    Args:
+        user_message (str): The user's research query or message.
+    Yields:
+        dict: Thought and state at each step, including final output.
     """
     try:
         # Initialize state
@@ -763,45 +853,46 @@ def trigger_stategraph_agent_show_thoughts(user_message: str):
         yield {"thought": f"An error occurred: {str(e)}", "is_final": True, "final_content": None}
 
 
-if __name__ == "__main__":
-    # Example usage (stepwise test)
-    queries = [
-        "I am looking for papers in the field of machine learning in healthcare published after 2018.",  # accept
-        # "Hello world",  # out_of_scope
-        # "Biology",  # reformulate (too short/vague)
-        # "Deep learning for genomics and climate change adaptation",  # split (multi-topic)
-        # "Quantum entanglement in nitrogen-vacancy centers at 4K in diamond nanostructures",  # broaden (very narrow)
-        # "Recent advances in science and technology"  # narrow (too broad)
-    ]
-    for user_query in queries:
-        print(f"\n=== Testing query: '{user_query}' ===")
-        # Step 1: Input node
-        state = {"user_query": user_query}
-        state = input_node(state)
-        print("After input_node:", state)
-        # Step 2: Out-of-scope check node
-        state = out_of_scope_check_node(state)
-        print("After out_of_scope_check_node:", state)
-        out_of_scope_result = state.get("out_of_scope_result")
-        if out_of_scope_result:
-            try:
-                parsed = json.loads(out_of_scope_result)
-                if parsed.get("status") == "valid" and "keywords" in parsed:
-                    state["keywords"] = parsed["keywords"]
-            except Exception:
-                # Optionally log or handle parsing errors
-                logger.error("Error parsing out_of_scope_result")
-                pass
-        print("After out_of_scope_check_node:", state)
-        # Step 3: Quality control node
-        state = quality_control_node(state)
-        print("After quality_control_node:", state)
-        # Step 4: Update papers node
-        state = update_papers_by_project_node(state)
-        print("After update_papers_by_project_node:", state)
-        # Step 5: Get best papers node
-        state = get_best_papers_node(state)
-        print("After get_best_papers_node:", state)
-        # Step 6: Filter papers node
-        state = filter_papers_node(state)
-        print("After filter_papers_node:", state)
+# NOTE: This block is for local testing only. Uncomment to run local tests.
+# if __name__ == "__main__":
+#     # Example usage (stepwise test)
+#     queries = [
+#         "I am looking for papers in the field of machine learning in healthcare published after 2018.",  # accept
+#         # "Hello world",  # out_of_scope
+#         # "Biology",  # reformulate (too short/vague)
+#         # "Deep learning for genomics and climate change adaptation",  # split (multi-topic)
+#         # "Quantum entanglement in nitrogen-vacancy centers at 4K in diamond nanostructures",  # broaden (very narrow)
+#         # "Recent advances in science and technology"  # narrow (too broad)
+#     ]
+#     for user_query in queries:
+#         print(f"\n=== Testing query: '{user_query}' ===")
+#         # Step 1: Input node
+#         state = {"user_query": user_query}
+#         state = input_node(state)
+#         print("After input_node:", state)
+#         # Step 2: Out-of-scope check node
+#         state = out_of_scope_check_node(state)
+#         print("After out_of_scope_check_node:", state)
+#         out_of_scope_result = state.get("out_of_scope_result")
+#         if out_of_scope_result:
+#             try:
+#                 parsed = json.loads(out_of_scope_result)
+#                 if parsed.get("status") == "valid" and "keywords" in parsed:
+#                     state["keywords"] = parsed["keywords"]
+#             except Exception:
+#                 # Optionally log or handle parsing errors
+#                 logger.error("Error parsing out_of_scope_result")
+#                 pass
+#         print("After out_of_scope_check_node:", state)
+#         # Step 3: Quality control node
+#         state = quality_control_node(state)
+#         print("After quality_control_node:", state)
+#         # Step 4: Update papers node
+#         state = update_papers_by_project_node(state)
+#         print("After update_papers_by_project_node:", state)
+#         # Step 5: Get best papers node
+#         state = get_best_papers_node(state)
+#         print("After get_best_papers_node:", state)
+#         # Step 6: Filter papers node
+#         state = filter_papers_node(state)
+#         print("After filter_papers_node:", state)
