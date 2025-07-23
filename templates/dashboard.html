@@ -18,11 +18,16 @@
             </span>
             <h1>Capstone 2025</h1>
         </div>
-        <button id="createProjectBtn" class="btn btn-primary create-project-cta">Start a New Project!</button>
+        <button id="createProjectBtn" class="btn btn-primary create-project-cta">Start a New Project</button>
     </header>
     <main class="main-content">
-        <div class="search-bar-wrapper">
+        <div class="search-bar-wrapper" style="display: none;">
             <input type="text" id="projectSearchInput" class="search-bar" placeholder="Search by tag or keyword...">
+        </div>
+        <div id="noProjectsContainer" class="no-projects-container" style="display: none;">
+            <div class="no-projects-icon">📁</div>
+            <h2 class="no-projects-title">There are no projects yet.</h2>
+            <p class="no-projects-subtitle">Start your first project to begin exploring research papers and getting personalized recommendations.</p>
         </div>
         <div id="projectsList" class="projects-list">
             <!-- Project cards will be rendered here by JS -->

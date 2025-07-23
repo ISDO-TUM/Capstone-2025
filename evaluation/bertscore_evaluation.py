@@ -64,40 +64,39 @@ def recall_at_k(ranked_papers: List[Dict], bertscore_scores: Dict[str, float], k
 
 def dcg_at_k(ranked_papers: List[Dict], bertscore_scores: Dict[str, float], k: int) -> float:
     """
-    Compute DCG@k using BERTScore F1 as relevance scores.
+    Compute dcg@k using BERTScore F1 as relevance labels.
     """
     dcg = 0.0
     for i, paper in enumerate(ranked_papers[:k]):
         title = paper['title']
-        relevance = bertscore_scores.get(title, 0.0)
-        dcg += relevance / math.log2(i + 2)  # log2(i+2) because i starts at 0
+        rel = bertscore_scores.get(title, 0.0)
+        gain = (2 ** rel - 1)
+        discount = math.log2(i + 2)
+        dcg += gain / discount
     return dcg
 
 
 def idcg_at_k(bertscore_scores: Dict[str, float], k: int) -> float:
     """
-    Compute IDCG@k (ideal DCG) by sorting papers by BERTScore F1 in descending order.
+    Compute idcg@k using BERTScore F1 as relevance labels.
     """
-    sorted_scores = sorted(bertscore_scores.values(), reverse=True)
-
+    sorted_rels = sorted(bertscore_scores.values(), reverse=True)
     idcg = 0.0
-    for i, relevance in enumerate(sorted_scores[:k]):
-        idcg += relevance / math.log2(i + 2)
+    for i, rel in enumerate(sorted_rels[:k]):
+        gain = (2 ** rel - 1)
+        discount = math.log2(i + 2)
+        idcg += gain / discount
     return idcg
 
 
 def ndcg_at_k(ranked_papers: List[Dict], bertscore_scores: Dict[str, float], k: int) -> float:
     """
-    Compute nDCG@k using BERTScore F1 as relevance scores.
+    Compute ndcg@k using BERTScore F1 as relevance labels.
     """
     dcg = dcg_at_k(ranked_papers, bertscore_scores, k)
     idcg = idcg_at_k(bertscore_scores, k)
-
-    if idcg == 0:
-        return 0.0
-
-    ndcg = dcg / idcg
-    return min(ndcg, 1.0)  # Ensure NDCG never exceeds 1.0
+    ndcg = dcg / idcg if idcg != 0 else 0.0
+    return min(ndcg, 1.0)
 
 
 def evaluate_ranking_performance(ranked_papers: List[Dict], bertscore_scores: Dict[str, float],
@@ -177,7 +176,7 @@ def evaluate_bertscore_relevance(user_prompt: str, recommended_papers: List[Dict
         # Get top-k results
         top_k_results = results[:top_k]
         # Calculate ranking metrics
-        ranking_metrics = evaluate_ranking_performance(results, bertscore_scores, k_values=[1, 3, 5, 10])
+        ranking_metrics = evaluate_ranking_performance(recommended_papers, bertscore_scores, k_values=[1, 3, 5, 10])
         # Calculate average scores
         avg_precision = sum(res['bertscore_precision'] for res in results) / len(results) if results else 0
         avg_recall = sum(res['bertscore_recall'] for res in results) / len(results) if results else 0
