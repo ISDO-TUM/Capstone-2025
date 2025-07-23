@@ -1,9 +1,11 @@
 from datetime import datetime
 from typing import List, Dict
 
+
 def load_template(path: str) -> str:
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
+
 
 def format_paper_html(paper: dict) -> str:
     tags_html = "".join(
@@ -94,6 +96,7 @@ def generate_newsletter_html(papers: List[Dict]) -> str:
         f.write(result)
 
     return result
+
 
 if __name__ == '__main__':
     paper1 = {
