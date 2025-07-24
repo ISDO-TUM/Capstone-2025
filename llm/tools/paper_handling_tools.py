@@ -182,26 +182,6 @@ def update_papers_for_project(queries: list[str], project_id: str) -> str:
                 "Ignore the errors and proceed with ranking the papers.")
 
 
-def check_relevance_threshold(papers_with_relevance_scores: list[dict], threshold: float, min_papers: int = 3) -> bool:
-    """
-    Checks if the similarity scores in the list of papers meet the specified threshold.
-    Only considers the top N papers (default 3) and requires at least that many to proceed.
-
-    Args:
-        papers_with_relevance_scores: List of paper dictionaries including 'similarity_score'.
-        threshold: Minimum similarity score to consider a paper relevant.
-        min_papers: Minimum number of papers required to evaluate satisfaction.
-
-    Returns:
-        True if the top N papers meet the threshold; otherwise False.
-    """
-    if len(papers_with_relevance_scores) < min_papers:
-        return False
-
-    top_papers = papers_with_relevance_scores[:min_papers]
-    return all(paper.get("similarity_score", 0.0) >= threshold for paper in top_papers)
-
-
 @tool
 def accept(confirmation: str) -> str:
     """
