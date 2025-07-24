@@ -183,18 +183,6 @@ def update_papers_for_project(queries: list[str], project_id: str) -> str:
 
 
 @tool
-def accept(confirmation: str) -> str:
-    """
-    Agent has accepted the current results.
-    No reformulation or retry is needed.
-    """
-    return json.dumps({
-        "status": "accepted",
-        "message": "The current paper results meet the quality requirements. Proceeding..."
-    })
-
-
-@tool
 def retry_broaden(keywords: list[str], query_description: str = "") -> str:
     """
     Agent tool to broaden the user's original keyword list using LLM.
@@ -1015,8 +1003,6 @@ def main():
                 output = retry_broaden.invoke(inputs)
             elif tool_name == "reformulate_query":
                 output = reformulate_query.invoke(inputs)
-            elif tool_name == "accept":
-                output = accept.invoke(inputs)
             elif tool_name == "detect_out_of_scope_query":
                 output = detect_out_of_scope_query.invoke(inputs)
             else:

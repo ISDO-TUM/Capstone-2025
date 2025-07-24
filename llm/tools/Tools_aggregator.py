@@ -9,7 +9,6 @@ Responsibilities:
 
 from llm.tools.paper_handling_tools import (
     update_papers_for_project,
-    accept,
     retry_broaden,
     narrow_query,
     reformulate_query,
@@ -25,7 +24,6 @@ from llm.tools.paper_ranker import get_best_papers
 tools = [
     update_papers_for_project,
     get_best_papers,
-    accept,
     retry_broaden,
     narrow_query,
     reformulate_query,
