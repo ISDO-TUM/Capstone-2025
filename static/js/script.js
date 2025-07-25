@@ -46,6 +46,56 @@ function renderPubSubPapers(papers, container) {
     });
 }
 
+//loadPubSubPapers loads the latest papers after recommendations are loaded
+async function loadPubSubPapers(projectId) {
+    const container = document.getElementById('pubsubPapersContainer');
+    if (!container) return;
+
+    try {
+        // First update the newsletter papers
+        const updateRes = await fetch('/api/pubsub/update_newsletter_papers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectId })
+        });
+        const updateJson = await updateRes.json();
+        if (!updateRes.ok) {
+            console.warn('⚠️ update_newsletter_papers status failed:', updateRes.status, updateJson);
+            // Show user-friendly message for new projects
+            if (updateJson.error && updateJson.error.includes('No search queries found')) {
+                console.log('📝 New project detected - queries will be generated when recommendations are created');
+            }
+        } else {
+            // Add a small delay to ensure database transaction is committed
+            console.log('✅ PubSub update completed successfully, waiting for database commit...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        // Then fetch the papers
+        const papers = await fetch(
+            `/api/pubsub/get_newsletter_papers?projectId=${projectId}`
+        ).then(r => {
+            console.log('📡 PubSub papers response status:', r.status);
+            return r.json();
+        }).catch(err => {
+            console.error('❌ Error fetching PubSub papers:', err);
+            return [];
+        });
+
+        console.log('PubSub papers fetched:', papers);
+        console.log('pubsubPapersContainer is', container);
+        if (papers.length === 0) {
+            // Keep the loading placeholder if no papers are available
+            console.log('📭 No papers available yet');
+        } else {
+            console.log('📬 Rendering real PubSub papers:', papers);
+            renderPubSubPapers(papers, container);
+        }
+    } catch (err) {
+        console.error('Error loading PubSub papers:', err);
+    }
+}
+
 // Helper function to create star rating HTML
 const createStarRatingHTML = () => `
     <span class="star" data-value="1">&#9733;</span>
@@ -131,52 +181,15 @@ async function handleRouting () {
         renderPubSubSection();
         setupPubSubForm();
 
+        // Show loading placeholder immediately
+        container.innerHTML = '<p class="no-papers-placeholder">⌛ Latest papers will appear here soon...</p>';
+
         const params= new URLSearchParams(window.location.search);
         const updateRecommendations = params.get('updateRecommendations') === 'true';
         loadProjectOverviewData(projectId, project.description, updateRecommendations);
         if (updateRecommendations) {
             history.replaceState({}, '', window.location.pathname);
         }
-
-        try {
-            const updateRes = await fetch('/api/pubsub/update_newsletter_papers', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ projectId })
-            });
-            const updateJson = await updateRes.json();
-            if (!updateRes.ok) {
-                console.warn('⚠️ update_newsletter_papers status failed:', updateRes.status, updateJson);
-                // Show user-friendly message for new projects
-                if (updateJson.error && updateJson.error.includes('No search queries found')) {
-                console.log('📝 New project detected - queries will be generated when recommendations are created');
-                }
-            } else {
-                // Add a small delay to ensure database transaction is committed
-                console.log('✅ PubSub update completed successfully, waiting for database commit...');
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-        } catch (err) {
-            console.error('Error when calling update_newsletter_papers:', err);
-        }
-        const papers = await fetch(
-            `/api/pubsub/get_newsletter_papers?projectId=${projectId}`
-        ).then(r => {
-            console.log('📡 PubSub papers response status:', r.status);
-            return r.json();
-        }).catch(err => {
-            console.error('❌ Error fetching PubSub papers:', err);
-            return [];
-        });
-            console.log('PubSub papers fetched:', papers);
-            console.log('pubsubPapersContainer is', container);
-            if (papers.length === 0) {
-                // Instead of rendering test cards, show a placeholder message
-                container.innerHTML = '<p class="no-papers-placeholder">Here the newest papers will be shown later.</p>';
-            } else {
-                console.log('📬 Rendering real PubSub papers:', papers);
-                renderPubSubPapers(papers, container);
-            }
 
 
     } else if (path === '/') {
@@ -489,6 +502,12 @@ function renderRecommendations(recommendations, container) {
             filterAndSortPapers();
         }
     }, 100);
+
+    // Load PubSub papers after recommendations are rendered
+    const projectId = window.location.pathname.split('/').pop();
+    if (projectId) {
+        loadPubSubPapers(projectId);
+    }
 }
 
 async function loadMorePapers(projectId, recommendationsContainer, thoughtsContainer) {
@@ -823,41 +842,52 @@ function renderNoResultsInThoughts(noResultsData, lastThoughtEl, thoughtsContain
 function setupCollapsibleDescription(description) {
     const descriptionDisplay = document.getElementById('projectDescriptionDisplay');
     const descriptionWrapper = descriptionDisplay?.parentElement;
-    const toggleButton = document.getElementById('descriptionToggle');
     const fadeOverlay = document.getElementById('descriptionFadeOverlay');
-    const controls = document.getElementById('descriptionControls');
-    const expandText = toggleButton?.querySelector('.expand-text');
+    const oldControls = document.getElementById('descriptionControls');
+    if (oldControls && oldControls.parentNode) oldControls.parentNode.removeChild(oldControls);
 
-    if (!descriptionDisplay || !descriptionWrapper || !toggleButton || !fadeOverlay || !controls || !expandText) return;
+    if (!descriptionDisplay || !descriptionWrapper || !fadeOverlay) return;
 
     const wordCount = description.trim().split(/\s+/).length;
 
     if (wordCount > 500) {
-        const isCollapsed = true;
+        // Create controls and toggle button dynamically
+        const controls = document.createElement('div');
+        controls.className = 'description-controls';
+        controls.id = 'descriptionControls';
+        const toggleButton = document.createElement('button');
+        toggleButton.className = 'expand-btn';
+        toggleButton.id = 'descriptionToggle';
+        toggleButton.innerHTML = `
+            <span class="expand-text">Show full description</span>
+            <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <polyline points="6,9 12,15 18,9"></polyline>
+            </svg>
+        `;
+        controls.appendChild(toggleButton);
+        descriptionWrapper.appendChild(controls);
+        const expandText = toggleButton.querySelector('.expand-text');
 
+        const isCollapsed = true;
         descriptionDisplay.classList.toggle('collapsed', isCollapsed);
         descriptionDisplay.classList.toggle('expanded', !isCollapsed);
         toggleButton.classList.toggle('expanded', !isCollapsed);
         fadeOverlay.classList.toggle('visible', isCollapsed);
         controls.classList.add('visible');
-
         expandText.textContent = isCollapsed ? 'Show full description' : 'Hide full description';
 
         toggleButton.addEventListener('click', () => {
             const currentlyCollapsed = descriptionDisplay.classList.contains('collapsed');
-
             descriptionDisplay.classList.toggle('collapsed', !currentlyCollapsed);
             descriptionDisplay.classList.toggle('expanded', currentlyCollapsed);
             toggleButton.classList.toggle('expanded', currentlyCollapsed);
             fadeOverlay.classList.toggle('visible', !currentlyCollapsed);
-
             expandText.textContent = !currentlyCollapsed ? 'Show full description' : 'Hide full description';
         });
     } else {
         // Short description, no need to use expandable view
         descriptionDisplay.classList.add('expanded');
         fadeOverlay.classList.remove('visible');
-        controls.classList.remove('visible');
     }
 }
 
@@ -881,23 +911,71 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderProjects(projects) {
+    function renderProjects(projects, isSearchResult = false) {
         const projectsList = document.getElementById('projectsList');
+        const noProjectsContainer = document.getElementById('noProjectsContainer');
+        const searchBarWrapper = document.querySelector('.search-bar-wrapper');
+
         if (!projectsList) return;
+
+        // Check if there are no projects (only show no projects screen if it's not a search result)
+        if ((!projects || projects.length === 0) && !isSearchResult) {
+            // Hide search bar and projects list, show no projects message
+            if (searchBarWrapper) {
+                searchBarWrapper.classList.add('hidden');
+                searchBarWrapper.style.display = 'none';
+            }
+            if (projectsList) projectsList.style.display = 'none';
+            if (noProjectsContainer) {
+                noProjectsContainer.style.display = 'flex';
+            }
+            return;
+        }
+
+        // Show search bar and projects list, hide no projects message
+        if (searchBarWrapper) {
+            searchBarWrapper.classList.remove('hidden');
+            searchBarWrapper.style.display = 'flex';
+        }
+        if (projectsList) projectsList.style.display = 'grid';
+        if (noProjectsContainer) noProjectsContainer.style.display = 'none';
+
         projectsList.innerHTML = '';
+
+        // If no search results, show empty state but keep search bar visible
+        if (!projects || projects.length === 0) {
+            projectsList.innerHTML = '<div style="text-align: center; color: #6c757d; padding: 40px; font-size: 1.1rem;">No projects found matching your search.</div>';
+            return;
+        }
+
+        // Sort projects by date descending (latest first)
+        projects = projects.slice().sort((a, b) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            return dateB - dateA;
+        });
         projects.forEach((project, idx) => {
             const card = document.createElement('div');
             card.className = 'project-card';
             card.style.animationDelay = `${idx * 0.04 + 0.1}s`;
             // Truncate description to 120 chars for safety
             const truncatedDescription = truncateText(project.description, 120);
+            // Format date to human-readable string, add 2 hours for CET
+            let formattedDate = project.date;
+            if (project.date) {
+                const d = new Date(project.date);
+                if (!isNaN(d)) {
+                    d.setHours(d.getHours() + 2); // Add 2 hours for CET
+                    formattedDate = d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                }
+            }
             card.innerHTML = `
                 <div class="project-title">${project.title}</div>
                 <div class="project-description">${truncatedDescription}</div>
                 <div class="project-tags">
                     ${project.tags.map(tag => `<span class="project-tag">${tag}</span>`).join(' ')}
                 </div>
-                <div class="project-date">Created: ${project.date}</div>
+                <div class="project-date">Created: ${formattedDate}</div>
             `;
             // Navigate to project page on click
             card.addEventListener('click', () => {
@@ -954,19 +1032,32 @@ document.addEventListener('DOMContentLoaded', () => {
         // Load projects from API
         loadProjectsFromAPI().then(projects => {
             allProjects = projects;
-            renderProjects(allProjects);
+            renderProjects(allProjects, false); // Not a search result
         });
 
         const searchInput = document.getElementById('projectSearchInput');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 const filtered = filterProjectsBySearch(allProjects, e.target.value);
-                renderProjects(filtered);
+                renderProjects(filtered, true); // Mark as search result
             });
         }
         // Animate cards on scroll (again, in case of resize/search)
         window.addEventListener('resize', animateCardsOnScroll);
         window.addEventListener('scroll', animateCardsOnScroll);
+    }
+
+    if (window.location.pathname.startsWith('/project/')) {
+        const params = new URLSearchParams(window.location.search);
+        const isNewProject = params.get('updateRecommendations') === 'true';
+        if (!isNewProject) {
+            const agentThoughtsContainer = document.getElementById('agentThoughtsContainer');
+            if (agentThoughtsContainer) {
+                agentThoughtsContainer.innerHTML = '';
+                const section = document.querySelector('.agent-thoughts-section');
+                if (section) section.style.display = 'none';
+            }
+        }
     }
 
     handleRouting();

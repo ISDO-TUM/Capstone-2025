@@ -136,43 +136,6 @@ def out_of_scope_check_node(state):
     return state
 
 
-# --- Keyword Generation Node ---
-
-
-@node_logger("generate_keywords", input_keys=["user_query"], output_keys=["keywords"])
-def generate_keywords_node(state):
-    """
-    Generate keywords from the user query using the explicit tool.
-    Args:
-        state (dict): The current agent state.
-    Returns:
-        dict: Updated state with generated keywords.
-    """
-    tools = get_tools()
-    generate_keywords_tool = None
-    for tool in tools:
-        if hasattr(tool, 'name') and tool.name == 'generate_keywords_from_query':
-            generate_keywords_tool = tool
-            break
-    if generate_keywords_tool is None:
-        state["error"] = "generate_keywords_from_query tool not found"
-        state["keywords"] = []
-        return state
-
-    user_query = state.get("user_query", "")
-    try:
-        result_json = generate_keywords_tool.invoke({"query_description": user_query})
-        result = json.loads(result_json)
-        if result.get("status") == "success" and "keywords" in result["result"]:
-            state["keywords"] = result["result"]["keywords"]
-        else:
-            state["keywords"] = []
-    except Exception as e:
-        logger.error(f"[generate_keywords] Exception: {e}")
-        state["keywords"] = []
-        state["error"] = f"Keyword generation error: {e}"
-    return state
-
 # --- Quality Control Node (QC) ---
 
 

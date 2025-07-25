@@ -109,8 +109,8 @@ body {
 }
 
 .project-header {
-    margin-bottom: 30px;
-    padding-bottom: 20px;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
     border-bottom: 1px solid #e9ecef;
     width: 100%;
 }
@@ -651,9 +651,9 @@ body {
     transform: translateY(-1px);
 }
 .project-date {
+    margin-top: auto;
     font-size: 0.99rem;
     color: #6c7a8a;
-    margin-top: 2px;
     letter-spacing: 0.1px;
     font-weight: 500;
 }
@@ -661,6 +661,48 @@ body {
 /* --- SCROLL ANIMATION --- */
 .projects-list .project-card {
     will-change: opacity, transform;
+}
+
+/* --- NO PROJECTS MESSAGE --- */
+.no-projects-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 60px 20px;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.no-projects-icon {
+    font-size: 4rem;
+    color: #6c757d;
+    margin-bottom: 0px;
+    opacity: 0.6;
+}
+
+.no-projects-title {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 16px;
+    letter-spacing: 0.5px;
+}
+
+.no-projects-subtitle {
+    font-size: 1.1rem;
+    color: #6c757d;
+    line-height: 1.6;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* Hide search bar when no projects */
+.search-bar-wrapper.hidden {
+    display: none;
 }
 
 /* --- RESPONSIVE --- */
@@ -779,6 +821,27 @@ body {
         padding: 14px 24px;
         border-radius: 18px;
     }
+
+    /* Mobile responsive for no projects message */
+    .no-projects-container {
+        min-height: 50vh;
+        padding: 40px 20px;
+    }
+
+    .no-projects-icon {
+        font-size: 3rem;
+        margin-bottom: 0px;
+    }
+
+    .no-projects-title {
+        font-size: 1.5rem;
+        margin-bottom: 12px;
+    }
+
+    .no-projects-subtitle {
+        font-size: 1rem;
+        max-width: 300px;
+    }
 }
 
 .info-icon {
@@ -793,11 +856,11 @@ body {
     visibility: hidden;
     opacity: 0;
     width: 320px;
-    background-color: #222;
-    color: #fff;
+    background: rgba(255,255,255,0.95);
+    color: #1a237e;
     text-align: left;
-    border-radius: 6px;
-    padding: 12px;
+    border-radius: 12px;
+    padding: 16px;
     position: absolute;
     z-index: 10;
     top: 120%;
@@ -805,7 +868,12 @@ body {
     transform: translateX(-50%);
     transition: opacity 0.2s;
     font-size: 0.95em;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    font-weight: 400;
+    box-shadow: 0 4px 24px 0 rgba(31, 38, 135, 0.15);
+    border: 1.5px solid #b3d1ff;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    line-height: 1.5;
 }
 
 .info-icon:hover .tooltip,
@@ -1401,6 +1469,9 @@ body {
 .load-more-btn.loading {
     position: relative;
     color: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .load-more-btn.loading::after {
@@ -1408,10 +1479,11 @@ body {
     position: absolute;
     width: 20px;
     height: 20px;
-    top: 50%;
-    left: 50%;
-    margin-left: -10px;
-    margin-top: -10px;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
     border: 2px solid transparent;
     border-top: 2px solid white;
     border-radius: 50%;
@@ -1733,4 +1805,8 @@ body {
 
 .recommendation-card.hidden {
     display: none;
+}
+
+.recommendations-section + .recommendations-section {
+    margin-top: 20px;
 }
