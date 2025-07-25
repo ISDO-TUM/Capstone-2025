@@ -679,45 +679,6 @@ def store_papers_for_project_node(state):
     return state
 
 
-def run_stategraph_agent(user_query: str):
-    """
-    Run the complete Stategraph agent workflow and return the final results.
-
-    Args:
-        user_query (str): The user's research query
-
-    Returns:
-        dict: Final state with papers and results
-    """
-    # Initialize state
-    state = {"user_query": user_query}
-
-    # Run the complete workflow
-    state = input_node(state)
-    state = out_of_scope_check_node(state)
-
-    # Extract keywords from out_of_scope_result if available
-    out_of_scope_result = state.get("out_of_scope_result")
-    if out_of_scope_result:
-        try:
-            parsed = json.loads(out_of_scope_result)
-            if parsed.get("status") == "valid" and "keywords" in parsed:
-                state["keywords"] = parsed["keywords"]
-        except Exception:
-            logger.error("Error parsing out_of_scope_result")
-
-    state = quality_control_node(state)
-    # Branch: if split, expand subqueries before updating papers
-    if state.get("qc_decision") == "split":
-        state = expand_subqueries_node(state)
-    state = update_papers_by_project_node(state)
-    state = get_best_papers_node(state)
-    state = filter_papers_node(state)
-    # Final node: store papers for project
-    state = store_papers_for_project_node(state)
-    return state
-
-
 def trigger_stategraph_agent_show_thoughts(user_message: str):
     """
     Generator that yields each step of the Stategraph agent's thought process for frontend streaming.
