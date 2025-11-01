@@ -32,6 +32,9 @@ from paper_handling.paper_handler import fetch_works_multiple_queries, process_a
 from pubsub.pubsub_main import update_newsletter_papers
 from pubsub.pubsub_params import DAYS_FOR_UPDATE
 from utils.status import Status
+from clerk_backend_api import Clerk
+from clerk_backend_api.security import authenticate_request
+from clerk_backend_api.security.types import AuthenticateRequestOptions
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +43,29 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 
+
+# Initialize Clerk
+clerk_sdk = Clerk(bearer_auth=os.getenv('CLERK_SECRET_KEY'))
+
+
+# Middleware decorator for Authentication
+def require_auth(func):
+    def wrapper(*args, **kwargs):
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return jsonify({"error": "Missing Authorization header"}), 401
+
+        token = auth_header.split(" ")[1]  # Bearer <token>
+
+        try:
+            session = clerk_sdk.sessions.verify_session(token)
+            request.user = session["user_id"]  # save user ID
+            return func(*args, **kwargs)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 401
+
+    wrapper.__name__ = func.__name__
+    return wrapper
 
 @app.errorhandler(413)
 def request_entity_too_large(error):
