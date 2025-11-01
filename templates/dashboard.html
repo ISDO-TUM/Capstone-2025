@@ -33,6 +33,32 @@
             <!-- Project cards will be rendered here by JS -->
         </div>
     </main>
+    <div id="clerk-panel" style="position: absolute; top: 20%; left: 20%;"></div>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script async crossorigin="anonymous" data-clerk-publishable-key="{{ env.CLERK_PUBLISHABLE_KEY }}"
+        src="{{ env.CLERK_FRONTEND_API }}" type="text/javascript"></script>
+    <script>
+        window.addEventListener('load', async function () {
+            await Clerk.load()
+
+            if (Clerk.isSignedIn) {
+                document.getElementById('clerk-panel').innerHTML = `
+                <div id="user-button"></div>
+            `
+
+                const userButtonDiv = document.getElementById('user-button')
+
+                Clerk.mountUserButton(userButtonDiv)
+            } else {
+                document.getElementById('clerk-panel').innerHTML = `
+                <div id="sign-in"></div>
+            `
+
+                const signInDiv = document.getElementById('sign-in')
+
+                Clerk.mountSignIn(signInDiv)
+            }
+        })
+    </script>
 </body>
 </html>
