@@ -91,7 +91,7 @@ def request_entity_too_large(error):
     }), 413
 
 
-@app.route("/")
+@app.route('/')
 def home():
     """
     Render the dashboard homepage or login view based on user authentication.
