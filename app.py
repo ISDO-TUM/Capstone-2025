@@ -33,7 +33,6 @@ from pubsub.pubsub_main import update_newsletter_papers
 from pubsub.pubsub_params import DAYS_FOR_UPDATE
 from utils.status import Status
 from clerk_backend_api import Clerk
-from clerk_backend_api.security import authenticate_request
 from clerk_backend_api.security.types import AuthenticateRequestOptions
 
 logger = logging.getLogger(__name__)
@@ -92,35 +91,46 @@ def request_entity_too_large(error):
     }), 413
 
 
-@app.route('/')
+@app.route("/")
 def home():
     """
-    Render the dashboard homepage.
+    Render the dashboard homepage or login view based on user authentication.
     Returns:
-        Response: Rendered dashboard.html template.
+        Response: Rendered dashboard.html template or login view.
     """
-    # user_info = clerk_sdk.clients.get(client_id=request.user_id)
 
-    # Fetch user information using Clerk SDK
     user_info = None
     if request.is_signed_in and request.user_id:
         try:
             user_info = clerk_sdk.users.get(user_id=request.user_id)
         except Exception as e:
-            user_info = f"Failed to fetch user info: {e}"
+            logging.error(f"Error fetching user info from Clerk: {e}")
+            user_info = {}
 
-    
+    print(
+        f"user_id: {request.user_id}, is_signed_in: {request.is_signed_in}, auth_payload: {request.auth_payload}"
+    )
 
-    return render_template('dashboard.html', env={
-        'CLERK_PUBLISHABLE_KEY': os.getenv('CLERK_PUBLISHABLE_KEY'),
-        'CLERK_FRONTEND_API': os.getenv('CLERK_FRONTEND_API'),
-        'signed_in': request.is_signed_in,
-        'user_id': request.user_id,
-        'auth_payload': {
-            'payload': request.auth_payload,
-            'user_info': user_info
+    parsed_user_info = None
+    if request.is_signed_in and user_info:
+        parsed_user_info = {
+            "first_name": getattr(user_info, "first_name", ""),
+            "last_name": getattr(user_info, "last_name", ""),
+            "profile_image_url": getattr(user_info, "profile_image_url", ""),
+            "email": user_info.email_addresses[0].email_address
+            if user_info.email_addresses
+            else "Unknown Email",
         }
-    })
+
+    return render_template(
+        "dashboard.html",
+        signed_in=request.is_signed_in,
+        user_info=parsed_user_info,
+        env={
+            "CLERK_PUBLISHABLE_KEY": os.getenv("CLERK_PUBLISHABLE_KEY"),
+            "CLERK_FRONTEND_API": os.getenv("CLERK_FRONTEND_API"),
+        },
+    )
 
 
 @app.route('/create-project')

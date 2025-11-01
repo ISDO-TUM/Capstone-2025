@@ -18,21 +18,30 @@
             </span>
             <h1>Capstone 2025</h1>
         </div>
-        <button id="createProjectBtn" class="btn btn-primary create-project-cta">Start a New Project</button>
+        {% if signed_in %}
+            <span class="user-name">Hi {{ user_info.first_name if user_info.first_name }}</span>
+            <button id="createProjectBtn" class="btn btn-primary create-project-cta">Start a New Project</button>
+            <div id="clerk-user-button"></div>
+        {% endif %}
     </header>
     <main class="main-content">
-        <div class="search-bar-wrapper" style="display: none;">
-            <input type="text" id="projectSearchInput" class="search-bar" placeholder="Search by tag or keyword...">
-        </div>
-        <div id="noProjectsContainer" class="no-projects-container" style="display: none;">
-            <div class="no-projects-icon">📁</div>
-            <p>user-id: {{ env.user_id }}, signed_in: {{ env.signed_in }}, auth-payload: {{ env.auth_payload }}</p>
-            <h2 class="no-projects-title">There are no projects yet.</h2>
-            <p class="no-projects-subtitle">Start your first project to begin exploring research papers and getting personalized recommendations.</p>
-        </div>
-        <div id="projectsList" class="projects-list">
-            <!-- Project cards will be rendered here by JS -->
-        </div>
+        {% if signed_in %}
+            <div class="search-bar-wrapper" style="display: none;">
+                <input type="text" id="projectSearchInput" class="search-bar" placeholder="Search by tag or keyword...">
+            </div>
+            <div id="noProjectsContainer" class="no-projects-container" style="display: none;">
+                <div class="no-projects-icon">📁</div>
+                <h2 class="no-projects-title">There are no projects yet.</h2>
+                <p class="no-projects-subtitle">Start your first project to begin exploring research papers and getting personalized recommendations.</p>
+            </div>
+            <div id="projectsList" class="projects-list">
+                <!-- Project cards will be rendered here by JS -->
+            </div>
+        {% else %}
+            <div class="login-dialog-container">
+                <div id="clerk-sign-in-dialog"></div>
+            </div>
+        {% endif %}
     </main>
     <div id="clerk-panel" style="position: absolute; top: 20%; left: 20%;"></div>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
@@ -43,19 +52,10 @@
             await Clerk.load()
 
             if (Clerk.isSignedIn) {
-                document.getElementById('clerk-panel').innerHTML = `
-                <div id="user-button"></div>
-            `
-
-                const userButtonDiv = document.getElementById('user-button')
-
+                const userButtonDiv = document.getElementById('clerk-user-button')
                 Clerk.mountUserButton(userButtonDiv)
             } else {
-                document.getElementById('clerk-panel').innerHTML = `
-                <div id="sign-in"></div>
-            `
-
-                const signInDiv = document.getElementById('sign-in')
+                const signInDiv = document.getElementById('clerk-sign-in-dialog')
 
                 Clerk.mountSignIn(signInDiv)
             }

@@ -1810,3 +1810,11 @@ body {
 .recommendations-section + .recommendations-section {
     margin-top: 20px;
 }
+
+.login-dialog-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
+}
