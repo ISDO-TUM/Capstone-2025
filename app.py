@@ -48,24 +48,34 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 clerk_sdk = Clerk(bearer_auth=os.getenv('CLERK_SECRET_KEY'))
 
 
-# Middleware decorator for Authentication
-def require_auth(func):
-    def wrapper(*args, **kwargs):
-        auth_header = request.headers.get("Authorization")
-        if not auth_header:
-            return jsonify({"error": "Missing Authorization header"}), 401
+@app.before_request
+def authenticate_user():
+    """
+    Middleware to authenticate the user with Clerk and inject auth information into the request object.
+    """
+    try:
+        # Authenticate the request using Clerk
+        request_state = clerk_sdk.authenticate_request(
+            request,
+            AuthenticateRequestOptions(
+                authorized_parties=['http://localhost']
+            )
+        )
 
-        token = auth_header.split(" ")[1]  # Bearer <token>
+        print(request_state)
 
-        try:
-            session = clerk_sdk.sessions.verify_session(token)
-            request.user = session["user_id"]  # save user ID
-            return func(*args, **kwargs)
-        except Exception as e:
-            return jsonify({"error": str(e)}), 401
+        # Attach authentication information to the request object
+        request.is_signed_in = request_state.is_signed_in
+        request.user_id = request_state.payload.get("sub") if request_state.is_signed_in else None
+        request.auth_payload = request_state.payload if request_state.is_signed_in else None
 
-    wrapper.__name__ = func.__name__
-    return wrapper
+    except Exception as e:
+        # Log the error and set default values for unauthenticated requests
+        logger.error(f"Authentication error: {e}")
+        request.is_signed_in = False
+        request.user_id = None
+        request.auth_payload = None
+
 
 @app.errorhandler(413)
 def request_entity_too_large(error):
@@ -89,7 +99,28 @@ def home():
     Returns:
         Response: Rendered dashboard.html template.
     """
-    return render_template('dashboard.html')
+    # user_info = clerk_sdk.clients.get(client_id=request.user_id)
+
+    # Fetch user information using Clerk SDK
+    user_info = None
+    if request.is_signed_in and request.user_id:
+        try:
+            user_info = clerk_sdk.users.get(user_id=request.user_id)
+        except Exception as e:
+            user_info = f"Failed to fetch user info: {e}"
+
+    
+
+    return render_template('dashboard.html', env={
+        'CLERK_PUBLISHABLE_KEY': os.getenv('CLERK_PUBLISHABLE_KEY'),
+        'CLERK_FRONTEND_API': os.getenv('CLERK_FRONTEND_API'),
+        'signed_in': request.is_signed_in,
+        'user_id': request.user_id,
+        'auth_payload': {
+            'payload': request.auth_payload,
+            'user_info': user_info
+        }
+    })
 
 
 @app.route('/create-project')
