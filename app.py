@@ -41,6 +41,14 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 
 
+# Configuration for mock authentication
+MOCK_AUTH_CONFIG = {
+    "is_logged_in": True,  # Set to False to simulate no user logged in
+    "is_admin": False,    # Set to True to simulate admin login
+    "user_id": "user_123"  # Mock user ID
+}
+
+
 @app.errorhandler(413)
 def request_entity_too_large(error):
     """
@@ -56,28 +64,68 @@ def request_entity_too_large(error):
     }), 413
 
 
+# Update the decorator to access data from the global variable directly
+def inject_session(func):
+    def wrapper(*args, **kwargs):
+        kwargs['session'] = {
+            "is_logged_in": MOCK_AUTH_CONFIG.get('is_logged_in', False),
+            "is_admin": MOCK_AUTH_CONFIG.get('is_admin', False),
+            "user_id": MOCK_AUTH_CONFIG.get('user_id', None)
+        }
+        return func(*args, **kwargs)
+    wrapper.__name__ = func.__name__  # Preserve the original function name
+    return wrapper
+
+
 @app.route('/')
-def home():
+@inject_session
+def home(session):
     """
     Render the dashboard homepage.
     Returns:
         Response: Rendered dashboard.html template.
     """
+
+    # <mock-auth-example>
+    # Here you can see an example of using the mock authentication
+
+    # only allow access if logged in
+    if not session['is_logged_in']:
+        return jsonify({"error": "User not logged in"}), 401
+
+    # Log authentication information
+    print(f"User ID: {session['user_id']}, Is Admin: {session['is_admin']}, Logged In {session['is_logged_in']}")
+
+    # End of example
+
     return render_template('dashboard.html')
 
 
 @app.route('/create-project')
-def create_project_page():
+@inject_session
+def create_project_page(session):
     """
     Render the create project page.
     Returns:
         Response: Rendered create_project.html template.
     """
+
+    # <mock-auth-example>
+    # Here you can see an example of using the mock authentication
+    if not session['is_logged_in']:
+        return jsonify({"error": "User not logged in"}), 401
+
+    # Log authentication information
+    print(f"User ID: {session['user_id']}, Is Admin: {session['is_admin']}, Logged In {session['is_logged_in']}")
+
+    # End of example
+
     return render_template('create_project.html')
 
 
 @app.route('/project/<project_id>')
-def project_overview_page(project_id):
+@inject_session
+def project_overview_page(project_id, session):
     """
     Render the project overview page for a given project.
     Args:
@@ -85,16 +133,41 @@ def project_overview_page(project_id):
     Returns:
         Response: Rendered project_overview.html template.
     """
+
+    # <mock-auth-example>
+    # Here you can see an example of using the mock authentication
+    if not session['is_logged_in']:
+        return jsonify({"error": "User not logged in"}), 401
+
+    # Log authentication information
+    print(f"User ID: {session['user_id']}, Is Admin: {session['is_admin']}, Logged In {session['is_logged_in']}")
+
+    # End of example
+
     return render_template('project_overview.html', project_id=project_id)
 
 
+# Updated existing routes to use session for authentication checks
+
 @app.route('/api/projects', methods=['POST'])
-def api_create_project():
+@inject_session
+def api_create_project(session):
     """
     Create a new project with the given title and description.
     Returns:
         Response: JSON with new projectId or error message.
     """
+
+    # <mock-auth-example>
+    # Here you can see an example of using the mock authentication
+    if not session['is_logged_in']:
+        return jsonify({"error": "User not logged in"}), 401
+
+    # Log authentication information
+    print(f"User ID: {session['user_id']}, Is Admin: {session['is_admin']}, Logged In {session['is_logged_in']}")
+
+    # End of example
+
     data = request.get_json() or {}
     title = data.get('title')
     desc = data.get('description')
@@ -105,13 +178,23 @@ def api_create_project():
 
 
 @app.route('/api/getProjects', methods=['GET'])
-def get_projects():
+@inject_session
+def get_projects(session):
     """
     Get all projects with project_id and metadata.
     Returns:
         Response: JSON with all projects and their metadata.
     """
-    """Get all projects with project_id and metadata."""
+
+    # <mock-auth-example>
+    # Here you can see an example of using the mock authentication
+    if not session['is_logged_in']:
+        return jsonify({"error": "User not logged in"}), 401
+
+    # Log authentication information
+    print(f"User ID: {session['user_id']}, Is Admin: {session['is_admin']}, Logged In {session['is_logged_in']}")
+
+    # End of example
 
     projects = get_all_projects()
     complete_projects = []
@@ -136,12 +219,24 @@ def get_projects():
 
 
 @app.route('/api/recommendations', methods=['POST'])
-def get_recommendations():
+@inject_session
+def get_recommendations(session):
     """
     Get recommendations for a project. Streams agent thoughts and recommendations to the frontend.
     Returns:
         Response: Server-sent event stream with recommendations or agent thoughts.
     """
+
+    # <mock-auth-example>
+    # Here you can see an example of using the mock authentication
+    if not session['is_logged_in']:
+        return jsonify({"error": "User not logged in"}), 401
+
+    # Log authentication information
+    print(f"User ID: {session['user_id']}, Is Admin: {session['is_admin']}, Logged In {session['is_logged_in']}")
+
+    # End of example
+
     print("Attempting to get recommendations")
     """Get recommendations for a project. Updated to use project_id and update_recommendations flag."""
     try:
@@ -222,12 +317,24 @@ def get_recommendations():
 
 
 @app.route('/api/extract-pdf-text', methods=['POST'])
-def extract_pdf_text():
+@inject_session
+def extract_pdf_text(session):
     """
     Extract text from an uploaded PDF file.
     Returns:
         Response: JSON with extracted text or error message.
     """
+
+    # <mock-auth-example>
+    # Here you can see an example of using the mock authentication
+    if not session['is_logged_in']:
+        return jsonify({"error": "User not logged in"}), 401
+
+    # Log authentication information
+    print(f"User ID: {session['user_id']}, Is Admin: {session['is_admin']}, Logged In {session['is_logged_in']}")
+
+    # End of example
+
     if 'file' not in request.files:
         return jsonify({"error": "No file provided"}), 400
 
@@ -265,12 +372,23 @@ def extract_pdf_text():
 
 
 @app.route('/api/pubsub/update_newsletter_papers', methods=['POST'])
-def api_update_newsletter():
+@inject_session
+def api_update_newsletter(session):
     """
     Trigger update of newsletter papers for a project using the agent and update newsletter/seen flags in the database.
     Returns:
         Response: JSON status message.
     """
+    # <mock-auth-example>
+    # Here you can see an example of using the mock authentication
+    if not session['is_logged_in']:
+        return jsonify({"error": "User not logged in"}), 401
+
+    # Log authentication information
+    print(f"User ID: {session['user_id']}, Is Admin: {session['is_admin']}, Logged In {session['is_logged_in']}")
+
+    # End of example
+
     logger.info("Triggered api_update_newsletter")
     payload = request.get_json() or {}
     project_id = payload.get('projectId')
@@ -306,12 +424,25 @@ def api_update_newsletter():
 # Returns current set of (paper_hash, summary) tuples that are both newsletter = TRUE and seen = FALSE for a given project.
 # JS then looks up the full paper details via get_paper_by_hash and renders them.
 @app.route('/api/pubsub/get_newsletter_papers', methods=['GET'])
-def api_get_newsletter():
+@inject_session
+def api_get_newsletter(session):
     """
     Get the current set of newsletter papers for a project.
     Returns:
         Response: JSON list of newsletter papers with metadata.
     """
+
+    # <mock-auth-example>
+    # Here you can see an example of using the mock authentication
+    if not session['is_logged_in']:
+        return jsonify({"error": "User not logged in"}), 401
+
+    # Log authentication information
+    print(f"User ID: {session['user_id']}, Is Admin: {session['is_admin']}, Logged In {session['is_logged_in']}")
+
+    # End of example
+
+
     project_id = request.args.get('projectId') or request.args.get('project_id')
     if not project_id:
         return jsonify({"error": "Missing projectId"}), 400
@@ -344,12 +475,25 @@ def api_get_newsletter():
 
 
 @app.route('/api/rate_paper', methods=['POST'])
-def rate_paper():
+@inject_session
+def rate_paper(session):
     """
     Rate a paper, update the user embedding, and replace it if it's low rated.
     Returns:
         Response: JSON status message and replacement info if applicable.
     """
+
+    # <mock-auth-example>
+    # Here you can see an example of using the mock authentication
+    if not session['is_logged_in']:
+        return jsonify({"error": "User not logged in"}), 401
+
+    # Log authentication information
+    print(f"User ID: {session['user_id']}, Is Admin: {session['is_admin']}, Logged In {session['is_logged_in']}")
+
+    # End of example
+
+
     data = request.get_json()
     if not data:
         return jsonify({"status": "error", "message": "No data provided"}), 400
@@ -418,7 +562,8 @@ def rate_paper():
 
 
 @app.route('/api/project/<project_id>')
-def api_get_project(project_id):
+@inject_session
+def api_get_project(project_id, session):
     """
     Get project metadata for a given project_id.
     Args:
@@ -426,6 +571,18 @@ def api_get_project(project_id):
     Returns:
         Response: JSON with project metadata or error message.
     """
+
+    # <mock-auth-example>
+    # Here you can see an example of using the mock authentication
+    if not session['is_logged_in']:
+        return jsonify({"error": "User not logged in"}), 401
+
+    # Log authentication information
+    print(f"User ID: {session['user_id']}, Is Admin: {session['is_admin']}, Logged In {session['is_logged_in']}")
+
+    # End of example
+
+
     proj = get_project_by_id(project_id)
     if not proj:
         return jsonify({"error": "Project not found"}), 404
@@ -442,7 +599,8 @@ def api_get_project(project_id):
 
 
 @app.route('/api/project/<project_id>/update_prompt', methods=['POST'])
-def api_update_project_prompt(project_id):
+@inject_session
+def api_update_project_prompt(project_id, session):
     """
     Update the project prompt/description for a given project_id.
     Args:
@@ -450,6 +608,18 @@ def api_update_project_prompt(project_id):
     Returns:
         Response: JSON with updated description or error message.
     """
+
+    # <mock-auth-example>
+    # Here you can see an example of using the mock authentication
+    if not session['is_logged_in']:
+        return jsonify({"error": "User not logged in"}), 401
+
+    # Log authentication information
+    print(f"User ID: {session['user_id']}, Is Admin: {session['is_admin']}, Logged In {session['is_logged_in']}")
+
+    # End of example
+
+
     data = request.get_json() or {}
     new_prompt = data.get('prompt')
     if not new_prompt:
@@ -464,12 +634,25 @@ def api_update_project_prompt(project_id):
 
 
 @app.route('/api/load_more_papers', methods=['POST'])
-def load_more_papers():
+@inject_session
+def load_more_papers(session):
     """
     Load more paper recommendations for the user, streaming results as they are found.
     Returns:
         Response: Server-sent event stream with more recommendations or error message.
     """
+
+    # <mock-auth-example>
+    # Here you can see an example of using the mock authentication
+    if not session['is_logged_in']:
+        return jsonify({"error": "User not logged in"}), 401
+
+    # Log authentication information
+    print(f"User ID: {session['user_id']}, Is Admin: {session['is_admin']}, Logged In {session['is_logged_in']}")
+
+    # End of example
+
+
     try:
         data = request.get_json()
         project_id = data.get('project_id') if data else None
@@ -543,6 +726,119 @@ def load_more_papers():
     except Exception as e:
         logger.error(f"Error in /load_more_papers: {e}")
         return jsonify({"error": f"Failed to load more papers: {str(e)}"}), 500
+
+
+##
+##  Following are example usages of the mock authentication middleware in endpoints
+##
+
+# Updated example usage in endpoints
+@app.route('/api/example-protected', methods=['GET'])
+@inject_session
+def example_protected(session):
+    """
+    Example endpoint demonstrating the use of mock authentication middleware.
+    Returns:
+        Response: JSON with user authentication details or error message.
+    """
+    if not session['is_logged_in']:
+        return jsonify({"error": "User not logged in"}), 401
+
+    return jsonify({
+        "message": "Access granted",
+        "user_id": session['user_id'],
+        "is_admin": session['is_admin']
+    })
+
+@app.route('/api/admin-only', methods=['GET'])
+@inject_session
+def admin_only(session):
+    """
+    Example endpoint restricted to admin users.
+    Returns:
+        Response: JSON with admin authentication details or error message.
+    """
+    if not session['is_logged_in']:
+        return jsonify({"error": "User not logged in"}), 401
+
+    if not session['is_admin']:
+        return jsonify({"error": "Admin access required"}), 403
+
+    return jsonify({
+        "message": "Admin access granted",
+        "user_id": session['user_id']
+    })
+
+##
+##  End of example usages
+##
+
+
+##
+## Mock Authentication update endpoint
+##
+
+
+# Endpoint to update the global mock user configuration
+@app.route('/update-mock-user', methods=['GET', 'POST'])
+def update_mock_user():
+    """
+    Endpoint to update the global mock user configuration.
+    This endpoint does not require authentication.
+    Returns:
+        Response: Rendered form or confirmation message.
+    """
+    if request.method == 'POST':
+        is_logged_in = request.form.get('is_logged_in', 'false').lower() == 'true'
+        is_admin = request.form.get('is_admin', 'false').lower() == 'true'
+        user_id = request.form.get('user_id', 'user_123')
+
+        # Update the session with new mock user details
+        MOCK_AUTH_CONFIG['is_logged_in'] = is_logged_in
+        MOCK_AUTH_CONFIG['is_admin'] = is_admin
+        MOCK_AUTH_CONFIG['user_id'] = user_id
+
+        return jsonify({
+            "message": "Mock user updated successfully",
+            "is_logged_in": MOCK_AUTH_CONFIG['is_logged_in'],
+            "is_admin": MOCK_AUTH_CONFIG['is_admin'],
+            "user_id": MOCK_AUTH_CONFIG['user_id']
+        })
+
+    # Render a simple HTML form for updating the mock user
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Update Mock User</title>
+    </head>
+    <body>
+        <h1>Update Mock User</h1>
+        <form method="POST">
+            <label for="is_logged_in">Is Logged In:</label>
+            <select name="is_logged_in" id="is_logged_in">
+                <option value="true">True</option>
+                <option value="false">False</option>
+            </select><br><br>
+
+            <label for="is_admin">Is Admin:</label>
+            <select name="is_admin" id="is_admin">
+                <option value="true">True</option>
+                <option value="false">False</option>
+            </select><br><br>
+
+            <label for="user_id">User ID:</label>
+            <input type="text" id="user_id" name="user_id" value="user_123"><br><br>
+
+            <button type="submit">Update</button>
+        </form>
+    </body>
+    </html>
+    '''
+
+##
+## End of Mock Authentication Middleware
+##
 
 
 if __name__ == '__main__':
