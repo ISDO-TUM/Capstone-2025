@@ -13,9 +13,12 @@ This is the main entrypoint for running the web application and serving the fron
 
 import json
 import logging
+import logging.config
+import atexit
 import os
 import sys
 import io
+import pathlib
 
 from flask import (
     Flask,
@@ -60,6 +63,7 @@ from pubsub.pubsub_params import DAYS_FOR_UPDATE
 from utils.status import Status
 from clerk_backend_api import Clerk
 from clerk_backend_api.security.types import AuthenticateRequestOptions
+from custom_logging import APILogger
 
 # Only import Clerk if not in test mode
 if os.getenv("TEST_MODE") != "true":
@@ -67,6 +71,7 @@ if os.getenv("TEST_MODE") != "true":
     from clerk_backend_api.security.types import AuthenticateRequestOptions
 
 logger = logging.getLogger(__name__)
+test_logger = APILogger()
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 app = Flask(__name__)
@@ -142,6 +147,17 @@ def authenticate_user():
     else:
         request.auth = None
 
+def setup_logging():
+    config_file = pathlib.Path("custom_logging/config.json")
+    with open(config_file) as f_in:
+        config = json.load(f_in)
+    logging.config.dictConfig(config)
+
+    # queue_handler = logging.getHandlerByName("queue_handler")
+    # if queue_handler is not None:
+    #     queue_handler.listener.start()
+    #     atexit.register(queue_handler.listener.stop)
+
 
 @app.errorhandler(413)
 def request_entity_too_large(error):
@@ -166,6 +182,7 @@ def home():
         Response: Rendered dashboard.html template or login view.
     """
 
+    test_logger.request_start(method="GET", path="/")
     return render_template(
         "dashboard.html",
         auth=request.auth,
@@ -214,6 +231,7 @@ def project_overview_page(project_id):
     if project["user_id"] != request.auth["user_id"]:
         return {"error": "Forbidden"}, 403
 
+    test_logger.request_start(method="GET", path=f"/project/{project_id}")
     return render_template(
         "project_overview.html",
         project_id=project_id,
@@ -757,6 +775,7 @@ def load_more_papers():
 
 
 if __name__ == "__main__":
+    setup_logging()
     if not os.getenv("CLERK_SECRET_KEY"):
         raise ValueError(
             "CLERK_SECRET_KEY environment variable is required for authentication."
