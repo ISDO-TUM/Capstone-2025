@@ -404,6 +404,7 @@ dependencies = [
     { name = "pydantic-graph" },
     { name = "pypdf" },
     { name = "python-dotenv" },
+    { name = "python-json-logger" },
     { name = "requests" },
 ]
 
@@ -430,6 +431,7 @@ requires-dist = [
     { name = "pydantic-graph", specifier = ">=1.44.0" },
     { name = "pypdf", specifier = "==3.17.0" },
     { name = "python-dotenv", specifier = "==1.1.0" },
+    { name = "python-json-logger", specifier = "==4.0.0" },
     { name = "requests", specifier = "==2.32.4" },
 ]
 
