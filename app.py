@@ -14,11 +14,14 @@ This is the main entrypoint for running the web application and serving the fron
 import json
 import asyncio
 import logging
+import logging.config
+import atexit
 import os
 import sys
 import io
 import threading
 from queue import Queue, Empty
+import pathlib
 
 from flask import (
     Flask,
@@ -69,6 +72,9 @@ from config import (
     HOSTNAME,
     validate_required_env_vars,
 )
+from clerk_backend_api import Clerk
+from clerk_backend_api.security.types import AuthenticateRequestOptions
+from custom_logging import APILogger
 
 # Only import Clerk if not in test mode
 if not TEST_MODE:
@@ -80,6 +86,7 @@ else:
     AuthenticateRequestOptions = None
 
 logger = logging.getLogger(__name__)
+test_logger = APILogger()
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 app = Flask(__name__)
@@ -224,6 +231,17 @@ def authenticate_user():
         )
         request.auth = None
 
+def setup_logging():
+    config_file = pathlib.Path("custom_logging/config.json")
+    with open(config_file) as f_in:
+        config = json.load(f_in)
+    logging.config.dictConfig(config)
+
+    # queue_handler = logging.getHandlerByName("queue_handler")
+    # if queue_handler is not None:
+    #     queue_handler.listener.start()
+    #     atexit.register(queue_handler.listener.stop)
+
 
 @app.errorhandler(413)
 def request_entity_too_large(error):
@@ -251,6 +269,55 @@ def clerk_config():
             "publishableKey": CLERK_PUBLISHABLE_KEY,
             "frontendApiUrl": CLERK_FRONTEND_API_URL,
         }
+
+
+@app.route("/create-project")
+def create_project_page():
+    """
+    Render the create project page.
+    Returns:
+        Response: Rendered create_project.html template.
+    """
+    if not request.auth:
+        return {"error": "Not authenticated"}, 401
+
+    return render_template(
+        "create_project.html",
+        auth=request.auth,
+        CLERK_PUBLISHABLE_KEY=os.getenv("CLERK_PUBLISHABLE_KEY"),
+        CLERK_FRONTEND_API_URL=os.getenv("CLERK_FRONTEND_API_URL"),
+    )
+
+
+@app.route("/project/<project_id>")
+def project_overview_page(project_id):
+    """
+    Render the project overview page for a given project.
+    Args:
+        project_id (str): The project ID.
+    Returns:
+        Response: Rendered project_overview.html template.
+    """
+    if not request.auth:
+        return render_template(
+            "dashboard.html",
+            auth=None,
+            CLERK_PUBLISHABLE_KEY=os.getenv("CLERK_PUBLISHABLE_KEY"),
+            CLERK_FRONTEND_API_URL=os.getenv("CLERK_FRONTEND_API_URL"),
+        )
+
+    project = get_project_by_id(project_id)
+    if project["user_id"] != request.auth["user_id"]:
+        return {"error": "Forbidden"}, 403
+
+    test_logger.request_start(method="GET", path=f"/project/{project_id}")
+    return render_template(
+        "project_overview.html",
+        project_id=project_id,
+        auth=request.auth,
+        CLERK_PUBLISHABLE_KEY=os.getenv("CLERK_PUBLISHABLE_KEY"),
+        CLERK_FRONTEND_API_URL=os.getenv("CLERK_FRONTEND_API_URL"),
+>>>>>>> d6cf1a0 (feat: add structured logging with Grafana integration)
     )
 
 
@@ -937,5 +1004,25 @@ def load_more_papers():
 if __name__ == "__main__":
     # Validate required environment variables
     validate_required_env_vars()
+    setup_logging()
+    if not os.getenv("CLERK_SECRET_KEY"):
+        raise ValueError(
+            "CLERK_SECRET_KEY environment variable is required for authentication."
+        )
+
+    if not os.getenv("CLERK_PUBLISHABLE_KEY"):
+        raise ValueError(
+            "CLERK_PUBLISHABLE_KEY environment variable is required for authentication."
+        )
+
+    if not os.getenv("CLERK_FRONTEND_API_URL"):
+        raise ValueError(
+            "CLERK_FRONTEND_API_URL environment variable is required for authentication."
+        )
+
+    if not os.getenv("HOSTNAME"):
+        raise ValueError(
+            "HOSTNAME environment variable is required for authentication."
+        )
 
     app.run(host="0.0.0.0", debug=True, port=80)  # nosec B201, B104
