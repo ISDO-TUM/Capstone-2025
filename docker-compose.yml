@@ -13,6 +13,7 @@ services:
       - "${DB_PORT:-5432}:5432"
     volumes:
       - capstone_postgres_data:/var/lib/postgresql/data
+      - ./logs:/app/logs
     networks:
       - capstone_network
 
