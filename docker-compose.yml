@@ -61,9 +61,36 @@ services:
     networks:
       - capstone_network
 
+  grafana:
+    image: grafana/grafana:12.2.1
+    container_name: grafana_container
+    restart: unless-stopped
+    environment:
+      - GF_LOG_LEVEL=warn
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    networks:
+      - capstone_network
+
+  promtail:
+    image: grafana/promtail:3.5.7
+    container_name: promtail_container
+    restart: unless-stopped
+    volumes:
+      - ./promtail-config.yaml:/mnt/config/promtail-config.yaml:ro
+      - ./logs:/app/logs:ro
+    command: -config.file=/mnt/config/promtail-config.yaml -config.expand-env=true
+    env_file:
+      - .env
+    networks:
+      - capstone_network
+
 volumes:
   capstone_postgres_data:
   capstone_chroma_data:
+  grafana-storage:
 
 networks:
   capstone_network:
