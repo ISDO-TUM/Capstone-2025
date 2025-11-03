@@ -32,7 +32,7 @@
     },
     "loggers": {
         "root": {
-            "level": "DEBUG",
+            "level": "INFO",
             "handlers": ["queue_handler"]
         }
     }
