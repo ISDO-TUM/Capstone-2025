@@ -1,0 +1,43 @@
+[project]
+name = "Capstone-2025"
+version = "1.0"
+description = "A modular, extensible agentic academic paper recommendation system leveraging LLMs, vector search, and modern backend best practices. Designed for multi-step reasoning, project-specific recommendations, and robust filtering, with a focus on maintainability and extensibility."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "chromadb==1.0.12",
+    "clerk-backend-api==3.3.1",
+    "flask==3.1.1",
+    "langchain-core==0.3.63",
+    "langchain-openai==0.3.19",
+    "langchain==0.3.25",
+    "langgraph==0.5.0",
+    "numpy==2.3.0",
+    "openai==1.79.0",
+    "psycopg2-binary==2.9.10",
+    "pyalex==0.18",
+    "pypdf==3.17.0",
+    "python-dotenv==1.1.0",
+    "requests==2.32.4",
+]
+
+[dependency-groups]
+dev = [
+    "fuzzywuzzy>=0.18.0",
+    "pandas>=2.3.3",
+    "python-levenshtein>=0.27.3",
+    "ruff>=0.14.4",
+]
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"

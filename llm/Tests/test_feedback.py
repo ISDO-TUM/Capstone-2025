@@ -57,7 +57,9 @@ def run_update_user_vector_test(user_vector, papers):
     # Apply updates
     updated_vector = user_vector.copy()
     for title, rating in paper_ratings.items():
-        updated_vector = update_user_vector(updated_vector, paper_vectors[title], rating)
+        updated_vector = update_user_vector(
+            updated_vector, paper_vectors[title], rating
+        )
         print(f"Applied rating {rating} to '{title}'")
 
     # Get new similarities

@@ -42,11 +42,11 @@ def _generate_paper_hash(paper_data_dict):
         s(paper_data_dict.get("authors")),
         s(paper_data_dict.get("publication_date")),
         s(paper_data_dict.get("landing_page_url")),
-        s(paper_data_dict.get("pdf_url"))
+        s(paper_data_dict.get("pdf_url")),
     ]
 
     data_string = "||".join(fields_to_hash)
-    return hashlib.sha256(data_string.encode('utf-8')).hexdigest()
+    return hashlib.sha256(data_string.encode("utf-8")).hexdigest()
 
 
 def insert_papers(papers_data_list):
@@ -109,21 +109,34 @@ def insert_papers(papers_data_list):
 
             # ---------- NEW: pull only the numeric percentile ----------
             cit_norm_raw = p.get("citation_normalized_percentile")
-            cit_norm_pct = _to_float(cit_norm_raw["value"]) if isinstance(cit_norm_raw, dict) else None
+            cit_norm_pct = (
+                _to_float(cit_norm_raw["value"])
+                if isinstance(cit_norm_raw, dict)
+                else None
+            )
 
             cited_count = _to_int(p.get("cited_by_count"))
 
             counts_years = p.get("counts_by_year")
             if counts_years is not None:
-                counts_years = json.dumps(counts_years)          # -> JSONB text
+                counts_years = json.dumps(counts_years)  # -> JSONB text
 
             cur.execute(
                 SQL,
                 (
-                    p_hash, p["id"], p["title"], abstract, authors,
-                    pub_date, landing_url, pdf_url,
-                    sim_score, fwci, cit_norm_pct,
-                    cited_count, counts_years
+                    p_hash,
+                    p["id"],
+                    p["title"],
+                    abstract,
+                    authors,
+                    pub_date,
+                    landing_url,
+                    pdf_url,
+                    sim_score,
+                    fwci,
+                    cit_norm_pct,
+                    cited_count,
+                    counts_years,
                 ),
             )
 
@@ -259,7 +272,7 @@ def get_papers_by_hash(paper_hashes_to_find):
 
     try:
         cur.execute(sql, (paper_hashes_to_find,))
-        papers_dict = {row['paper_hash']: dict(row) for row in cur.fetchall()}
+        papers_dict = {row["paper_hash"]: dict(row) for row in cur.fetchall()}
 
         # Preserve the order of the input hashes
         papers = []
@@ -298,10 +311,10 @@ def update_paper(old_paper_hash, update_data):
     cur = conn.cursor()
 
     try:
-
         cur.execute(
             "SELECT id, title, abstract, authors, publication_date, landing_page_url, pdf_url FROM papers_table WHERE paper_hash = %s;",
-            (old_paper_hash,))
+            (old_paper_hash,),
+        )
         current_paper_tuple = cur.fetchone()
 
         if not current_paper_tuple:
@@ -309,16 +322,26 @@ def update_paper(old_paper_hash, update_data):
             return False
 
         current_paper_data = {
-            "id": current_paper_tuple[0], "title": current_paper_tuple[1],
-            "abstract": current_paper_tuple[2], "authors": current_paper_tuple[3],
+            "id": current_paper_tuple[0],
+            "title": current_paper_tuple[1],
+            "abstract": current_paper_tuple[2],
+            "authors": current_paper_tuple[3],
             "publication_date": current_paper_tuple[4],
-            "landing_page_url": current_paper_tuple[5], "pdf_url": current_paper_tuple[6]
+            "landing_page_url": current_paper_tuple[5],
+            "pdf_url": current_paper_tuple[6],
         }
 
         updated_paper_data = current_paper_data.copy()
 
-        allowed_fields = ["id", "title", "abstract", "authors", "publication_date",
-                          "landing_page_url", "pdf_url"]
+        allowed_fields = [
+            "id",
+            "title",
+            "abstract",
+            "authors",
+            "publication_date",
+            "landing_page_url",
+            "pdf_url",
+        ]
 
         valid_update_applied = False
         for key, value in update_data.items():
@@ -330,7 +353,8 @@ def update_paper(old_paper_hash, update_data):
                 valid_update_applied = True
             else:
                 print(
-                    f"Warning: Field '{key}' is not an allowed paper field for update and will be ignored.")
+                    f"Warning: Field '{key}' is not an allowed paper field for update and will be ignored."
+                )
 
         if not valid_update_applied:
             print("No valid fields provided for update.")
@@ -341,7 +365,8 @@ def update_paper(old_paper_hash, update_data):
 
         if new_hash == old_paper_hash:
             print(
-                f"Update for paper hash {old_paper_hash} resulted in no change to content hash. No DB modification needed.")
+                f"Update for paper hash {old_paper_hash} resulted in no change to content hash. No DB modification needed."
+            )
             return True
 
         insert_sql = """
@@ -350,29 +375,38 @@ def update_paper(old_paper_hash, update_data):
             ON CONFLICT (paper_hash) DO NOTHING;
         """
 
-        cur.execute(insert_sql, (
-            new_hash,
-            updated_paper_data["id"], updated_paper_data["title"],
-            updated_paper_data.get("abstract"), updated_paper_data.get("authors"),
-            updated_paper_data.get("publication_date"),
-            updated_paper_data.get("landing_page_url"), updated_paper_data.get("pdf_url")
-        ))
+        cur.execute(
+            insert_sql,
+            (
+                new_hash,
+                updated_paper_data["id"],
+                updated_paper_data["title"],
+                updated_paper_data.get("abstract"),
+                updated_paper_data.get("authors"),
+                updated_paper_data.get("publication_date"),
+                updated_paper_data.get("landing_page_url"),
+                updated_paper_data.get("pdf_url"),
+            ),
+        )
 
         rows_inserted = cur.rowcount
         if rows_inserted == 0 and new_hash != old_paper_hash:
             print(
-                f"Updated state for paper (old hash {old_paper_hash}) results in new hash {new_hash}, which already exists in the DB.")
+                f"Updated state for paper (old hash {old_paper_hash}) results in new hash {new_hash}, which already exists in the DB."
+            )
 
         delete_sql = "DELETE FROM papers_table WHERE paper_hash = %s;"
         cur.execute(delete_sql, (old_paper_hash,))
 
         if cur.rowcount == 0:
             print(
-                f"Warning: Paper with old hash {old_paper_hash} was not found for deletion after update attempt. This might be okay if the new state's hash ({new_hash}) was identical and already existed.")
+                f"Warning: Paper with old hash {old_paper_hash} was not found for deletion after update attempt. This might be okay if the new state's hash ({new_hash}) was identical and already existed."
+            )
 
         conn.commit()
         print(
-            f"Paper with old hash {old_paper_hash} processed for update. New effective hash is {new_hash}.")
+            f"Paper with old hash {old_paper_hash} processed for update. New effective hash is {new_hash}."
+        )
         return True
 
     except psycopg2.Error as e:
@@ -381,7 +415,9 @@ def update_paper(old_paper_hash, update_data):
             conn.rollback()
         return False
     except Exception as ex:
-        print(f"An unexpected error occurred while updating paper {old_paper_hash}: {ex}")
+        print(
+            f"An unexpected error occurred while updating paper {old_paper_hash}: {ex}"
+        )
         if conn:
             conn.rollback()
         return False
@@ -403,8 +439,15 @@ def update_paper_field(old_paper_hash, field_name, new_value):
         bool: True if update was successful, False otherwise.
     """
 
-    allowed_fields = ["id", "title", "abstract", "authors", "publication_date", "landing_page_url",
-                      "pdf_url"]
+    allowed_fields = [
+        "id",
+        "title",
+        "abstract",
+        "authors",
+        "publication_date",
+        "landing_page_url",
+        "pdf_url",
+    ]
     if field_name not in allowed_fields:
         print(f"Error: '{field_name}' is not an updatable field for a paper.")
         return False
@@ -470,7 +513,8 @@ def list_tables_and_columns():
         print("Schema for 'papers_table':")
         for table in tables:
             table_name = table[0]
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT c.column_name, c.data_type, c.is_nullable, c.column_default,
                        tc.constraint_name, tc.constraint_type
                 FROM information_schema.columns c
@@ -483,14 +527,17 @@ def list_tables_and_columns():
                   AND kcu.constraint_name = tc.constraint_name
                 WHERE c.table_name = %s AND c.table_schema = 'public'
                 ORDER BY c.ordinal_position;
-                """, (table_name,))
+                """,
+                (table_name,),
+            )
             columns = cur.fetchall()
             for column in columns:
                 constraint_info = ""
                 if column[4] and column[5]:  # constraint_name and constraint_type
                     constraint_info = f", Constraint: {column[4]} ({column[5]})"
                 print(
-                    f"  - {column[0]} ({column[1]}, Nullable: {column[2]}, Default: {column[3]}{constraint_info})")
+                    f"  - {column[0]} ({column[1]}, Nullable: {column[2]}, Default: {column[3]}{constraint_info})"
+                )
     except psycopg2.Error as e:
         print(f"Error listing tables and columns: {e}")
     finally:
@@ -527,8 +574,7 @@ def _to_int(val):
         return None
 
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     # 1. Make sure your .env file is set up with DB credentials.
     # 2. Ensure the 'papers_table' exists with the correct schema.
     #    You might need to DROP and RECREATE it if the schema changed significantly.
@@ -557,7 +603,7 @@ if __name__ == '__main__':
         "authors": "Jane Doe, John Smith",
         "publication_date": "2024-01-15",
         "landing_page_url": "https://example.com/paper/arxiv_2401.00001",
-        "pdf_url": "https://example.com/pdf/paper/arxiv_2401.00001.pdf"
+        "pdf_url": "https://example.com/pdf/paper/arxiv_2401.00001.pdf",
     }
     sample_paper_2_data = {
         "id": "doi_10.1000_xyz123",
@@ -565,7 +611,7 @@ if __name__ == '__main__':
         "authors": "Alice Wonderland, Bob The Builder",
         "publication_date": "2023-11-01",
         "abstract": None,
-        "pdf_url": "https://example.com/pdf/paper/doi_10.1000_xyz123.pdf"
+        "pdf_url": "https://example.com/pdf/paper/doi_10.1000_xyz123.pdf",
     }
     sample_paper_3_data = {
         "id": "internal_report_007",
@@ -581,28 +627,38 @@ if __name__ == '__main__':
     paper_3_hash = None
 
     print("\nAttempting to insert papers:")
-    papers_to_insert = [sample_paper_1_data, sample_paper_2_data, sample_paper_3_data,
-                        sample_paper_1_data]
+    papers_to_insert = [
+        sample_paper_1_data,
+        sample_paper_2_data,
+        sample_paper_3_data,
+        sample_paper_1_data,
+    ]
     status_code, inserted_info = insert_papers(papers_to_insert)
 
     print(f"Insertion Status Code: {status_code}")
     if status_code == 1:
         print("Successfully inserted papers:")
         for info in inserted_info:
-            print(f"  Title: {info['title']}, Abstract: '{info['abstract']}', Hash: {info['hash']}")
+            print(
+                f"  Title: {info['title']}, Abstract: '{info['abstract']}', Hash: {info['hash']}"
+            )
 
-            if info['title'] == sample_paper_1_data['title']:
-                paper_1_hash = info['hash']
-            elif info['title'] == sample_paper_2_data['title']:
-                paper_2_hash = info['hash']
-            elif info['title'] == sample_paper_3_data['title']:
-                paper_3_hash = info['hash']
+            if info["title"] == sample_paper_1_data["title"]:
+                paper_1_hash = info["hash"]
+            elif info["title"] == sample_paper_2_data["title"]:
+                paper_2_hash = info["hash"]
+            elif info["title"] == sample_paper_3_data["title"]:
+                paper_3_hash = info["hash"]
     elif not inserted_info:
-        print("  No new papers were inserted (possibly all duplicates or all data invalid).")
+        print(
+            "  No new papers were inserted (possibly all duplicates or all data invalid)."
+        )
     else:
         print("  Insertion was reported as unsuccessful.")
         if inserted_info:
-            print(f"  Partial/erroneous info (should be empty on error): {inserted_info}")
+            print(
+                f"  Partial/erroneous info (should be empty on error): {inserted_info}"
+            )
 
     # print("-" * 40)
     #

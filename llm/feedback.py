@@ -1,13 +1,18 @@
 from typing import List
 import numpy as np
 import logging
-from database.projects_database_handler import get_user_profile_embedding, add_user_profile_embedding
+from database.projects_database_handler import (
+    get_user_profile_embedding,
+    add_user_profile_embedding,
+)
 from chroma_db.chroma_vector_db import chroma_db
 
 logger = logging.getLogger(__name__)
 
 
-def update_user_vector(user_vector: List[float], paper_vector: List[float], rating: int) -> List[float]:
+def update_user_vector(
+    user_vector: List[float], paper_vector: List[float], rating: int
+) -> List[float]:
     """
     Modify the user embedding vector based on feedback from rating a paper.
 
@@ -38,7 +43,9 @@ def update_user_vector(user_vector: List[float], paper_vector: List[float], rati
     return updated_vec_np.tolist()
 
 
-def update_user_profile_embedding_from_rating(project_id: str, paper_hash: str, rating: int) -> bool:
+def update_user_profile_embedding_from_rating(
+    project_id: str, paper_hash: str, rating: int
+) -> bool:
     """
     Update the user profile embedding based on a paper rating.
 
@@ -54,26 +61,36 @@ def update_user_profile_embedding_from_rating(project_id: str, paper_hash: str, 
         # Get current user profile embedding
         current_embedding = get_user_profile_embedding(project_id)
         if current_embedding is None:
-            logger.warning(f"No user profile embedding found for project {project_id}, skipping update")
+            logger.warning(
+                f"No user profile embedding found for project {project_id}, skipping update"
+            )
             return False
 
         # Get paper embedding directly from ChromaDB
         paper_embedding = chroma_db.get_embedding_by_hash(paper_hash)
         if paper_embedding is None:
-            logger.warning(f"No embedding found in ChromaDB for paper hash {paper_hash}, skipping update")
+            logger.warning(
+                f"No embedding found in ChromaDB for paper hash {paper_hash}, skipping update"
+            )
             return False
 
         # Update user profile embedding based on rating
-        updated_embedding = update_user_vector(current_embedding, paper_embedding, rating)
+        updated_embedding = update_user_vector(
+            current_embedding, paper_embedding, rating
+        )
 
         # Save updated embedding to database
         add_user_profile_embedding(project_id, updated_embedding)
 
-        logger.info(f"Updated user profile embedding for project {project_id} based on rating {rating}")
+        logger.info(
+            f"Updated user profile embedding for project {project_id} based on rating {rating}"
+        )
         return True
 
     except Exception as e:
-        logger.error(f"Failed to update user profile embedding for project {project_id}: {e}")
+        logger.error(
+            f"Failed to update user profile embedding for project {project_id}: {e}"
+        )
         return False
 
 

@@ -22,16 +22,16 @@ def format_paper_html(paper: dict) -> str:
       <td style="padding:24px 30px; border-bottom:1px solid #e9ecef;">
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
-            <td style="font-size:13px; color:#6c757d; text-align:right;">{paper['date']}</td>
+            <td style="font-size:13px; color:#6c757d; text-align:right;">{paper["date"]}</td>
           </tr>
           <tr>
             <td style="font-size:13px; color:#1e3a8a; font-weight:bold; padding-top:4px;">{category}</td>
           </tr>
           <tr>
-            <td style="font-size:18px; font-weight:600; color:#212529; padding:6px 0;">{paper['title']}</td>
+            <td style="font-size:18px; font-weight:600; color:#212529; padding:6px 0;">{paper["title"]}</td>
           </tr>
           <tr>
-            <td style="font-size:14px; color:#495057; line-height:1.5; padding-bottom:10px;">{paper['summary']}</td>
+            <td style="font-size:14px; color:#495057; line-height:1.5; padding-bottom:10px;">{paper["summary"]}</td>
           </tr>
           <tr>
             <td style="font-size:13px; color:#6c757d;">
@@ -98,7 +98,7 @@ def generate_newsletter_html(papers: List[Dict]) -> str:
     return result
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     paper1 = {
         "title": "Distributed Event Streaming in Modern Microservices Architecture",
         "summary": "This paper explores distributed event streaming in microservice architectures.",
@@ -107,7 +107,7 @@ if __name__ == '__main__':
         "published_in": "Journal of Distributed Computing",
         "tags": ["microservices", "event streaming", "scalability"],
         "category": "Distributed Systems",
-        "link": "https://example.com/paper1"
+        "link": "https://example.com/paper1",
     }
     paper2 = {
         "title": "Distributed Event Streaming in Modern Microservices Architecture",
@@ -117,7 +117,7 @@ if __name__ == '__main__':
         "published_in": "Journal of Distributed Computing",
         "tags": ["microservices", "event streaming", "scalability"],
         "category": "Distributed Systems",
-        "link": "https://example.com/paper1"
+        "link": "https://example.com/paper1",
     }
     paper3 = {
         "title": "Distributed Event Streaming in Modern Microservices Architecture",
@@ -127,7 +127,7 @@ if __name__ == '__main__':
         "published_in": "Journal of Distributed Computing",
         "tags": ["microservices", "event streaming", "scalability"],
         "category": "Distributed Systems",
-        "link": "https://example.com/paper1"
+        "link": "https://example.com/paper1",
     }
 
     papers = [paper1, paper2, paper3]

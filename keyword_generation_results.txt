@@ -1,0 +1,14 @@
+--- Evaluation Complete ---
+--- Results Summary ---
+Model: gpt-5.1, Search Results: 25 -> Success Rate: 35/50 (70.00%)
+Model: gpt-5.1, Search Results: 50 -> Success Rate: 35/50 (70.00%)
+Model: gpt-5.1, Search Results: 100 -> Success Rate: 44/50 (88.00%)
+Model: gpt-5, Search Results: 25 -> Success Rate: 36/50 (72.00%)
+Model: gpt-5, Search Results: 50 -> Success Rate: 39/50 (78.00%)
+Model: gpt-5, Search Results: 100 -> Success Rate: 39/50 (78.00%)
+Model: gpt-5-mini, Search Results: 25 -> Success Rate: 34/50 (68.00%)
+Model: gpt-5-mini, Search Results: 50 -> Success Rate: 36/50 (72.00%)
+Model: gpt-5-mini, Search Results: 100 -> Success Rate: 40/50 (80.00%)
+Model: gpt-5-nano, Search Results: 25 -> Success Rate: 34/50 (68.00%)
+Model: gpt-5-nano, Search Results: 50 -> Success Rate: 37/50 (74.00%)
+Model: gpt-5-nano, Search Results: 100 -> Success Rate: 40/50 (80.00%)

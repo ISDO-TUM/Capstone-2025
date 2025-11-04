@@ -14,8 +14,13 @@ def connect_to_db():  # outside_chroma=False)
     db_port = os.getenv("DB_PORT", "5432")
 
     try:
-        return psycopg2.connect(host=db_host, dbname=db_name,
-                                user=db_user, password=db_password, port=db_port)
+        return psycopg2.connect(
+            host=db_host,
+            dbname=db_name,
+            user=db_user,
+            password=db_password,
+            port=db_port,
+        )
         # return conn
     except psycopg2.Error as e:
         print(f"Error connecting to the database: {e}")

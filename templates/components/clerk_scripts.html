@@ -1,0 +1,27 @@
+<script async crossorigin="anonymous" data-clerk-publishable-key="{{ CLERK_PUBLISHABLE_KEY }}"
+    src="{{ CLERK_FRONTEND_API_URL }}" type="text/javascript"></script>
+{% if not auth %}
+<script>
+    window.serverAuthenticated = false;
+</script>
+{% endif %}
+<script>
+    window.addEventListener('load', async function () {
+        await Clerk.load()
+
+        if (Clerk.isSignedIn) {
+            if (window.serverAuthenticated === false) {
+                // User is signed in on client but not authenticated on server
+                // Trigger a full page reload to sync state
+                window.location.reload()
+            } else {
+                const userButtonDiv = document.getElementById('clerk-user-button')
+                Clerk.mountUserButton(userButtonDiv)
+            }
+        } else {
+            const signInDiv = document.getElementById('clerk-sign-in-dialog')
+
+            Clerk.mountSignIn(signInDiv)
+        }
+    })
+</script>
