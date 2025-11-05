@@ -6,6 +6,7 @@ import os
 from dotenv import load_dotenv
 import openai
 
+from fuzzywuzzy import fuzz
 def get_random_open_access_paper():
     """
     Gets a random open access paper from OpenAlex.
@@ -125,8 +126,9 @@ def find_relevant_cited_papers(paper_text):
         You are a research assistant. I will provide you with the full text of a research paper.
         Your task is to identify the "Related Work" section (or a similar section with a different name, like "Literature Review").
         From this section, please extract the titles of the most relevant cited papers.
-        Return a list of the paper titles as a Python list of strings.
-        For example: ['Paper Title 1', 'Paper Title 2', 'Paper Title 3']
+        Return a JSON object with a single key "papers" containing a list of the paper titles as strings.
+        For example: {"papers": ["Paper Title 1", "Paper Title 2", "Paper Title 3"]}
+        If no papers are found, return an empty list: {"papers": []}
         """
 
         # Aggressively clean the string
@@ -134,6 +136,7 @@ def find_relevant_cited_papers(paper_text):
 
         response = client.chat.completions.create(
             model="gpt-4.1",
+            response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": cleaned_paper_text
@@ -141,11 +144,117 @@ def find_relevant_cited_papers(paper_text):
             ]
         )
 
-        return response.choices[0].message.content
+        response_content = response.choices[0].message.content
+        try:
+            import json
+            json_response = json.loads(response_content)
+            if "papers" in json_response and isinstance(json_response["papers"], list):
+                return json_response["papers"]
+            else:
+                print(f"OpenAI response did not contain a valid 'papers' list: {response_content}")
+                return []
+        except json.JSONDecodeError:
+            print(f"Failed to decode JSON from OpenAI response: {response_content}")
+            return []
 
     except Exception as e:
         print(f"An error occurred while communicating with OpenAI: {e}")
         return None
+
+def search_papers_in_openalex(paper_titles):
+    """
+    Searches for papers in OpenAlex by title and retrieves their OpenAlex IDs.
+
+    Args:
+        paper_titles (list): A list of paper titles.
+
+    Returns:
+        list: A list of dictionaries, each containing the title and OpenAlex ID.
+    """
+    results = []
+    for title in paper_titles:
+        try:
+            # Search for the paper by title
+            works = pyalex.Works().search(title).get()
+            if works:
+                # Assume the first result is the most relevant
+                work = works[0]
+                results.append({
+                    "title": title,
+                    "openalex_id": work.get('id')
+                })
+            else:
+                results.append({
+                    "title": title,
+                    "openalex_id": None
+                })
+        except Exception as e:
+            print(f"An error occurred while searching for '{title}': {e}")
+            results.append({
+                "title": title,
+                "openalex_id": None
+            })
+    return results
+
+from fuzzywuzzy import fuzz
+
+def find_cited_papers_in_openalex(original_paper_id, paper_titles):
+    """
+    Searches for papers within the citations of an original paper in OpenAlex.
+
+    Args:
+        original_paper_id (str): The OpenAlex ID of the original paper.
+        paper_titles (list): A list of paper titles to search for.
+
+    Returns:
+        list: A list of dictionaries, each containing the title and OpenAlex ID.
+    """
+    results = []
+    try:
+        # Get the citations of the original paper
+        original_work = pyalex.Works()[original_paper_id]
+        referenced_works_ids = original_work.get('referenced_works', [])
+
+        if not referenced_works_ids:
+            print(f"No referenced works found for paper {original_paper_id}")
+            return []
+
+        # Fetch details of referenced works in batches
+        referenced_works = []
+        for i in range(0, len(referenced_works_ids), 50): # 50 is the max per page
+            batch_ids = "|".join(referenced_works_ids[i:i+50])
+            referenced_works.extend(pyalex.Works().filter(openalex_id=batch_ids).get())
+
+        for title_to_find in paper_titles:
+            best_match = None
+            highest_ratio = 0
+            for cited_work in referenced_works:
+                cited_title = cited_work.get('title')
+                if cited_title:
+                    ratio = fuzz.token_set_ratio(title_to_find, cited_title)
+                    if ratio > highest_ratio:
+                        highest_ratio = ratio
+                        best_match = cited_work
+
+            if best_match and highest_ratio > 80: # Using a threshold of 80
+                results.append({
+                    "searched_title": title_to_find,
+                    "found_title": best_match.get('title'),
+                    "openalex_id": best_match.get('id'),
+                    "match_ratio": highest_ratio
+                })
+            else:
+                results.append({
+                    "searched_title": title_to_find,
+                    "found_title": None,
+                    "openalex_id": None,
+                    "match_ratio": 0
+                })
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+    return results
 
 if __name__ == '__main__':
     load_dotenv()
@@ -164,7 +273,9 @@ if __name__ == '__main__':
             print("\nSuccessfully extracted full text.\n")
             relevant_papers = find_relevant_cited_papers(full_text)
             if relevant_papers:
-                    print(f"Results: {relevant_papers}")
+                    print(f"Found relevant papers: {relevant_papers}")
+                    openalex_papers = find_cited_papers_in_openalex(paper.get('id'), relevant_papers)
+                    print(f"OpenAlex search results: {openalex_papers}")
             else:
                 print("\nCould not find relevant cited papers.")
             found_paper_with_full_text = True
