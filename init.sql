@@ -39,3 +39,10 @@ CREATE TABLE IF NOT EXISTS public.paperprojects_table (
     FOREIGN KEY (project_id) REFERENCES projects_table(project_id) ON DELETE CASCADE,
     FOREIGN KEY (paper_hash) REFERENCES papers_table(paper_hash) ON DELETE CASCADE
 );
+
+-- Add new OpenAlex metadata to DB
+ALTER TABLE public.papers_table ADD COLUMN IF NOT EXISTS venue_name TEXT;
+ALTER TABLE public.papers_table ADD COLUMN IF NOT EXISTS venue_type TEXT;
+ALTER TABLE public.papers_table ADD COLUMN IF NOT EXISTS is_oa BOOLEAN;
+ALTER TABLE public.papers_table ADD COLUMN IF NOT EXISTS oa_status TEXT;
+ALTER TABLE public.papers_table ADD COLUMN IF NOT EXISTS oa_url TEXT;

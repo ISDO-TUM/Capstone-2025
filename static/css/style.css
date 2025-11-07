@@ -250,11 +250,14 @@ body {
 
 .recommendations-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: 1fr;
     gap: 24px;
 }
 
 .recommendation-card {
+    width: 100%;
+    max-width: none;            
+    box-sizing: border-box; 
     background-color: #fff;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
@@ -716,7 +719,7 @@ body {
         margin-bottom: 32px;
     }
     .recommendations-grid {
-        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        grid-template-columns: repeat(2, 1fr);
         gap: 32px;
     }
     .projects-list {

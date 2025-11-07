@@ -28,7 +28,7 @@ from database.projects_database_handler import add_new_project_to_db, get_all_pr
 from llm.Embeddings import embed_papers
 from llm.feedback import update_user_profile_embedding_from_rating
 from llm.tools.paper_handling_tools import replace_low_rated_paper
-from paper_handling.paper_handler import fetch_works_multiple_queries, process_available_papers, search_and_filter_papers
+from paper_handling.paper_handler import fetch_works_multiple_queries, process_available_papers, search_and_filter_papers, create_paper_dict
 from pubsub.pubsub_main import update_newsletter_papers
 from pubsub.pubsub_params import DAYS_FOR_UPDATE
 from utils.status import Status
@@ -192,19 +192,19 @@ def get_recommendations():
                 for rec in recs_basic_data:
                     paper = get_paper_by_hash(rec['paper_hash'])
                     if paper is not None:
-                        paper_dict = {
-                            'title': paper.get("title", "N/A"),
-                            'link': paper.get("landing_page_url", "#"),
-                            'description': rec.get("summary", "Relevant based on user interest."),
-                            'hash': rec['paper_hash'],
-                            'is_replacement': rec.get('is_replacement', False)
-                        }
+                        # Use the centralized create_paper_dict function
+                        paper_dict = create_paper_dict(
+                            paper, 
+                            rec.get("summary", "Relevant based on user interest."),
+                            rec.get('is_replacement', False)
+                        )
                     else:
+                        # Fallback for missing papers
                         paper_dict = {
                             'title': "N/A",
                             'link': "#",
                             'description': "Relevant based on user interest.",
-                            'hash': "Nan",
+                            'hash': "N/A",
                             'is_replacement': False
                         }
                     recommendations.append(paper_dict)
