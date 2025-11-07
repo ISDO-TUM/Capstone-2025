@@ -42,7 +42,7 @@ services:
         echo 'Database ready. Running setup script...' &&
         psql -h db -U ${DB_USER:-user} -d ${DB_NAME:-papers} -f /app/init.sql &&
         echo 'Setup complete. Starting application...' &&
-        python app.py
+        uv run app.py --no-dev
       "
     ports:
       - "80:80"
