@@ -44,11 +44,14 @@ def add_new_project_to_db(title: str, description: str) -> str:
         VALUES (%s, %s, %s)
     """
 
-    cursor.execute(sql_insert,
-                   (project_id,
-                    title,
-                    description,
-                    ))
+    cursor.execute(
+        sql_insert,
+        (
+            project_id,
+            title,
+            description,
+        ),
+    )
     conn.commit()
     cursor.close()
     conn.close()
@@ -75,11 +78,14 @@ def add_user_profile_embedding(project_id: str, embedding: List[float]):
     # Convert embedding list to JSONB format
     embedding_json = json.dumps(embedding)
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE projects_table
         SET user_profile_embedding = %s
         WHERE project_id = %s
-    """, (embedding_json, project_id))
+    """,
+        (embedding_json, project_id),
+    )
 
     conn.commit()
     cursor.close()
@@ -100,11 +106,14 @@ def get_user_profile_embedding(project_id: str) -> List[float] | None:
 
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT user_profile_embedding
         FROM projects_table
         WHERE project_id = %s
-    """, (project_id,))
+    """,
+        (project_id,),
+    )
 
     result = cursor.fetchone()
     cursor.close()
@@ -141,9 +150,15 @@ def add_queries_to_project_db(queries: list[str], project_id: str):
     logger.info("Updating projects_table with new queries")
 
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
         UPDATE projects_table SET queries = %s WHERE project_id = %s
-        """, (queries_str, project_id,))
+        """,
+            (
+                queries_str,
+                project_id,
+            ),
+        )
     except Exception as e:
         logger.error(f"Error updating projects_table with project queries: {e}")
         conn.rollback()
@@ -167,7 +182,9 @@ def get_queries_for_project(project_id: str):
     conn = connect_to_db()
     cursor = conn.cursor()
 
-    cursor.execute(""" SELECT queries FROM projects_table WHERE project_id = %s""", (project_id,))
+    cursor.execute(
+        """ SELECT queries FROM projects_table WHERE project_id = %s""", (project_id,)
+    )
 
     queries = cursor.fetchone()
     return queries
@@ -184,9 +201,12 @@ def get_project_prompt(project_id: str):
     conn = connect_to_db()
     cursor = conn.cursor()
 
-    cursor.execute(""" SELECT description
+    cursor.execute(
+        """ SELECT description
                        FROM projects_table
-                       WHERE project_id = %s""", (project_id,))
+                       WHERE project_id = %s""",
+        (project_id,),
+    )
 
     prompt = cursor.fetchone()
     return prompt
@@ -201,7 +221,9 @@ def get_all_projects() -> list[dict]:
     conn = connect_to_db()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    cursor.execute("SELECT project_id, title, description, creation_date FROM projects_table")
+    cursor.execute(
+        "SELECT project_id, title, description, creation_date FROM projects_table"
+    )
 
     projects = [dict(row) for row in cursor.fetchall()]
     cursor.close()
@@ -223,11 +245,14 @@ def get_project_data(project_id: str):
 
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    cursor.execute("""
+    cursor.execute(
+        """
                    SELECT *
                    FROM projects_table
                    WHERE project_id = %s
-                   """, (project_id,))
+                   """,
+        (project_id,),
+    )
     result = cursor.fetchone()
     if result is None:
         return None
@@ -251,11 +276,14 @@ def add_email_to_project_db(email: str, project_id: str):
     conn = connect_to_db()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
                    UPDATE projects_table
                    SET queries = %s
                    WHERE project_id = %s VALUES (%s)
-                   """, (email, project_id))
+                   """,
+        (email, project_id),
+    )
 
     conn.commit()
     cursor.close()
@@ -287,11 +315,14 @@ def get_project_by_id(project_id: str):
     """
     conn = connect_to_db()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT *
           FROM projects_table
          WHERE project_id = %s
-    """, (project_id,))
+    """,
+        (project_id,),
+    )
     row = cursor.fetchone()
     cursor.close()
     conn.close()
@@ -312,11 +343,14 @@ def update_project_description(project_id: str, new_description: str):
     conn = connect_to_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE projects_table
             SET description = %s
             WHERE project_id = %s
-        """, (new_description, project_id))
+        """,
+            (new_description, project_id),
+        )
         conn.commit()
         status = Status.SUCCESS
     except Exception as e:

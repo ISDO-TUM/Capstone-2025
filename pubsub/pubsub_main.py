@@ -3,14 +3,25 @@ import logging
 from datetime import datetime, timedelta, timezone
 from chroma_db.chroma_vector_db import chroma_db
 import numpy as np
-from database.projectpaper_database_handler import get_pubsub_papers_for_project, reset_newsletter_tags, \
-    set_newsletter_tags_for_project
+from database.projectpaper_database_handler import (
+    get_pubsub_papers_for_project,
+    reset_newsletter_tags,
+    set_newsletter_tags_for_project,
+)
 from pubsub import pubsub_params
 
 from pubsub.temporary_llm_that_will_be_replaced_soon import calL_temp_agent
 from typing import List, TypedDict
-from database.papers_database_handler import insert_papers, get_papers_by_original_id, get_paper_by_hash
-from database.projects_database_handler import get_queries_for_project, get_project_prompt, get_user_profile_embedding
+from database.papers_database_handler import (
+    insert_papers,
+    get_papers_by_original_id,
+    get_paper_by_hash,
+)
+from database.projects_database_handler import (
+    get_queries_for_project,
+    get_project_prompt,
+    get_user_profile_embedding,
+)
 import ast
 from llm.Embeddings import embed_papers
 from paper_handling.paper_handler import fetch_works_multiple_queries
@@ -52,12 +63,16 @@ def update_newsletter_papers(project_id: str):
     logger.info(f"    ✓ prompt: {project_prompt[:50]}…")
 
     logger.info("  ↳ querying embedded project prompt…")
-    embedded_prompt = get_user_profile_embedding(project_id)  # todo handle cases where this is null
+    embedded_prompt = get_user_profile_embedding(
+        project_id
+    )  # todo handle cases where this is null
     logger.info("    ✓ prompt embedding acquired")
 
     # 2. Fetch works
     logger.info("  ↳ fetching works from API…")
-    papers, _ = fetch_works_multiple_queries(queries, from_publication_date=get_update_date(pubsub_params.DAYS_FOR_UPDATE))
+    papers, _ = fetch_works_multiple_queries(
+        queries, from_publication_date=get_update_date(pubsub_params.DAYS_FOR_UPDATE)
+    )
     logger.info(f"    ✓ fetched {len(papers)} papers")
 
     # 3. Insert into Postgres
@@ -92,7 +107,9 @@ def update_newsletter_papers(project_id: str):
     logger.info("  ↳ loading current newsletter-paper hashes…")
 
     # todo for now this returns all newsletter papers, not the old ones (older than update days threshold) that have not been seen
-    current = get_pubsub_papers_for_project(project_id)  # If recommendation is older than the update days threshold but the user has not seen it consider it again
+    current = get_pubsub_papers_for_project(
+        project_id
+    )  # If recommendation is older than the update days threshold but the user has not seen it consider it again
 
     logger.info(f"    ✓ {len(current)} existing newsletter entries")
     potential = []
@@ -122,20 +139,23 @@ def update_newsletter_papers(project_id: str):
         logger.info(f"      ▪ picked {item['paper_hash']}: {item['summary'][:40]}…")
 
     if not recommendation_hashes:
-        logger.info(f"[update_newsletter_papers] No new recommendations for project {project_id}, skipping tag update")
+        logger.info(
+            f"[update_newsletter_papers] No new recommendations for project {project_id}, skipping tag update"
+        )
         return  # <-- without error, shows 200 OK
-    set_newsletter_tags_for_project(project_id, paper_hashes=recommendation_hashes, summaries=summaries)
+    set_newsletter_tags_for_project(
+        project_id, paper_hashes=recommendation_hashes, summaries=summaries
+    )
     logger.info(f"[update_newsletter_papers] DONE for project {project_id}")
 
 
 def _embed_and_store(papers):
     embedded_papers = []
     for paper in papers:
-        embedding = embed_papers(paper['title'],
-                                 paper['abstract'])
+        embedding = embed_papers(paper["title"], paper["abstract"])
         embedded_paper = {
-            'embedding': embedding,
-            'hash': paper['paper_hash'],
+            "embedding": embedding,
+            "hash": paper["paper_hash"],
         }
         embedded_papers.append(embedded_paper)
 
@@ -145,10 +165,12 @@ def _embed_and_store(papers):
 def _sim_search(papers, project_vector):
     hashes = []
     for paper in papers:
-        hashes.append(paper['paper_hash'])
-    latest_papers_subset = chroma_db.collection.get(ids=hashes, include=['embeddings'])
+        hashes.append(paper["paper_hash"])
+    latest_papers_subset = chroma_db.collection.get(ids=hashes, include=["embeddings"])
     results = []
-    for id, embedding in zip(latest_papers_subset["ids"], latest_papers_subset["embeddings"]):
+    for id, embedding in zip(
+        latest_papers_subset["ids"], latest_papers_subset["embeddings"]
+    ):
         sim = _cosine_similarity(project_vector, embedding)
         results.append((id, sim))
     results.sort(key=lambda x: x[1], reverse=True)
@@ -201,4 +223,4 @@ def get_update_date(days_for_update: int | float) -> str:
 
 # NOTE: This block is for local testing only. Uncomment to run local tests.
 # if __name__ == '__main__':
-    # update_newsletter_papers("babbab43-0323-423e-ba29-f74ec07e2d57")
+# update_newsletter_papers("babbab43-0323-423e-ba29-f74ec07e2d57")
