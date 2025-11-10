@@ -4,7 +4,7 @@ from database.projects_database_handler import (
     add_new_project_to_db,
     add_user_profile_embedding,
     get_user_profile_embedding,
-    get_project_data
+    get_project_data,
 )
 import sys
 import os
@@ -16,12 +16,10 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 def test_embedding_storage_and_retrieval():
     project_id = add_new_project_to_db(
         "Test AI Research Project",
-        "Research on machine learning applications in healthcare"
+        "Research on machine learning applications in healthcare",
     )
 
-    user_profile_text = (
-        "I am a researcher interested in machine learning, deep learning, and healthcare applications."
-    )
+    user_profile_text = "I am a researcher interested in machine learning, deep learning, and healthcare applications."
     embedding = embed_user_profile(user_profile_text)
     add_user_profile_embedding(project_id, embedding)
 
@@ -37,8 +35,7 @@ def test_embedding_storage_and_retrieval():
 
 def test_embedding_update():
     project_id = add_new_project_to_db(
-        "Test Update Project",
-        "Testing embedding updates"
+        "Test Update Project", "Testing embedding updates"
     )
 
     initial_embedding = embed_user_profile("I am interested in quantum computing")
@@ -64,8 +61,7 @@ def test_get_best_papers_with_text():
 
 def test_get_best_papers_with_project_id():
     project_id = add_new_project_to_db(
-        "Test Project for get_best_papers",
-        "Testing get_best_papers with project ID"
+        "Test Project for get_best_papers", "Testing get_best_papers with project ID"
     )
     embedding = embed_user_profile("deep learning for medical image analysis")
     add_user_profile_embedding(project_id, embedding)
@@ -79,8 +75,7 @@ def test_get_best_papers_with_project_id():
 
 def test_get_best_papers_fallback():
     project_id = add_new_project_to_db(
-        "Test Project Without Embedding",
-        "Testing fallback behavior"
+        "Test Project Without Embedding", "Testing fallback behavior"
     )
 
     if get_user_profile_embedding(project_id) is not None:
@@ -95,8 +90,7 @@ def test_get_best_papers_fallback():
 
 def test_database_integrity():
     project_id = add_new_project_to_db(
-        "Database Integrity Test",
-        "Testing database integrity"
+        "Database Integrity Test", "Testing database integrity"
     )
     embedding = embed_user_profile("artificial intelligence for robotics")
     add_user_profile_embedding(project_id, embedding)

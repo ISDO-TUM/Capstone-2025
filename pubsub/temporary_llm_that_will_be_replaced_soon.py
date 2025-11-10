@@ -28,9 +28,5 @@ Respond with a dict list of the paper hashes of the most relevant papers. With t
 
 
 def calL_temp_agent(papers: str, project_prompt: str, k: str):
-    formatted_prompt = prompt.format_messages(
-        topic=project_prompt,
-        papers=papers,
-        k=k
-    )
+    formatted_prompt = prompt.format_messages(topic=project_prompt, papers=papers, k=k)
     return llm.invoke(formatted_prompt)

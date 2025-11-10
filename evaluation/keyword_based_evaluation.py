@@ -12,16 +12,16 @@ def cosine_similarity(a, b):
 
 
 # KeyBERT setup for domain-specific keyword extraction
-kw_model = KeyBERT(model='allenai/scibert_scivocab_uncased')
+kw_model = KeyBERT(model="allenai/scibert_scivocab_uncased")
 
 
 def extract_keywords_keybert(text, top_n=10, stopwords=None):
     keywords = kw_model.extract_keywords(
         text,
         keyphrase_ngram_range=(1, 3),
-        stop_words=stopwords or 'english',
+        stop_words=stopwords or "english",
         use_maxsum=True,
-        top_n=top_n
+        top_n=top_n,
     )
     return [kw for kw, score in keywords]
 
@@ -53,7 +53,9 @@ def precision_recall_f1(prompt_keywords, paper_keywords):
     return precision, recall, f1
 
 
-def evaluate_keyword_based_relevance(user_prompt: str, recommended_papers: List[Dict], top_k: int = 10):
+def evaluate_keyword_based_relevance(
+    user_prompt: str, recommended_papers: List[Dict], top_k: int = 10
+):
     """
     Evaluate recommended papers using keyword-based relevance scoring and print results.
 
@@ -70,12 +72,14 @@ def evaluate_keyword_based_relevance(user_prompt: str, recommended_papers: List[
         abstract = paper.get("abstract", "")
         content = f"{title}\n\n{abstract}".strip()
         if content:
-            paper_data.append({
-                "id": f"paper_{i}",
-                "title": title,
-                "abstract": abstract,
-                "content": content
-            })
+            paper_data.append(
+                {
+                    "id": f"paper_{i}",
+                    "title": title,
+                    "abstract": abstract,
+                    "content": content,
+                }
+            )
             paper_texts.append(content)
 
     prompt_keywords = extract_keywords_keybert(user_prompt, top_n=10)
@@ -95,7 +99,9 @@ def evaluate_keyword_based_relevance(user_prompt: str, recommended_papers: List[
         keybert_matches[paper["id"]] = overlap
 
         # Jaccard similarity
-        jaccard_scores[paper["id"]] = jaccard_similarity(prompt_keywords, paper_keywords)
+        jaccard_scores[paper["id"]] = jaccard_similarity(
+            prompt_keywords, paper_keywords
+        )
 
         # Precision, Recall, F1
         precision, recall, f1 = precision_recall_f1(prompt_keywords, paper_keywords)
@@ -121,27 +127,43 @@ def evaluate_keyword_based_relevance(user_prompt: str, recommended_papers: List[
         f1_score = f1_scores.get(kid, 0.0) or 0.0
         semantic_score = semantic_scores.get(kid, 0.0) or 0.0
 
-        results.append({
-            "title": paper["title"],
-            "abstract": paper["abstract"],
-            "jaccard_score": round(float(jaccard_score), 3),
-            "precision_score": round(float(precision_score), 3),
-            "recall_score": round(float(recall_score), 3),
-            "f1_score": round(float(f1_score), 3),
-            "semantic_score": round(float(semantic_score), 3)
-        })
+        results.append(
+            {
+                "title": paper["title"],
+                "abstract": paper["abstract"],
+                "jaccard_score": round(float(jaccard_score), 3),
+                "precision_score": round(float(precision_score), 3),
+                "recall_score": round(float(recall_score), 3),
+                "f1_score": round(float(f1_score), 3),
+                "semantic_score": round(float(semantic_score), 3),
+            }
+        )
 
     # Sort results by semantic score
-    sorted_results = sorted(results, key=lambda x: x["semantic_score"], reverse=True)[:top_k]
-    sorted_papers = [paper for paper, _ in
-                     sorted(zip(paper_data, results), key=lambda x: x[1]["semantic_score"], reverse=True)[:top_k]]
+    sorted_results = sorted(results, key=lambda x: x["semantic_score"], reverse=True)[
+        :top_k
+    ]
+    sorted_papers = [
+        paper
+        for paper, _ in sorted(
+            zip(paper_data, results), key=lambda x: x[1]["semantic_score"], reverse=True
+        )[:top_k]
+    ]
 
     # Calculate average scores
-    avg_jaccard = sum(res['jaccard_score'] for res in results) / len(results) if results else 0
-    avg_precision = sum(res['precision_score'] for res in results) / len(results) if results else 0
-    avg_recall = sum(res['recall_score'] for res in results) / len(results) if results else 0
-    avg_f1 = sum(res['f1_score'] for res in results) / len(results) if results else 0
-    avg_semantic = sum(res['semantic_score'] for res in results) / len(results) if results else 0
+    avg_jaccard = (
+        sum(res["jaccard_score"] for res in results) / len(results) if results else 0
+    )
+    avg_precision = (
+        sum(res["precision_score"] for res in results) / len(results) if results else 0
+    )
+    avg_recall = (
+        sum(res["recall_score"] for res in results) / len(results) if results else 0
+    )
+    avg_f1 = sum(res["f1_score"] for res in results) / len(results) if results else 0
+    avg_semantic = (
+        sum(res["semantic_score"] for res in results) / len(results) if results else 0
+    )
 
     # Prepare data for saving
     evaluation_data = {
@@ -157,29 +179,29 @@ def evaluate_keyword_based_relevance(user_prompt: str, recommended_papers: List[
                 "precision_score": round(avg_precision, 3),
                 "recall_score": round(avg_recall, 3),
                 "f1_score": round(avg_f1, 3),
-                "semantic_score": round(avg_semantic, 3)
-            }
+                "semantic_score": round(avg_semantic, 3),
+            },
         },
-        "papers": []
+        "papers": [],
     }
 
     # Add individual paper results
     for i, (paper, res) in enumerate(zip(sorted_papers, sorted_results), 1):
         paper_result = {
             "rank": i,
-            "title": res['title'],
-            "abstract": res['abstract'],
+            "title": res["title"],
+            "abstract": res["abstract"],
             "scores": {
-                "jaccard_score": res['jaccard_score'],
-                "precision_score": res['precision_score'],
-                "recall_score": res['recall_score'],
-                "f1_score": res['f1_score'],
-                "semantic_score": res['semantic_score']
+                "jaccard_score": res["jaccard_score"],
+                "precision_score": res["precision_score"],
+                "recall_score": res["recall_score"],
+                "f1_score": res["f1_score"],
+                "semantic_score": res["semantic_score"],
             },
             "keywords": {
-                "paper_keywords": paper_keywords_dict.get(paper['id'], []),
-                "matched_keywords": keybert_matches.get(paper['id'], [])
-            }
+                "paper_keywords": paper_keywords_dict.get(paper["id"], []),
+                "matched_keywords": keybert_matches.get(paper["id"], []),
+            },
         }
         evaluation_data["papers"].append(paper_result)
 
@@ -192,7 +214,7 @@ def evaluate_keyword_based_relevance(user_prompt: str, recommended_papers: List[
     filename = f"keyword_evaluation_{timestamp_str}.json"
     filepath = os.path.join(evaluation_dir, filename)
 
-    with open(filepath, 'w', encoding='utf-8') as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         json.dump(evaluation_data, f, indent=2, ensure_ascii=False)
 
     # Print summary

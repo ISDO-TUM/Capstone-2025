@@ -22,9 +22,9 @@ def sendmail(email, html_content):
             # Ersetze Platzhalter im HTML-Template
             # E-Mail Nachricht erstellen
             msg = MIMEMultipart()
-            msg['From'] = formataddr((NAME, username))
-            msg['To'] = email
-            msg['Subject'] = "NOTIFICATION"
+            msg["From"] = formataddr((NAME, username))
+            msg["To"] = email
+            msg["Subject"] = "NOTIFICATION"
 
             # E-Mail-Text und HTML hinzufügen
             msg.attach(MIMEText(html_content, "html", "utf-8"))

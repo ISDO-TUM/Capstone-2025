@@ -6,21 +6,26 @@ import os
 from datetime import datetime
 
 
-def compute_bertscore_similarity(user_prompt: str, paper_texts: List[str], model_type: str = "bert-base-uncased"):
+def compute_bertscore_similarity(
+    user_prompt: str, paper_texts: List[str], model_type: str = "bert-base-uncased"
+):
     """
     Compute BERTScore similarity between user prompt and paper texts.
     Returns precision, recall, and F1 scores.
     """
     P, R, F1 = score(
-        paper_texts, [user_prompt] * len(paper_texts),
+        paper_texts,
+        [user_prompt] * len(paper_texts),
         model_type=model_type,
         lang="en",
-        verbose=False
+        verbose=False,
     )
     return P.numpy().tolist(), R.numpy().tolist(), F1.numpy().tolist()
 
 
-def precision_at_k(ranked_papers: List[Dict], bertscore_scores: Dict[str, float], k: int) -> float:
+def precision_at_k(
+    ranked_papers: List[Dict], bertscore_scores: Dict[str, float], k: int
+) -> float:
     """
     Compute Precision@k using BERTScore F1 as relevance labels.
     """
@@ -31,7 +36,7 @@ def precision_at_k(ranked_papers: List[Dict], bertscore_scores: Dict[str, float]
     relevant_count = 0
 
     for paper in ranked_papers[:k]:
-        title = paper['title']
+        title = paper["title"]
         bertscore_f1 = bertscore_scores.get(title, 0.0)
         if bertscore_f1 > relevance_threshold:
             relevant_count += 1
@@ -39,21 +44,25 @@ def precision_at_k(ranked_papers: List[Dict], bertscore_scores: Dict[str, float]
     return relevant_count / k
 
 
-def recall_at_k(ranked_papers: List[Dict], bertscore_scores: Dict[str, float], k: int) -> float:
+def recall_at_k(
+    ranked_papers: List[Dict], bertscore_scores: Dict[str, float], k: int
+) -> float:
     """
     Compute Recall@k using BERTScore F1 as relevance labels.
     """
     relevance_threshold = 0.5
 
     # Count total relevant papers
-    total_relevant = sum(1 for score in bertscore_scores.values() if score > relevance_threshold)
+    total_relevant = sum(
+        1 for score in bertscore_scores.values() if score > relevance_threshold
+    )
 
     if total_relevant == 0:
         return 0.0
 
     relevant_retrieved = 0
     for paper in ranked_papers[:k]:
-        title = paper['title']
+        title = paper["title"]
         bertscore_f1 = bertscore_scores.get(title, 0.0)
         if bertscore_f1 > relevance_threshold:
             relevant_retrieved += 1
@@ -62,15 +71,17 @@ def recall_at_k(ranked_papers: List[Dict], bertscore_scores: Dict[str, float], k
     return min(recall, 1.0)  # Ensure recall never exceeds 1.0
 
 
-def dcg_at_k(ranked_papers: List[Dict], bertscore_scores: Dict[str, float], k: int) -> float:
+def dcg_at_k(
+    ranked_papers: List[Dict], bertscore_scores: Dict[str, float], k: int
+) -> float:
     """
     Compute dcg@k using BERTScore F1 as relevance labels.
     """
     dcg = 0.0
     for i, paper in enumerate(ranked_papers[:k]):
-        title = paper['title']
+        title = paper["title"]
         rel = bertscore_scores.get(title, 0.0)
-        gain = (2 ** rel - 1)
+        gain = 2**rel - 1
         discount = math.log2(i + 2)
         dcg += gain / discount
     return dcg
@@ -83,13 +94,15 @@ def idcg_at_k(bertscore_scores: Dict[str, float], k: int) -> float:
     sorted_rels = sorted(bertscore_scores.values(), reverse=True)
     idcg = 0.0
     for i, rel in enumerate(sorted_rels[:k]):
-        gain = (2 ** rel - 1)
+        gain = 2**rel - 1
         discount = math.log2(i + 2)
         idcg += gain / discount
     return idcg
 
 
-def ndcg_at_k(ranked_papers: List[Dict], bertscore_scores: Dict[str, float], k: int) -> float:
+def ndcg_at_k(
+    ranked_papers: List[Dict], bertscore_scores: Dict[str, float], k: int
+) -> float:
     """
     Compute ndcg@k using BERTScore F1 as relevance labels.
     """
@@ -99,8 +112,11 @@ def ndcg_at_k(ranked_papers: List[Dict], bertscore_scores: Dict[str, float], k: 
     return min(ndcg, 1.0)
 
 
-def evaluate_ranking_performance(ranked_papers: List[Dict], bertscore_scores: Dict[str, float],
-                                 k_values: List[int] = [1, 3, 5, 10]) -> Dict[str, float]:
+def evaluate_ranking_performance(
+    ranked_papers: List[Dict],
+    bertscore_scores: Dict[str, float],
+    k_values: List[int] = [1, 3, 5, 10],
+) -> Dict[str, float]:
     """
     Evaluate ranking performance using BERTScore as ground truth.
 
@@ -120,14 +136,16 @@ def evaluate_ranking_performance(ranked_papers: List[Dict], bertscore_scores: Di
             recall = recall_at_k(ranked_papers, bertscore_scores, k)
             ndcg = ndcg_at_k(ranked_papers, bertscore_scores, k)
 
-            results[f'precision@{k}'] = round(precision, 3)
-            results[f'recall@{k}'] = round(recall, 3)
-            results[f'ndcg@{k}'] = round(ndcg, 3)
+            results[f"precision@{k}"] = round(precision, 3)
+            results[f"recall@{k}"] = round(recall, 3)
+            results[f"ndcg@{k}"] = round(ndcg, 3)
 
     return results
 
 
-def _evaluate_bertscore_relevance_core(user_prompt: str, recommended_papers: List[Dict]) -> tuple[List[Dict], Dict[str, float]]:
+def _evaluate_bertscore_relevance_core(
+    user_prompt: str, recommended_papers: List[Dict]
+) -> tuple[List[Dict], Dict[str, float]]:
     """
     Evaluate recommended papers using BERTScore similarity.
     Args:
@@ -141,26 +159,34 @@ def _evaluate_bertscore_relevance_core(user_prompt: str, recommended_papers: Lis
     # Prepare paper texts (title + abstract)
     paper_texts = [f"{p['title']}. {p['abstract']}" for p in recommended_papers]
     # Compute BERTScore similarity
-    bertscore_precisions, bertscore_recalls, bertscore_f1s = compute_bertscore_similarity(user_prompt, paper_texts)
+    bertscore_precisions, bertscore_recalls, bertscore_f1s = (
+        compute_bertscore_similarity(user_prompt, paper_texts)
+    )
     # Create results with BERTScore scores
     results = []
     bertscore_scores_dict = {}
-    for i, (p, r, f1) in enumerate(zip(bertscore_precisions, bertscore_recalls, bertscore_f1s)):
+    for i, (p, r, f1) in enumerate(
+        zip(bertscore_precisions, bertscore_recalls, bertscore_f1s)
+    ):
         title = recommended_papers[i]["title"]
         bertscore_scores_dict[title] = f1
-        results.append({
-            "title": title,
-            "abstract": recommended_papers[i]["abstract"],
-            "bertscore_precision": round(float(p), 3),
-            "bertscore_recall": round(float(r), 3),
-            "bertscore_f1": round(float(f1), 3)
-        })
+        results.append(
+            {
+                "title": title,
+                "abstract": recommended_papers[i]["abstract"],
+                "bertscore_precision": round(float(p), 3),
+                "bertscore_recall": round(float(r), 3),
+                "bertscore_f1": round(float(f1), 3),
+            }
+        )
     # Sort results by BERTScore F1 (descending)
     sorted_results = sorted(results, key=lambda x: x["bertscore_f1"], reverse=True)
     return sorted_results, bertscore_scores_dict
 
 
-def evaluate_bertscore_relevance(user_prompt: str, recommended_papers: List[Dict], top_k: int = 10):
+def evaluate_bertscore_relevance(
+    user_prompt: str, recommended_papers: List[Dict], top_k: int = 10
+):
     """
     Evaluate recommended papers using BERTScore similarity and save results.
     Args:
@@ -169,18 +195,33 @@ def evaluate_bertscore_relevance(user_prompt: str, recommended_papers: List[Dict
         top_k (int): Number of top relevant papers to return.
     """
     import logging
+
     logger = logging.getLogger(__name__)
     try:
         # Get BERTScore evaluation results
-        results, bertscore_scores = _evaluate_bertscore_relevance_core(user_prompt, recommended_papers)
+        results, bertscore_scores = _evaluate_bertscore_relevance_core(
+            user_prompt, recommended_papers
+        )
         # Get top-k results
         top_k_results = results[:top_k]
         # Calculate ranking metrics
-        ranking_metrics = evaluate_ranking_performance(recommended_papers, bertscore_scores, k_values=[1, 3, 5, 10])
+        ranking_metrics = evaluate_ranking_performance(
+            recommended_papers, bertscore_scores, k_values=[1, 3, 5, 10]
+        )
         # Calculate average scores
-        avg_precision = sum(res['bertscore_precision'] for res in results) / len(results) if results else 0
-        avg_recall = sum(res['bertscore_recall'] for res in results) / len(results) if results else 0
-        avg_f1 = sum(res['bertscore_f1'] for res in results) / len(results) if results else 0
+        avg_precision = (
+            sum(res["bertscore_precision"] for res in results) / len(results)
+            if results
+            else 0
+        )
+        avg_recall = (
+            sum(res["bertscore_recall"] for res in results) / len(results)
+            if results
+            else 0
+        )
+        avg_f1 = (
+            sum(res["bertscore_f1"] for res in results) / len(results) if results else 0
+        )
         # Prepare data for saving
         evaluation_data = {
             "timestamp": datetime.now().isoformat(),
@@ -192,23 +233,23 @@ def evaluate_bertscore_relevance(user_prompt: str, recommended_papers: List[Dict
                 "average_scores": {
                     "bertscore_precision": round(avg_precision, 3),
                     "bertscore_recall": round(avg_recall, 3),
-                    "bertscore_f1": round(avg_f1, 3)
+                    "bertscore_f1": round(avg_f1, 3),
                 },
-                "ranking_metrics": ranking_metrics
+                "ranking_metrics": ranking_metrics,
             },
-            "papers": []
+            "papers": [],
         }
         # Add individual paper results
         for i, res in enumerate(top_k_results, 1):
             paper_result = {
                 "rank": i,
-                "title": res['title'],
-                "abstract": res['abstract'],
+                "title": res["title"],
+                "abstract": res["abstract"],
                 "scores": {
-                    "bertscore_precision": res['bertscore_precision'],
-                    "bertscore_recall": res['bertscore_recall'],
-                    "bertscore_f1": res['bertscore_f1']
-                }
+                    "bertscore_precision": res["bertscore_precision"],
+                    "bertscore_recall": res["bertscore_recall"],
+                    "bertscore_f1": res["bertscore_f1"],
+                },
             }
             evaluation_data["papers"].append(paper_result)
         # Save to file
@@ -218,7 +259,7 @@ def evaluate_bertscore_relevance(user_prompt: str, recommended_papers: List[Dict
         timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"bertscore_evaluation_{timestamp_str}.json"
         filepath = os.path.join(evaluation_dir, filename)
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             json.dump(evaluation_data, f, indent=2, ensure_ascii=False)
         # Print summary
         print(f"BERTScore Evaluation Results saved to: {filepath}")
