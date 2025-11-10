@@ -140,6 +140,9 @@ def create_project_page():
     Returns:
         Response: Rendered create_project.html template.
     """
+    if not request.is_signed_in:
+        return {"error": "Not authenticated"}, 401
+
     return render_template('create_project.html')
 
 
@@ -152,16 +155,26 @@ def project_overview_page(project_id):
     Returns:
         Response: Rendered project_overview.html template.
     """
+    if not request.is_signed_in:
+        return render_template('dashboard.html')
+
+    project = get_project_by_id(project_id)
+    if project["user_id"] != request.user_id:
+        return {"error": "Forbidden"}, 403
+
     return render_template('project_overview.html', project_id=project_id)
 
 
 @app.route('/api/projects', methods=['POST'])
 def api_create_project():
     """
-    Create a new project with the given title and description.
+    Create a new project for the signed-in user with the given title and description.
     Returns:
         Response: JSON with new projectId or error message.
     """
+    if not request.is_signed_in:
+        return {"error": "Not authenticated"}, 401
+
     data = request.get_json() or {}
     title = data.get('title')
     desc = data.get('description')
@@ -174,11 +187,14 @@ def api_create_project():
 @app.route('/api/getProjects', methods=['GET'])
 def get_projects():
     """
-    Get all projects with project_id and metadata.
+    Get all projects owned by the current user with project_id and metadata.
     Returns:
         Response: JSON with all projects and their metadata.
     """
     """Get all projects with project_id and metadata."""
+
+    if not request.is_signed_in:
+        return {"error": "Not authenticated"}, 401
 
     projects = get_all_projects()
     complete_projects = []
@@ -209,6 +225,10 @@ def get_recommendations():
     Returns:
         Response: Server-sent event stream with recommendations or agent thoughts.
     """
+
+    if not request.is_signed_in:
+        return {"error": "Not authenticated"}, 401
+
     print("Attempting to get recommendations")
     """Get recommendations for a project. Updated to use project_id and update_recommendations flag."""
     try:
@@ -295,6 +315,9 @@ def extract_pdf_text():
     Returns:
         Response: JSON with extracted text or error message.
     """
+    if not request.is_signed_in:
+        return jsonify({"error": "Unauthorized"}), 401
+
     if 'file' not in request.files:
         return jsonify({"error": "No file provided"}), 400
 
@@ -338,6 +361,9 @@ def api_update_newsletter():
     Returns:
         Response: JSON status message.
     """
+    if not request.is_signed_in:
+        return jsonify({"error": "Unauthorized"}), 401
+
     logger.info("Triggered api_update_newsletter")
     payload = request.get_json() or {}
     project_id = payload.get('projectId')
@@ -379,6 +405,9 @@ def api_get_newsletter():
     Returns:
         Response: JSON list of newsletter papers with metadata.
     """
+    if not request.is_signed_in:
+        return jsonify({"error": "Unauthorized"}), 401
+
     project_id = request.args.get('projectId') or request.args.get('project_id')
     if not project_id:
         return jsonify({"error": "Missing projectId"}), 400
@@ -417,6 +446,9 @@ def rate_paper():
     Returns:
         Response: JSON status message and replacement info if applicable.
     """
+    if not request.is_signed_in:
+        return jsonify({"error": "Unauthorized"}), 401
+
     data = request.get_json()
     if not data:
         return jsonify({"status": "error", "message": "No data provided"}), 400
@@ -493,6 +525,9 @@ def api_get_project(project_id):
     Returns:
         Response: JSON with project metadata or error message.
     """
+    if not request.is_signed_in:
+        return jsonify({"error": "Unauthorized"}), 401
+
     proj = get_project_by_id(project_id)
     if not proj:
         return jsonify({"error": "Project not found"}), 404
@@ -517,6 +552,9 @@ def api_update_project_prompt(project_id):
     Returns:
         Response: JSON with updated description or error message.
     """
+    if not request.is_signed_in:
+        return jsonify({"error": "Unauthorized"}), 401
+
     data = request.get_json() or {}
     new_prompt = data.get('prompt')
     if not new_prompt:
@@ -537,6 +575,9 @@ def load_more_papers():
     Returns:
         Response: Server-sent event stream with more recommendations or error message.
     """
+    if not request.is_signed_in:
+        return jsonify({"error": "Unauthorized"}), 401
+
     try:
         data = request.get_json()
         project_id = data.get('project_id') if data else None

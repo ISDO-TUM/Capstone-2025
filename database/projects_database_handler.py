@@ -15,6 +15,8 @@ import json
 from typing import List
 
 import psycopg2.extras
+from flask import request
+
 from utils.status import Status
 from database.database_connection import connect_to_db
 
@@ -23,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 def add_new_project_to_db(title: str, description: str) -> str:
     """
-    Add a new project to the projects_table.
+    Add a new project to the projects_table for the current user.
     Args:
         title (str): Project title.
         description (str): Project description.
@@ -33,6 +35,12 @@ def add_new_project_to_db(title: str, description: str) -> str:
         Inserts a new row into the projects_table in the database.
     """
     project_id = str(uuid.uuid4())
+
+    user_id = getattr(request, "user_id", None)
+
+    if not request.is_signed_in or not user_id:
+        raise Exception("Not authenticated")
+
     conn = connect_to_db()
     cursor = conn.cursor()
 
@@ -40,14 +48,15 @@ def add_new_project_to_db(title: str, description: str) -> str:
         project_id = str(uuid.uuid4())
 
     sql_insert = """
-    INSERT INTO projects_table (project_id, title, description)
-        VALUES (%s, %s, %s)
+    INSERT INTO projects_table (project_id, user_id, title, description)
+        VALUES (%s, %s, %s, %s)
     """
 
     cursor.execute(sql_insert,
                    (project_id,
+                    user_id,
                     title,
-                    description,
+                    description
                     ))
     conn.commit()
     cursor.close()
@@ -65,6 +74,7 @@ def add_user_profile_embedding(project_id: str, embedding: List[float]):
         None
     Side effects:
         Updates the user_profile_embedding field in the projects_table.
+        Only updates projects owned by the currently logged-in user.
     """
     conn = connect_to_db()
     if conn is None:
@@ -75,11 +85,19 @@ def add_user_profile_embedding(project_id: str, embedding: List[float]):
     # Convert embedding list to JSONB format
     embedding_json = json.dumps(embedding)
 
+    user_id = getattr(request, "user_id", None)
+
+    if not request.is_signed_in or not user_id:
+        raise Exception("Not authenticated")
+
     cursor.execute("""
         UPDATE projects_table
         SET user_profile_embedding = %s
-        WHERE project_id = %s
-    """, (embedding_json, project_id))
+        WHERE project_id = %s AND user_id = %s 
+    """, (embedding_json, project_id, user_id))
+
+    if cursor.rowcount == 0:
+        raise Exception("Project not found or not owned by the current user")
 
     conn.commit()
     cursor.close()
@@ -88,7 +106,7 @@ def add_user_profile_embedding(project_id: str, embedding: List[float]):
 
 def get_user_profile_embedding(project_id: str) -> List[float] | None:
     """
-    Retrieve the user profile embedding for a project.
+    Retrieve the user profile embedding for a project owned by the current user.
     Args:
         project_id (str): The project ID.
     Returns:
@@ -100,11 +118,16 @@ def get_user_profile_embedding(project_id: str) -> List[float] | None:
 
     cursor = conn.cursor()
 
+    user_id = getattr(request, "user_id", None)
+
+    if not request.is_signed_in or not user_id:
+        raise Exception("Not authenticated")
+
     cursor.execute("""
         SELECT user_profile_embedding
         FROM projects_table
-        WHERE project_id = %s
-    """, (project_id,))
+        WHERE project_id = %s AND user_id = %s
+    """, (project_id, user_id))
 
     result = cursor.fetchone()
     cursor.close()
@@ -125,7 +148,7 @@ def get_user_profile_embedding(project_id: str) -> List[float] | None:
 
 def add_queries_to_project_db(queries: list[str], project_id: str):
     """
-    Add search queries to a project in the projects_table for reuse.
+    Add search queries to a project owned by the current user in the projects_table for reuse.
     Args:
         queries (list[str]): List of search queries.
         project_id (str): The project ID.
@@ -138,18 +161,23 @@ def add_queries_to_project_db(queries: list[str], project_id: str):
     cursor = conn.cursor()
     queries_str = repr(queries)
 
+    user_id = getattr(request, "user_id", None)
+
+    if not request.is_signed_in or not user_id:
+        raise Exception("Not authenticated")
+
     logger.info("Updating projects_table with new queries")
 
     try:
         cursor.execute("""
-        UPDATE projects_table SET queries = %s WHERE project_id = %s
-        """, (queries_str, project_id,))
+        UPDATE projects_table SET queries = %s WHERE project_id = %s AND user_id = %s
+        """, (queries_str, project_id, user_id))
     except Exception as e:
         logger.error(f"Error updating projects_table with project queries: {e}")
         conn.rollback()
         return Status.FAILURE
 
-    logger.info(f"Updated projects_table with new queries for project {project_id}")
+    logger.info(f"Updated projects_table with new queries for project {project_id} owned by user {user_id}")
     conn.commit()
     cursor.close()
     conn.close()
@@ -158,7 +186,7 @@ def add_queries_to_project_db(queries: list[str], project_id: str):
 
 def get_queries_for_project(project_id: str):
     """
-    Retrieve the list of paper API search queries for a project.
+    Retrieve the list of paper API search queries for a project owned by the current user.
     Args:
         project_id (str): The project ID.
     Returns:
@@ -167,7 +195,16 @@ def get_queries_for_project(project_id: str):
     conn = connect_to_db()
     cursor = conn.cursor()
 
-    cursor.execute(""" SELECT queries FROM projects_table WHERE project_id = %s""", (project_id,))
+    user_id = getattr(request, "user_id", None)
+
+    if not request.is_signed_in or not user_id:
+        raise Exception("Not authenticated")
+
+    cursor.execute(""" 
+    SELECT queries 
+    FROM projects_table 
+    WHERE project_id = %s AND user_id = %s"""
+                   , (project_id, user_id))
 
     queries = cursor.fetchone()
     return queries
@@ -175,7 +212,7 @@ def get_queries_for_project(project_id: str):
 
 def get_project_prompt(project_id: str):
     """
-    Retrieve the project description (prompt) for the given project.
+    Retrieve the project description (prompt) for the given project owned by the current user.
     Args:
         project_id (str): The project ID.
     Returns:
@@ -184,9 +221,14 @@ def get_project_prompt(project_id: str):
     conn = connect_to_db()
     cursor = conn.cursor()
 
+    user_id = getattr(request, "user_id", None)
+
+    if not request.is_signed_in or not user_id:
+        raise Exception("Not authenticated")
+
     cursor.execute(""" SELECT description
                        FROM projects_table
-                       WHERE project_id = %s""", (project_id,))
+                       WHERE project_id = %s AND user_id = %s""", (project_id, user_id))
 
     prompt = cursor.fetchone()
     return prompt
@@ -194,14 +236,22 @@ def get_project_prompt(project_id: str):
 
 def get_all_projects() -> list[dict]:
     """
-    Retrieve a list of all projects in the database.
+    Retrieve a list of all projects of the current user in the database.
     Returns:
         list[dict]: List of all project records as dictionaries.
     """
     conn = connect_to_db()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    cursor.execute("SELECT project_id, title, description, creation_date FROM projects_table")
+    user_id = getattr(request, "user_id", None)
+
+    if not request.is_signed_in or not user_id:
+        raise Exception("Not authenticated")
+
+    cursor.execute("""
+    SELECT project_id, title, description, creation_date
+    FROM projects_table
+    WHERE user_id = %s""", (user_id,))
 
     projects = [dict(row) for row in cursor.fetchall()]
     cursor.close()
@@ -211,7 +261,7 @@ def get_all_projects() -> list[dict]:
 
 def get_project_data(project_id: str):
     """
-    Retrieve all data for a project by its project_id.
+    Retrieve all data for a project owned by the current user by its project_id.
     Args:
         project_id (str): The project ID.
     Returns:
@@ -223,11 +273,16 @@ def get_project_data(project_id: str):
 
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
+    user_id = getattr(request, "user_id", None)
+
+    if not request.is_signed_in or not user_id:
+        raise Exception("Not authenticated")
+
     cursor.execute("""
                    SELECT *
                    FROM projects_table
-                   WHERE project_id = %s
-                   """, (project_id,))
+                   WHERE project_id = %s AND user_id = %s
+                   """, (project_id, user_id))
     result = cursor.fetchone()
     if result is None:
         return None
@@ -239,7 +294,7 @@ def get_project_data(project_id: str):
 
 def add_email_to_project_db(email: str, project_id: str):
     """
-    Add an email to a project for newsletter mailings.
+    Add an email to a project owned by the current user for newsletter mailings.
     Args:
         email (str): The email address to add.
         project_id (str): The project ID.
@@ -251,11 +306,16 @@ def add_email_to_project_db(email: str, project_id: str):
     conn = connect_to_db()
     cursor = conn.cursor()
 
+    user_id = getattr(request, "user_id", None)
+
+    if not request.is_signed_in or not user_id:
+        raise Exception("Not authenticated")
+
     cursor.execute("""
-                   UPDATE projects_table
-                   SET queries = %s
-                   WHERE project_id = %s VALUES (%s)
-                   """, (email, project_id))
+    UPDATE projects_table
+    SET email = %s
+    WHERE project_id = %s AND user_id = %s
+""", (email, project_id, user_id))
 
     conn.commit()
     cursor.close()
@@ -285,13 +345,19 @@ def get_project_by_id(project_id: str):
     Returns:
         dict or None: Dictionary of project data, or None if not found.
     """
+
+    user_id = getattr(request, "user_id", None)
+
+    if not request.is_signed_in or not user_id:
+        raise Exception("Not authenticated")
+
     conn = connect_to_db()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     cursor.execute("""
         SELECT *
           FROM projects_table
-         WHERE project_id = %s
-    """, (project_id,))
+         WHERE project_id = %s AND user_id = %s
+    """, (project_id, user_id))
     row = cursor.fetchone()
     cursor.close()
     conn.close()
@@ -300,7 +366,7 @@ def get_project_by_id(project_id: str):
 
 def update_project_description(project_id: str, new_description: str):
     """
-    Update the project description (prompt) for the given project_id.
+    Update the project owned by the current user description (prompt) for the given project_id.
     Args:
         project_id (str): The project ID.
         new_description (str): The new project description.
@@ -311,12 +377,18 @@ def update_project_description(project_id: str, new_description: str):
     """
     conn = connect_to_db()
     cursor = conn.cursor()
+
+    user_id = getattr(request, "user_id", None)
+
+    if not request.is_signed_in or not user_id:
+        raise Exception("Not authenticated")
+
     try:
         cursor.execute("""
             UPDATE projects_table
             SET description = %s
-            WHERE project_id = %s
-        """, (new_description, project_id))
+            WHERE project_id = %s AND user_id = %s
+        """, (new_description, project_id, user_id))
         conn.commit()
         status = Status.SUCCESS
     except Exception as e:
