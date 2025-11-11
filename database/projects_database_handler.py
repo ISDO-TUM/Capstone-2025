@@ -21,7 +21,7 @@ from database.database_connection import connect_to_db
 logger = logging.getLogger(__name__)
 
 
-def add_new_project_to_db(title: str, description: str) -> str:
+def add_new_project_to_db(title: str, description: str, log_history: bool) -> str:
     """
     Add a new project to the projects_table.
     Args:
@@ -40,14 +40,15 @@ def add_new_project_to_db(title: str, description: str) -> str:
         project_id = str(uuid.uuid4())
 
     sql_insert = """
-    INSERT INTO projects_table (project_id, title, description)
-        VALUES (%s, %s, %s)
+    INSERT INTO projects_table (project_id, title, description,log_history)
+        VALUES (%s, %s, %s, %s)
     """
 
     cursor.execute(sql_insert,
                    (project_id,
                     title,
                     description,
+                    log_history
                     ))
     conn.commit()
     cursor.close()

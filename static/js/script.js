@@ -144,12 +144,13 @@ async function handleRouting () {
         event.preventDefault();
         const title       = document.getElementById('projectTitle').value;
         const description = document.getElementById('projectDescription').value;
+        const logHistory  = document.getElementById('logHistory').value;
 
             // POST to real endpoint instead of localStorage
             const res = await fetch('/api/projects', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ title, description })
+              body: JSON.stringify({ title, description, logHistory })
             });
             if (!res.ok) {
               return alert('Error creating project');

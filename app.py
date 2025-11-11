@@ -98,9 +98,11 @@ def api_create_project():
     data = request.get_json() or {}
     title = data.get('title')
     desc = data.get('description')
-    if not title or not desc:
-        return jsonify({"error": "Missing title or description"}), 400
-    project_id = add_new_project_to_db(title, desc)
+    log_history_string = data.get('logHistory')
+    log_history = (log_history_string.lower() == "true")
+    if not title or not desc or not log_history_string:
+        return jsonify({"error": "Missing title/description/consent-value"}), 400
+    project_id = add_new_project_to_db(title, desc, log_history)
     return jsonify({"projectId": project_id}), 201
 
 

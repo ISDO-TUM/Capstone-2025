@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS public.projects_table (
     project_id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
     description TEXT NOT NULL,
+    log_history BOOLEAN NOT NULL,
     email TEXT,
     queries TEXT,
     creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
