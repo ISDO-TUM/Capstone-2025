@@ -85,6 +85,8 @@ services:
     image: grafana/grafana:12.2.1
     container_name: grafana_container
     restart: unless-stopped
+    environment:
+      - GF_LOG_LEVEL=warn
     ports:
       - "3000:3000"
     volumes:

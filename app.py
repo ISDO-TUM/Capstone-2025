@@ -63,6 +63,7 @@ from pubsub.pubsub_params import DAYS_FOR_UPDATE
 from utils.status import Status
 from clerk_backend_api import Clerk
 from clerk_backend_api.security.types import AuthenticateRequestOptions
+from custom_logging import APILogger
 
 # Only import Clerk if not in test mode
 if os.getenv("TEST_MODE") != "true":
@@ -70,6 +71,7 @@ if os.getenv("TEST_MODE") != "true":
     from clerk_backend_api.security.types import AuthenticateRequestOptions
 
 logger = logging.getLogger(__name__)
+test_logger = APILogger()
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 app = Flask(__name__)
@@ -180,6 +182,7 @@ def home():
         Response: Rendered dashboard.html template or login view.
     """
 
+    test_logger.request_start(method="GET", path="/")
     return render_template(
         "dashboard.html",
         auth=request.auth,
@@ -228,6 +231,7 @@ def project_overview_page(project_id):
     if project["user_id"] != request.auth["user_id"]:
         return {"error": "Forbidden"}, 403
 
+    test_logger.request_start(method="GET", path=f"/project/{project_id}")
     return render_template(
         "project_overview.html",
         project_id=project_id,
