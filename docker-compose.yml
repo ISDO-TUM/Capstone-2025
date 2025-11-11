@@ -94,28 +94,16 @@ services:
     networks:
       - capstone_network
 
-  loki:
-    image: grafana/loki:3.5.7
-    container_name: loki_container
-    restart: unless-stopped
-    ports:
-      - "3100:3100"
-    volumes:
-      - ./loki_config/loki-config.yaml:/mnt/config/loki-config.yaml:ro
-    command: -config.file=/mnt/config/loki-config.yaml
-    networks:
-      - capstone_network
-
   promtail:
     image: grafana/promtail:3.5.7
     container_name: promtail_container
     restart: unless-stopped
     volumes:
-      - ./loki_config/promtail-config.yaml:/mnt/config/promtail-config.yaml:ro
+      - ./promtail-config.yaml:/mnt/config/promtail-config.yaml:ro
       - ./logs:/app/logs:ro
-    command: -config.file=/mnt/config/promtail-config.yaml
-    depends_on:
-      - loki
+    command: -config.file=/mnt/config/promtail-config.yaml -config.expand-env=true
+    env_file:
+      - .env
     networks:
       - capstone_network
 
