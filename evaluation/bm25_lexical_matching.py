@@ -10,7 +10,9 @@ from datetime import datetime
 load_dotenv()
 
 
-def evaluate_bm25_lexical_matching(user_prompt: str, recommended_papers: List[Dict], top_k: int = 10):
+def evaluate_bm25_lexical_matching(
+    user_prompt: str, recommended_papers: List[Dict], top_k: int = 10
+):
     """
     Evaluate recommended papers using BM25 lexical matching via LlamaIndex and save results.
 
@@ -26,7 +28,9 @@ def evaluate_bm25_lexical_matching(user_prompt: str, recommended_papers: List[Di
         abstract = paper.get("abstract", "")
         content = f"{title}\n\n{abstract}".strip()
         if content:  # only add if not empty
-            node = TextNode(text=content, metadata={"title": title, "abstract": abstract})
+            node = TextNode(
+                text=content, metadata={"title": title, "abstract": abstract}
+            )
             nodes.append(node)
 
     # BM25 Retriever
@@ -34,9 +38,11 @@ def evaluate_bm25_lexical_matching(user_prompt: str, recommended_papers: List[Di
         nodes=nodes,
         similarity_top_k=len(nodes),
         stemmer=Stemmer.Stemmer("english"),
-        language="english"
+        language="english",
     )
-    bm25_results = {node.node.node_id: node.score for node in bm25_retriever.retrieve(user_prompt)}
+    bm25_results = {
+        node.node.node_id: node.score for node in bm25_retriever.retrieve(user_prompt)
+    }
 
     # Prepare results
     results = []
@@ -44,17 +50,23 @@ def evaluate_bm25_lexical_matching(user_prompt: str, recommended_papers: List[Di
         kid = node.node_id
         bm25_score = bm25_results.get(kid, 0.0) or 0.0
 
-        results.append({
-            "title": node.metadata["title"],
-            "abstract": node.metadata["abstract"],
-            "bm25_score": round(float(bm25_score), 3)
-        })
+        results.append(
+            {
+                "title": node.metadata["title"],
+                "abstract": node.metadata["abstract"],
+                "bm25_score": round(float(bm25_score), 3),
+            }
+        )
 
     # Sort results by BM25 score
-    sorted_results = sorted(results, key=lambda x: x["bm25_score"], reverse=True)[:top_k]
+    sorted_results = sorted(results, key=lambda x: x["bm25_score"], reverse=True)[
+        :top_k
+    ]
 
     # Calculate average score
-    avg_bm25 = sum(res['bm25_score'] for res in results) / len(results) if results else 0
+    avg_bm25 = (
+        sum(res["bm25_score"] for res in results) / len(results) if results else 0
+    )
 
     # Prepare data for saving
     evaluation_data = {
@@ -64,22 +76,18 @@ def evaluate_bm25_lexical_matching(user_prompt: str, recommended_papers: List[Di
             "total_papers": len(recommended_papers),
             "evaluated_papers": len(results),
             "top_k": top_k,
-            "average_scores": {
-                "bm25_score": round(avg_bm25, 3)
-            }
+            "average_scores": {"bm25_score": round(avg_bm25, 3)},
         },
-        "papers": []
+        "papers": [],
     }
 
     # Add individual paper results
     for i, res in enumerate(sorted_results, 1):
         paper_result = {
             "rank": i,
-            "title": res['title'],
-            "abstract": res['abstract'],
-            "scores": {
-                "bm25_score": res['bm25_score']
-            }
+            "title": res["title"],
+            "abstract": res["abstract"],
+            "scores": {"bm25_score": res["bm25_score"]},
         }
         evaluation_data["papers"].append(paper_result)
 
@@ -92,7 +100,7 @@ def evaluate_bm25_lexical_matching(user_prompt: str, recommended_papers: List[Di
     filename = f"bm25_evaluation_{timestamp_str}.json"
     filepath = os.path.join(evaluation_dir, filename)
 
-    with open(filepath, 'w', encoding='utf-8') as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         json.dump(evaluation_data, f, indent=2, ensure_ascii=False)
 
     # Print summary

@@ -52,7 +52,14 @@ def add_new_project_to_db(title: str, description: str) -> str:
         VALUES (%s, %s, %s, %s)
     """
 
-    cursor.execute(sql_insert, (project_id, user_id, title, description))
+    cursor.execute(
+        sql_insert,
+        (
+            project_id,
+            title,
+            description,
+        ),
+    )
     conn.commit()
     cursor.close()
     conn.close()
@@ -79,11 +86,6 @@ def add_user_profile_embedding(project_id: str, embedding: List[float]):
 
     # Convert embedding list to JSONB format
     embedding_json = json.dumps(embedding)
-
-    if not request.auth:
-        raise Exception("Not authenticated")
-
-    user_id = request.auth["user_id"]
 
     if not request.auth:
         raise Exception("Not authenticated")
@@ -120,11 +122,6 @@ def get_user_profile_embedding(project_id: str) -> List[float] | None:
         raise Exception("Failed to connect to database")
 
     cursor = conn.cursor()
-
-    if not request.auth:
-        raise Exception("Not authenticated")
-
-    user_id = request.auth["user_id"]
 
     if not request.auth:
         raise Exception("Not authenticated")

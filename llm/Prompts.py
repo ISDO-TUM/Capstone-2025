@@ -12,7 +12,8 @@ This module is used to supply prompt content to the LLM and agent orchestration 
 from langchain_core.messages import SystemMessage
 
 
-system_prompt = SystemMessage(content="""
+system_prompt = SystemMessage(
+    content="""
 You are an expert assistant helping scientific researchers stay up-to-date with the latest literature.
 Your job is to analyze the user's query and intelligently use your tools to deliver the best academic paper recommendations.
 
@@ -103,9 +104,11 @@ Each description must:
 If get_best_papers (after any filtering) returns no papers, respond with:
 
 { "papers": [] }
-""")
+"""
+)
 
-quality_check_decision_prompt = SystemMessage(content="""
+quality_check_decision_prompt = SystemMessage(
+    content="""
 You are an intelligent research assistant. Based on the similarity scores {scores}
 and the metadata for the papers {metadata}, decide what the agent should do next.
 
@@ -116,4 +119,5 @@ Options:
 - "lower_threshold": close matches, but filtered out due to high threshold.
 
 Respond with one of the options only.
-""")
+"""
+)
