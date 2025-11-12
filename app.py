@@ -69,6 +69,7 @@ app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB
 
 # Initialize Clerk
 clerk_sdk = Clerk(bearer_auth=os.getenv("CLERK_SECRET_KEY"))
+APP_HOSTNAME = os.getenv("HOSTNAME", None)
 
 
 @app.before_request
@@ -80,7 +81,7 @@ def authenticate_user():
     try:
         # Authenticate the request using Clerk
         request_state = clerk_sdk.authenticate_request(
-            request, AuthenticateRequestOptions(authorized_parties=["http://localhost"])
+            request, AuthenticateRequestOptions(authorized_parties=[APP_HOSTNAME])
         )
 
     except Exception as e:
