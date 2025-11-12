@@ -734,4 +734,17 @@ def load_more_papers():
 
 
 if __name__ == "__main__":
+
+    if not os.getenv("CLERK_SECRET_KEY"):
+        raise ValueError("CLERK_SECRET_KEY environment variable is required for authentication.")
+
+    if not os.getenv("CLERK_PUBLISHABLE_KEY"):
+        raise ValueError("CLERK_PUBLISHABLE_KEY environment variable is required for authentication.")
+
+    if not os.getenv("CLERK_FRONTEND_API_URL"):
+        raise ValueError("CLERK_FRONTEND_API_URL environment variable is required for authentication.")
+    
+    if not APP_HOSTNAME:
+        raise ValueError("HOSTNAME environment variable is required for authentication.")
+
     app.run(host="0.0.0.0", debug=True, port=80)  # nosec B201, B104
