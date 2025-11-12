@@ -21,13 +21,11 @@
             <div id="projectsList" class="projects-list">
                 <!-- Project cards will be rendered here by JS -->
             </div>
-        {% else %}
-            <div class="login-dialog-container">
-                <div id="clerk-sign-in-dialog"></div>
-            </div>
         {% endif %}
+        <div class="login-dialog-container">
+            <div id="clerk-sign-in-dialog"></div>
+        </div>
     </main>
-    <div id="clerk-panel" style="position: absolute; top: 20%; left: 20%;"></div>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     {% include 'components/clerk_scripts.html' %}
 </body>
