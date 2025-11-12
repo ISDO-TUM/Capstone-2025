@@ -74,7 +74,9 @@ async function loadPubSubPapers(projectId) {
 
         // Then fetch the papers
         const papers = await fetch(
-            `/api/pubsub/get_newsletter_papers?projectId=${projectId}`
+            `/api/pubsub/get_newsletter_papers?projectId=${projectId}`, {
+                credentials: 'include'
+            }
         ).then(r => {
             console.log('📡 PubSub papers response status:', r.status);
             return r.json();

@@ -7,25 +7,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <header class="main-header">
-        <div class="logo-title">
-            <span class="logo-svg">
-                <!-- Simple SVG logo placeholder -->
-                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="20" cy="20" r="20" fill="#007bff"/>
-                  <text x="50%" y="55%" text-anchor="middle" fill="#fff" font-size="18" font-family="Segoe UI, Arial" dy=".3em">C</text>
-                </svg>
-            </span>
-            <h1>Capstone 2025</h1>
-        </div>
-        {% if signed_in %}
-            <span class="user-name">Hi {{ user_info.first_name if user_info.first_name }}</span>
-            <button id="createProjectBtn" class="btn btn-primary create-project-cta">Start a New Project</button>
-            <div id="clerk-user-button"></div>
-        {% endif %}
-    </header>
+    {% include 'components/header.html' %}
     <main class="main-content">
-        {% if signed_in %}
+        {% if auth %}
             <div class="search-bar-wrapper" style="display: none;">
                 <input type="text" id="projectSearchInput" class="search-bar" placeholder="Search by tag or keyword...">
             </div>
@@ -45,21 +29,6 @@
     </main>
     <div id="clerk-panel" style="position: absolute; top: 20%; left: 20%;"></div>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
-    <script async crossorigin="anonymous" data-clerk-publishable-key="{{ env.CLERK_PUBLISHABLE_KEY }}"
-        src="{{ env.CLERK_FRONTEND_API }}" type="text/javascript"></script>
-    <script>
-        window.addEventListener('load', async function () {
-            await Clerk.load()
-
-            if (Clerk.isSignedIn) {
-                const userButtonDiv = document.getElementById('clerk-user-button')
-                Clerk.mountUserButton(userButtonDiv)
-            } else {
-                const signInDiv = document.getElementById('clerk-sign-in-dialog')
-
-                Clerk.mountSignIn(signInDiv)
-            }
-        })
-    </script>
+    {% include 'components/clerk_scripts.html' %}
 </body>
 </html>

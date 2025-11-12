@@ -52,6 +52,7 @@ def authenticate_user():
     """
     Middleware to authenticate the user with Clerk and inject auth information into the request object.
     """
+
     try:
         # Authenticate the request using Clerk
         request_state = clerk_sdk.authenticate_request(
@@ -61,19 +62,34 @@ def authenticate_user():
             )
         )
 
-        print(request_state)
-
-        # Attach authentication information to the request object
-        request.is_signed_in = request_state.is_signed_in
-        request.user_id = request_state.payload.get("sub") if request_state.is_signed_in else None
-        request.auth_payload = request_state.payload if request_state.is_signed_in else None
-
     except Exception as e:
         # Log the error and set default values for unauthenticated requests
         logger.error(f"Authentication error: {e}")
-        request.is_signed_in = False
-        request.user_id = None
-        request.auth_payload = None
+        request.auth = None
+        return
+
+    # Attach authentication information to the request object
+    if request_state.is_signed_in:
+        user_id = request_state.payload.get("sub")
+
+        request.auth = {
+            "user_id": user_id,
+        }
+
+        try:
+            user_info = clerk_sdk.users.get(user_id=user_id)
+            request.auth['username'] = user_info.username
+            request.auth['first_name'] = user_info.first_name
+            request.auth['last_name'] = user_info.last_name
+            if user_info.email_addresses and len(user_info.email_addresses) > 0:
+                request.auth['email'] = user_info.email_addresses[0].email_address if user_info.email_addresses else None
+            
+            request.auth['profile_image_url'] = user_info.profile_image_url
+        except Exception as e:
+            logging.error(f"Error fetching user info from Clerk:\n{e}")
+    
+    else:
+        request.auth = None
 
 
 @app.errorhandler(413)
@@ -99,37 +115,12 @@ def home():
         Response: Rendered dashboard.html template or login view.
     """
 
-    user_info = None
-    if request.is_signed_in and request.user_id:
-        try:
-            user_info = clerk_sdk.users.get(user_id=request.user_id)
-        except Exception as e:
-            logging.error(f"Error fetching user info from Clerk: {e}")
-            user_info = {}
-
-    print(
-        f"user_id: {request.user_id}, is_signed_in: {request.is_signed_in}, auth_payload: {request.auth_payload}"
-    )
-
-    parsed_user_info = None
-    if request.is_signed_in and user_info:
-        parsed_user_info = {
-            "first_name": getattr(user_info, "first_name", ""),
-            "last_name": getattr(user_info, "last_name", ""),
-            "profile_image_url": getattr(user_info, "profile_image_url", ""),
-            "email": user_info.email_addresses[0].email_address
-            if user_info.email_addresses
-            else "Unknown Email",
-        }
-
     return render_template(
         "dashboard.html",
-        signed_in=request.is_signed_in,
-        user_info=parsed_user_info,
-        env={
-            "CLERK_PUBLISHABLE_KEY": os.getenv("CLERK_PUBLISHABLE_KEY"),
-            "CLERK_FRONTEND_API": os.getenv("CLERK_FRONTEND_API"),
-        },
+        auth=request.auth,
+        showCreateProjectButton=True,
+        CLERK_PUBLISHABLE_KEY = os.getenv("CLERK_PUBLISHABLE_KEY"),
+        CLERK_FRONTEND_API_URL = os.getenv("CLERK_FRONTEND_API_URL"),
     )
 
 
@@ -140,10 +131,14 @@ def create_project_page():
     Returns:
         Response: Rendered create_project.html template.
     """
-    if not request.is_signed_in:
+    if not request.auth:
         return {"error": "Not authenticated"}, 401
 
-    return render_template('create_project.html')
+    return render_template('create_project.html',
+        auth=request.auth,
+        CLERK_PUBLISHABLE_KEY = os.getenv("CLERK_PUBLISHABLE_KEY"),
+        CLERK_FRONTEND_API_URL = os.getenv("CLERK_FRONTEND_API_URL"),
+    )
 
 
 @app.route('/project/<project_id>')
@@ -155,14 +150,22 @@ def project_overview_page(project_id):
     Returns:
         Response: Rendered project_overview.html template.
     """
-    if not request.is_signed_in:
-        return render_template('dashboard.html')
+    if not request.auth:
+        return render_template('dashboard.html',
+            auth=None,
+            CLERK_PUBLISHABLE_KEY = os.getenv("CLERK_PUBLISHABLE_KEY"),
+            CLERK_FRONTEND_API_URL = os.getenv("CLERK_FRONTEND_API_URL"),
+        )
 
     project = get_project_by_id(project_id)
-    if project["user_id"] != request.user_id:
+    if project["user_id"] != request.auth["user_id"]:
         return {"error": "Forbidden"}, 403
 
-    return render_template('project_overview.html', project_id=project_id)
+    return render_template('project_overview.html', project_id=project_id,
+        auth=request.auth,
+        CLERK_PUBLISHABLE_KEY = os.getenv("CLERK_PUBLISHABLE_KEY"),
+        CLERK_FRONTEND_API_URL = os.getenv("CLERK_FRONTEND_API_URL"),
+    )
 
 
 @app.route('/api/projects', methods=['POST'])
@@ -172,7 +175,7 @@ def api_create_project():
     Returns:
         Response: JSON with new projectId or error message.
     """
-    if not request.is_signed_in:
+    if not request.auth:
         return {"error": "Not authenticated"}, 401
 
     data = request.get_json() or {}
@@ -193,7 +196,7 @@ def get_projects():
     """
     """Get all projects with project_id and metadata."""
 
-    if not request.is_signed_in:
+    if not request.auth:
         return {"error": "Not authenticated"}, 401
 
     projects = get_all_projects()
@@ -226,7 +229,7 @@ def get_recommendations():
         Response: Server-sent event stream with recommendations or agent thoughts.
     """
 
-    if not request.is_signed_in:
+    if not request.auth:
         return {"error": "Not authenticated"}, 401
 
     print("Attempting to get recommendations")
@@ -315,7 +318,7 @@ def extract_pdf_text():
     Returns:
         Response: JSON with extracted text or error message.
     """
-    if not request.is_signed_in:
+    if not request.auth:
         return jsonify({"error": "Unauthorized"}), 401
 
     if 'file' not in request.files:
@@ -361,7 +364,7 @@ def api_update_newsletter():
     Returns:
         Response: JSON status message.
     """
-    if not request.is_signed_in:
+    if not request.auth:
         return jsonify({"error": "Unauthorized"}), 401
 
     logger.info("Triggered api_update_newsletter")
@@ -405,7 +408,7 @@ def api_get_newsletter():
     Returns:
         Response: JSON list of newsletter papers with metadata.
     """
-    if not request.is_signed_in:
+    if not request.auth:
         return jsonify({"error": "Unauthorized"}), 401
 
     project_id = request.args.get('projectId') or request.args.get('project_id')
@@ -446,7 +449,7 @@ def rate_paper():
     Returns:
         Response: JSON status message and replacement info if applicable.
     """
-    if not request.is_signed_in:
+    if not request.auth:
         return jsonify({"error": "Unauthorized"}), 401
 
     data = request.get_json()
@@ -525,7 +528,7 @@ def api_get_project(project_id):
     Returns:
         Response: JSON with project metadata or error message.
     """
-    if not request.is_signed_in:
+    if not request.auth:
         return jsonify({"error": "Unauthorized"}), 401
 
     proj = get_project_by_id(project_id)
@@ -552,7 +555,7 @@ def api_update_project_prompt(project_id):
     Returns:
         Response: JSON with updated description or error message.
     """
-    if not request.is_signed_in:
+    if not request.auth:
         return jsonify({"error": "Unauthorized"}), 401
 
     data = request.get_json() or {}
@@ -575,7 +578,7 @@ def load_more_papers():
     Returns:
         Response: Server-sent event stream with more recommendations or error message.
     """
-    if not request.is_signed_in:
+    if not request.auth:
         return jsonify({"error": "Unauthorized"}), 401
 
     try:
