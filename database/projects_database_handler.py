@@ -90,7 +90,13 @@ def add_user_profile_embedding(project_id: str, embedding: List[float]):
     
     user_id = request.auth["user_id"]
 
-    cursor.execute("""
+    if not request.auth:
+        raise Exception("Not authenticated")
+    
+    user_id = request.auth["user_id"]
+
+    cursor.execute(
+        """
         UPDATE projects_table
         SET user_profile_embedding = %s
         WHERE project_id = %s AND user_id = %s 
@@ -123,7 +129,13 @@ def get_user_profile_embedding(project_id: str) -> List[float] | None:
     
     user_id = request.auth["user_id"]
 
-    cursor.execute("""
+    if not request.auth:
+        raise Exception("Not authenticated")
+    
+    user_id = request.auth["user_id"]
+
+    cursor.execute(
+        """
         SELECT user_profile_embedding
         FROM projects_table
         WHERE project_id = %s AND user_id = %s
@@ -226,7 +238,13 @@ def get_project_prompt(project_id: str):
     
     user_id = request.auth["user_id"]
 
-    cursor.execute(""" SELECT description
+    if not request.auth:
+        raise Exception("Not authenticated")
+    
+    user_id = request.auth["user_id"]
+
+    cursor.execute(
+        """ SELECT description
                        FROM projects_table
                        WHERE project_id = %s AND user_id = %s""", (project_id, user_id))
 
@@ -243,15 +261,7 @@ def get_all_projects() -> list[dict]:
     conn = connect_to_db()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    if not request.auth:
-        raise Exception("Not authenticated")
-    
-    user_id = request.auth["user_id"]
-
-    cursor.execute("""
-    SELECT project_id, title, description, creation_date
-    FROM projects_table
-    WHERE user_id = %s""", (user_id,))
+    cursor.execute("SELECT project_id, title, description, creation_date FROM projects_table")
 
     projects = [dict(row) for row in cursor.fetchall()]
     cursor.close()
@@ -278,7 +288,13 @@ def get_project_data(project_id: str):
     
     user_id = request.auth["user_id"]
 
-    cursor.execute("""
+    if not request.auth:
+        raise Exception("Not authenticated")
+    
+    user_id = request.auth["user_id"]
+
+    cursor.execute(
+        """
                    SELECT *
                    FROM projects_table
                    WHERE project_id = %s AND user_id = %s
@@ -353,7 +369,8 @@ def get_project_by_id(project_id: str):
 
     conn = connect_to_db()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT *
           FROM projects_table
          WHERE project_id = %s AND user_id = %s
@@ -384,7 +401,8 @@ def update_project_description(project_id: str, new_description: str):
     user_id = request.auth["user_id"]
 
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE projects_table
             SET description = %s
             WHERE project_id = %s AND user_id = %s

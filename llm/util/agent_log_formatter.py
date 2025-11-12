@@ -86,7 +86,7 @@ def truncate_args(args_str, limit=200):
         # Parse the string into a list
         truncated = args_str[:limit]
         # Return the truncated list as a string representation
-        return str(truncated) + ('...' if len(args_str) > limit else '')
+        return str(truncated) + ("..." if len(args_str) > limit else "")
     except Exception:
         return args_str
 
@@ -121,5 +121,5 @@ def truncate_tool_response(response_str, limit=100):
     """
     # Truncate the response if it's too long
     if len(response_str) > limit:
-        return response_str[:limit] + '...'
+        return response_str[:limit] + "..."
     return response_str

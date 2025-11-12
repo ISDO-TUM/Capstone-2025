@@ -13,5 +13,6 @@ class Status:
     SUCCESS (0): Operation completed successfully.
     FAILURE (1): Operation failed.
     """
+
     SUCCESS = 0
     FAILURE = 1

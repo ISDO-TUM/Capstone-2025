@@ -49,19 +49,25 @@ def node_logger(node_name, input_keys=None, output_keys=None):
     Returns:
         function: Wrapped function with logging and error handling.
     """
+
     def decorator(func):
         def wrapper(state):
             logger = logging.getLogger("StategraphAgent")
             # Log input state
             if input_keys:
-                logger.info(f"[{node_name}] Input: %s", {k: state.get(k) for k in input_keys})
+                logger.info(
+                    f"[{node_name}] Input: %s", {k: state.get(k) for k in input_keys}
+                )
             else:
                 logger.info(f"[{node_name}] Input: %s", state)
             try:
                 result = func(state)
                 # Log output state
                 if output_keys:
-                    logger.info(f"[{node_name}] Output: %s", {k: result.get(k) for k in output_keys})
+                    logger.info(
+                        f"[{node_name}] Output: %s",
+                        {k: result.get(k) for k in output_keys},
+                    )
                 else:
                     logger.info(f"[{node_name}] Output: %s", result)
                 return result
@@ -69,13 +75,18 @@ def node_logger(node_name, input_keys=None, output_keys=None):
                 logger.exception(f"[{node_name}] Exception occurred: %s", e)
                 state["error"] = str(e)
                 return state
+
         return wrapper
+
     return decorator
+
 
 # --- Node: Input Handler ---
 
 
-@node_logger("input_node", input_keys=["user_query"], output_keys=["user_query", "keywords"])
+@node_logger(
+    "input_node", input_keys=["user_query"], output_keys=["user_query", "keywords"]
+)
 def input_node(state):
     """
     Initialize the state with the user query and extract project_id if present.
@@ -104,13 +115,16 @@ def input_node(state):
         "papers_raw": [],
         "papers_filtered": [],
         "final_output": None,
-        "project_id": project_id
+        "project_id": project_id,
     }
+
 
 # --- Out-of-Scope Check Node ---
 
 
-@node_logger("out_of_scope_check", input_keys=["user_query"], output_keys=["out_of_scope_result"])
+@node_logger(
+    "out_of_scope_check", input_keys=["user_query"], output_keys=["out_of_scope_result"]
+)
 def out_of_scope_check_node(state):
     """
     Detect if the user query is out of scope for academic paper recommendations.
@@ -123,7 +137,7 @@ def out_of_scope_check_node(state):
     tools = get_tools()
     detect_out_of_scope_query = None
     for tool in tools:
-        if hasattr(tool, 'name') and tool.name == 'detect_out_of_scope_query':
+        if hasattr(tool, "name") and tool.name == "detect_out_of_scope_query":
             detect_out_of_scope_query = tool
             break
     if detect_out_of_scope_query is None:
@@ -131,7 +145,9 @@ def out_of_scope_check_node(state):
         return state
 
     # Call the tool
-    result = detect_out_of_scope_query.invoke({"query_description": state["user_query"]})
+    result = detect_out_of_scope_query.invoke(
+        {"query_description": state["user_query"]}
+    )
     state["out_of_scope_result"] = result
     return state
 
@@ -139,7 +155,16 @@ def out_of_scope_check_node(state):
 # --- Quality Control Node (QC) ---
 
 
-@node_logger("quality_control", input_keys=["user_query", "out_of_scope_result", "keywords"], output_keys=["qc_decision", "qc_tool_result", "keywords", "has_filter_instructions"])
+@node_logger(
+    "quality_control",
+    input_keys=["user_query", "out_of_scope_result", "keywords"],
+    output_keys=[
+        "qc_decision",
+        "qc_tool_result",
+        "keywords",
+        "has_filter_instructions",
+    ],
+)
 def quality_control_node(state):
     """
     Perform quality control and filter detection on the user query.
@@ -149,7 +174,7 @@ def quality_control_node(state):
         dict: Updated state with QC decision, tool result, keywords, and filter instructions flag.
     """
     tools = get_tools()
-    tool_map = {getattr(tool, 'name', None): tool for tool in tools}
+    tool_map = {getattr(tool, "name", None): tool for tool in tools}
     qc_decision = "accept"  # Default
     qc_tool_result = None
     try:
@@ -201,7 +226,11 @@ def quality_control_node(state):
 
         try:
             filter_response = LLM.invoke(filter_detection_prompt)
-            filter_result = json.loads(filter_response.content) if isinstance(filter_response.content, str) else filter_response.content
+            filter_result = (
+                json.loads(filter_response.content)
+                if isinstance(filter_response.content, str)
+                else filter_response.content
+            )
 
             # Handle potential list response
             if isinstance(filter_result, list) and len(filter_result) > 0:
@@ -210,7 +239,9 @@ def quality_control_node(state):
             has_filter_instructions = False
             reason = "No reason provided"
             if isinstance(filter_result, dict):
-                has_filter_instructions = filter_result.get("has_filter_instructions", False)
+                has_filter_instructions = filter_result.get(
+                    "has_filter_instructions", False
+                )
                 reason = filter_result.get("reason", "No reason provided")
 
             state["has_filter_instructions"] = has_filter_instructions
@@ -240,7 +271,11 @@ def quality_control_node(state):
         }}
         """
         qc_response = LLM.invoke(qc_prompt)
-        qc_result = json.loads(qc_response.content) if isinstance(qc_response.content, str) else qc_response.content
+        qc_result = (
+            json.loads(qc_response.content)
+            if isinstance(qc_response.content, str)
+            else qc_response.content
+        )
         # If qc_result is a list, use the first element if possible
         if isinstance(qc_result, list) and len(qc_result) > 0:
             qc_result = qc_result[0]
@@ -253,10 +288,19 @@ def quality_control_node(state):
         if qc_decision == "reformulate":
             tool = tool_map.get("reformulate_query")
             if tool:
-                qc_tool_result = tool.invoke({"query_description": user_query, "keywords": keywords})
+                qc_tool_result = tool.invoke(
+                    {"query_description": user_query, "keywords": keywords}
+                )
                 try:
-                    tool_result = json.loads(qc_tool_result) if isinstance(qc_tool_result, str) else qc_tool_result
-                    if "result" in tool_result and "refined_keywords" in tool_result["result"]:
+                    tool_result = (
+                        json.loads(qc_tool_result)
+                        if isinstance(qc_tool_result, str)
+                        else qc_tool_result
+                    )
+                    if (
+                        "result" in tool_result
+                        and "refined_keywords" in tool_result["result"]
+                    ):
                         state["keywords"] = tool_result["result"]["refined_keywords"]
                 except Exception as e:
                     logger.error(f"Error in ...: {e}")
@@ -267,9 +311,15 @@ def quality_control_node(state):
         elif qc_decision == "broaden":
             tool = tool_map.get("retry_broaden")
             if tool:
-                qc_tool_result = tool.invoke({"query_description": user_query, "keywords": keywords})
+                qc_tool_result = tool.invoke(
+                    {"query_description": user_query, "keywords": keywords}
+                )
                 try:
-                    tool_result = json.loads(qc_tool_result) if isinstance(qc_tool_result, str) else qc_tool_result
+                    tool_result = (
+                        json.loads(qc_tool_result)
+                        if isinstance(qc_tool_result, str)
+                        else qc_tool_result
+                    )
                     if "broadened_keywords" in tool_result:
                         state["keywords"] = tool_result["broadened_keywords"]
                 except Exception as e:
@@ -277,9 +327,15 @@ def quality_control_node(state):
         elif qc_decision == "narrow":
             tool = tool_map.get("narrow_query")
             if tool:
-                qc_tool_result = tool.invoke({"query_description": user_query, "keywords": keywords})
+                qc_tool_result = tool.invoke(
+                    {"query_description": user_query, "keywords": keywords}
+                )
                 try:
-                    tool_result = json.loads(qc_tool_result) if isinstance(qc_tool_result, str) else qc_tool_result
+                    tool_result = (
+                        json.loads(qc_tool_result)
+                        if isinstance(qc_tool_result, str)
+                        else qc_tool_result
+                    )
                     if "narrowed_keywords" in tool_result:
                         state["keywords"] = tool_result["narrowed_keywords"]
                 except Exception as e:
@@ -294,10 +350,15 @@ def quality_control_node(state):
         qc_decision = "error"
     return state
 
+
 # --- Out-of-Scope Handler Node ---
 
 
-@node_logger("out_of_scope_handler", input_keys=["user_query", "qc_decision_reason"], output_keys=["out_of_scope_message", "requires_user_input"])
+@node_logger(
+    "out_of_scope_handler",
+    input_keys=["user_query", "qc_decision_reason"],
+    output_keys=["out_of_scope_message", "requires_user_input"],
+)
 def out_of_scope_handler_node(state):
     """
     Handle out-of-scope queries by providing explanation and requesting new input.
@@ -307,7 +368,9 @@ def out_of_scope_handler_node(state):
         dict: Updated state with out_of_scope_message and requires_user_input.
     """
     user_query = state.get("user_query", "")
-    qc_decision_reason = state.get("qc_decision_reason", "The query was determined to be out of scope.")
+    qc_decision_reason = state.get(
+        "qc_decision_reason", "The query was determined to be out of scope."
+    )
 
     # Generate explanation for why the query was rejected
     explanation_prompt = f"""
@@ -335,10 +398,18 @@ def out_of_scope_handler_node(state):
 
     try:
         explanation_response = LLM.invoke(explanation_prompt)
-        explanation = explanation_response.content if hasattr(explanation_response, 'content') else str(explanation_response)
+        explanation = (
+            explanation_response.content
+            if hasattr(explanation_response, "content")
+            else str(explanation_response)
+        )
 
         short_explanation_response = LLM.invoke(short_explanation_prompt)
-        short_explanation = short_explanation_response.content if hasattr(short_explanation_response, 'content') else str(short_explanation_response)
+        short_explanation = (
+            short_explanation_response.content
+            if hasattr(short_explanation_response, "content")
+            else str(short_explanation_response)
+        )
 
         # Create the out-of-scope message
         out_of_scope_message = {
@@ -346,7 +417,7 @@ def out_of_scope_handler_node(state):
             "original_query": user_query,
             "short_explanation": short_explanation,
             "explanation": explanation,
-            "suggestion": "Please provide a new query focused on academic research topics, technologies, or fields of study."
+            "suggestion": "Please provide a new query focused on academic research topics, technologies, or fields of study.",
         }
 
         state["out_of_scope_message"] = out_of_scope_message
@@ -362,7 +433,7 @@ def out_of_scope_handler_node(state):
             "original_query": user_query,
             "short_explanation": "Your query is out of scope. Please specify a research topic or field.",
             "explanation": "The query was determined to be out of scope for academic paper recommendations. Please try a different query focused on research topics or academic fields.",
-            "suggestion": "Please provide a new query focused on academic research topics, technologies, or fields of study."
+            "suggestion": "Please provide a new query focused on academic research topics, technologies, or fields of study.",
         }
         state["requires_user_input"] = True
 
@@ -381,23 +452,34 @@ def expand_subqueries_node(state):
     subqueries = []
     if qc_tool_result:
         try:
-            parsed = json.loads(qc_tool_result) if isinstance(qc_tool_result, str) else qc_tool_result
+            parsed = (
+                json.loads(qc_tool_result)
+                if isinstance(qc_tool_result, str)
+                else qc_tool_result
+            )
             if parsed.get("status") == "success" and "subqueries" in parsed:
                 for sub in parsed["subqueries"]:
-                    subqueries.append({
-                        "description": sub.get("sub_description", ""),
-                        "keywords": sub.get("keywords", [])
-                    })
+                    subqueries.append(
+                        {
+                            "description": sub.get("sub_description", ""),
+                            "keywords": sub.get("keywords", []),
+                        }
+                    )
         except Exception as e:
             logger.error(f"Error parsing subqueries: {e}")
     state["subqueries"] = subqueries
     logger.info(f"Extracted {len(subqueries)} subqueries from split.")
     return state
 
+
 # --- Update Papers by Project Node ---
 
 
-@node_logger("update_papers_by_project", input_keys=["user_query", "qc_decision", "qc_tool_result", "project_id"], output_keys=["update_papers_by_project_result"])
+@node_logger(
+    "update_papers_by_project",
+    input_keys=["user_query", "qc_decision", "qc_tool_result", "project_id"],
+    output_keys=["update_papers_by_project_result"],
+)
 def update_papers_by_project_node(state):
     """
     Update the paper database for a specific project based on the user query and QC decision.
@@ -407,10 +489,12 @@ def update_papers_by_project_node(state):
         dict: Updated state with update_papers_by_project_result.
     """
     tools = get_tools()
-    tool_map = {getattr(tool, 'name', None): tool for tool in tools}
+    tool_map = {getattr(tool, "name", None): tool for tool in tools}
     update_papers_for_project_tool = tool_map.get("update_papers_for_project")
     logger.info(f"Available tool names: {list(tool_map.keys())}")
-    logger.info(f"Looking for tool: update_papers_for_project, found: {update_papers_for_project_tool is not None}")
+    logger.info(
+        f"Looking for tool: update_papers_for_project, found: {update_papers_for_project_tool is not None}"
+    )
     update_papers_by_project_result = None
     all_papers = []
     project_id = state.get("project_id")
@@ -422,16 +506,23 @@ def update_papers_by_project_node(state):
             for sub in subqueries:
                 keywords = sub.get("keywords", [])
                 if update_papers_for_project_tool and project_id:
-                    result = update_papers_for_project_tool.invoke({"queries": keywords, "project_id": project_id})
+                    result = update_papers_for_project_tool.invoke(
+                        {"queries": keywords, "project_id": project_id}
+                    )
                     update_results.append(result)
             update_papers_by_project_result = update_results
         else:
             # Fallback: single query as before
             queries = []
-            if state.get("qc_decision") == "reformulate" and state.get("qc_tool_result"):
+            if state.get("qc_decision") == "reformulate" and state.get(
+                "qc_tool_result"
+            ):
                 try:
                     qc_result = json.loads(state["qc_tool_result"])
-                    if "result" in qc_result and "refined_keywords" in qc_result["result"]:
+                    if (
+                        "result" in qc_result
+                        and "refined_keywords" in qc_result["result"]
+                    ):
                         queries = qc_result["result"]["refined_keywords"]
                     elif "reformulated_description" in qc_result:
                         queries = [qc_result["reformulated_description"]]
@@ -447,19 +538,30 @@ def update_papers_by_project_node(state):
                 else:
                     queries = [state.get("user_query", "")]
             if update_papers_for_project_tool and project_id:
-                logger.info(f"Calling update_papers_for_project with queries: {queries} and project_id: {project_id}")
-                update_papers_by_project_result = update_papers_for_project_tool.invoke({"queries": queries, "project_id": project_id})
-                logger.info(f"update_papers_for_project result: {update_papers_by_project_result}")
+                logger.info(
+                    f"Calling update_papers_for_project with queries: {queries} and project_id: {project_id}"
+                )
+                update_papers_by_project_result = update_papers_for_project_tool.invoke(
+                    {"queries": queries, "project_id": project_id}
+                )
+                logger.info(
+                    f"update_papers_for_project result: {update_papers_by_project_result}"
+                )
         state["update_papers_by_project_result"] = update_papers_by_project_result
         state["all_papers"] = all_papers
     except Exception as e:
         state["error"] = f"Update papers by project node error: {e}"
     return state
 
+
 # --- Get Best Papers Node ---
 
 
-@node_logger("get_best_papers", input_keys=["project_id", "has_filter_instructions"], output_keys=["papers_raw"])
+@node_logger(
+    "get_best_papers",
+    input_keys=["project_id", "has_filter_instructions"],
+    output_keys=["papers_raw"],
+)
 def get_best_papers_node(state):
     """
     Retrieve the most relevant papers for a project based on filter instructions.
@@ -469,7 +571,7 @@ def get_best_papers_node(state):
         dict: Updated state with papers_raw.
     """
     tools = get_tools()
-    tool_map = {getattr(tool, 'name', None): tool for tool in tools}
+    tool_map = {getattr(tool, "name", None): tool for tool in tools}
     get_best_papers_tool = tool_map.get("get_best_papers")
     papers_raw = []
     try:
@@ -479,16 +581,19 @@ def get_best_papers_node(state):
 
         # Determine retrieval count based on filter instructions
         has_filter_instructions = state.get("has_filter_instructions", False)
-        retrieval_count = 50 if has_filter_instructions else 10  # More papers if filtering will be applied
+        retrieval_count = (
+            50 if has_filter_instructions else 10
+        )  # More papers if filtering will be applied
 
         if get_best_papers_tool:
             # Use num_candidates parameter based on filter instructions
-            papers_raw = get_best_papers_tool.invoke({
-                "project_id": project_id,
-                "num_candidates": retrieval_count
-            })
+            papers_raw = get_best_papers_tool.invoke(
+                {"project_id": project_id, "num_candidates": retrieval_count}
+            )
 
-            logger.info(f"Retrieved {len(papers_raw)} papers (filter instructions: {has_filter_instructions}, requested: {retrieval_count})")
+            logger.info(
+                f"Retrieved {len(papers_raw)} papers (filter instructions: {has_filter_instructions}, requested: {retrieval_count})"
+            )
 
         state["papers_raw"] = papers_raw
     except Exception as e:
@@ -497,7 +602,11 @@ def get_best_papers_node(state):
 
 
 # --- Filter Papers Node ---
-@node_logger("filter_papers", input_keys=["user_query", "papers_raw", "has_filter_instructions"], output_keys=["papers_filtered"])
+@node_logger(
+    "filter_papers",
+    input_keys=["user_query", "papers_raw", "has_filter_instructions"],
+    output_keys=["papers_filtered"],
+)
 def filter_papers_node(state):
     """
     Apply natural language filtering to the retrieved papers based on the user query.
@@ -507,7 +616,7 @@ def filter_papers_node(state):
         dict: Updated state with papers_filtered.
     """
     tools = get_tools()
-    tool_map = {getattr(tool, 'name', None): tool for tool in tools}
+    tool_map = {getattr(tool, "name", None): tool for tool in tools}
     filter_tool = tool_map.get("filter_papers_by_nl_criteria")
     papers_filtered = []
 
@@ -525,19 +634,24 @@ def filter_papers_node(state):
             # Use the filter_papers_by_nl_criteria tool to get both filtered papers and the filter spec
             filter_extraction_nl = user_query
             if filter_tool:
-                filter_result = filter_tool.invoke({
-                    "papers": papers_raw,
-                    "criteria_nl": filter_extraction_nl
-                })
+                filter_result = filter_tool.invoke(
+                    {"papers": papers_raw, "criteria_nl": filter_extraction_nl}
+                )
                 try:
                     filter_result_parsed = json.loads(filter_result)
                     if filter_result_parsed.get("status") == "success":
                         papers_filtered = filter_result_parsed.get("kept_papers", [])
-                        logger.info(f"Applied filter. Kept {len(papers_filtered)} out of {len(papers_raw)} papers")
+                        logger.info(
+                            f"Applied filter. Kept {len(papers_filtered)} out of {len(papers_raw)} papers"
+                        )
                         # Store the filter spec (filters) in the state for later use
-                        state["applied_filter_criteria"] = filter_result_parsed.get("filters", {})
+                        state["applied_filter_criteria"] = filter_result_parsed.get(
+                            "filters", {}
+                        )
                     else:
-                        logger.warning(f"Filter failed: {filter_result_parsed.get('message', 'Unknown error')}")
+                        logger.warning(
+                            f"Filter failed: {filter_result_parsed.get('message', 'Unknown error')}"
+                        )
                         papers_filtered = papers_raw
                         state["applied_filter_criteria"] = {}
                 except Exception as e:
@@ -553,7 +667,9 @@ def filter_papers_node(state):
         original_count = len(papers_filtered)
         papers_filtered = papers_filtered[:10]
         state["papers_filtered"] = papers_filtered
-        logger.info(f"Limited filtered papers from {original_count} to {len(papers_filtered)} (top 10)")
+        logger.info(
+            f"Limited filtered papers from {original_count} to {len(papers_filtered)} (top 10)"
+        )
 
     except Exception as e:
         state["error"] = f"Filter papers node error: {e}"
@@ -562,10 +678,15 @@ def filter_papers_node(state):
 
     return state
 
+
 # --- Smart No-Results Handler Node ---
 
 
-@node_logger("no_results_handler", input_keys=["user_query", "papers_raw", "papers_filtered"], output_keys=["no_results_message"])
+@node_logger(
+    "no_results_handler",
+    input_keys=["user_query", "papers_raw", "papers_filtered"],
+    output_keys=["no_results_message"],
+)
 def no_results_handler_node(state):
     """
     If no papers are found after filtering, generate a smart explanation using the LLM.
@@ -582,15 +703,14 @@ def no_results_handler_node(state):
 
     # Use the tool to get closest values and directions
     tools = get_tools()
-    tool_map = {getattr(tool, 'name', None): tool for tool in tools}
+    tool_map = {getattr(tool, "name", None): tool for tool in tools}
     closest_tool = tool_map.get("find_closest_paper_metrics")
     closest_values = {}
     if closest_tool:
         try:
-            closest_result = closest_tool.invoke({
-                "papers": papers_raw,
-                "filter_spec": filter_criteria_json
-            })
+            closest_result = closest_tool.invoke(
+                {"papers": papers_raw, "filter_spec": filter_criteria_json}
+            )
             closest_values = json.loads(closest_result)
         except Exception:
             closest_values = {}
@@ -620,24 +740,32 @@ def no_results_handler_node(state):
     """
     try:
         llm_response = LLM.invoke(smart_explanation_prompt)
-        explanation = llm_response.content if hasattr(llm_response, 'content') else str(llm_response)
+        explanation = (
+            llm_response.content
+            if hasattr(llm_response, "content")
+            else str(llm_response)
+        )
         state["no_results_message"] = {
             "type": "no_results",
             "explanation": explanation,
             "closest_values": closest_values,
-            "filter_criteria": filter_criteria_json
+            "filter_criteria": filter_criteria_json,
         }
     except Exception:
         state["no_results_message"] = {
             "type": "no_results",
             "explanation": "No papers matched your filter. Please try broadening your search.",
             "closest_values": closest_values,
-            "filter_criteria": filter_criteria_json
+            "filter_criteria": filter_criteria_json,
         }
     return state
 
 
-@node_logger("store_papers_for_project", input_keys=["project_id", "papers_filtered", "papers_raw", "user_query"], output_keys=["store_papers_for_project_result"])
+@node_logger(
+    "store_papers_for_project",
+    input_keys=["project_id", "papers_filtered", "papers_raw", "user_query"],
+    output_keys=["store_papers_for_project_result"],
+)
 def store_papers_for_project_node(state):
     """
     Store the recommended papers for a project in the database.
@@ -647,7 +775,7 @@ def store_papers_for_project_node(state):
         dict: Updated state with store_papers_for_project_result.
     """
     tools = get_tools()
-    tool_map = {getattr(tool, 'name', None): tool for tool in tools}
+    tool_map = {getattr(tool, "name", None): tool for tool in tools}
     store_papers_for_project_tool = tool_map.get("store_papers_for_project")
     # Use filtered papers if available, else raw
     project_id = state.get("project_id")
@@ -661,18 +789,18 @@ def store_papers_for_project_node(state):
         abstract = paper.get("abstract", "")
         # Use the tool version (invoke as a tool)
         try:
-            summary = generate_relevance_summary.invoke({
-                "user_query": user_query,
-                "title": title,
-                "abstract": abstract
-            })
+            summary = generate_relevance_summary.invoke(
+                {"user_query": user_query, "title": title, "abstract": abstract}
+            )
         except Exception:
             summary = f"Relevant to project query: {user_query}"
         if paper_hash:
             papers_to_store.append({"paper_hash": paper_hash, "summary": summary})
     result = None
     if store_papers_for_project_tool and project_id and papers_to_store:
-        result = store_papers_for_project_tool.invoke({"project_id": project_id, "papers": papers_to_store})
+        result = store_papers_for_project_tool.invoke(
+            {"project_id": project_id, "papers": papers_to_store}
+        )
     else:
         result = "No papers to store or missing project_id."
     state["store_papers_for_project_result"] = result
@@ -692,11 +820,19 @@ def trigger_stategraph_agent_show_thoughts(user_message: str):
         state = {"user_query": user_message}
 
         # Step 1: Input node
-        yield {"thought": "Processing user input...", "is_final": False, "final_content": None}
+        yield {
+            "thought": "Processing user input...",
+            "is_final": False,
+            "final_content": None,
+        }
         state = input_node(state)
 
         # Step 2: Out-of-scope check
-        yield {"thought": "Checking if query is within scope...", "is_final": False, "final_content": None}
+        yield {
+            "thought": "Checking if query is within scope...",
+            "is_final": False,
+            "final_content": None,
+        }
         state = out_of_scope_check_node(state)
 
         # Extract keywords from out_of_scope_result if available
@@ -706,18 +842,30 @@ def trigger_stategraph_agent_show_thoughts(user_message: str):
                 parsed = json.loads(out_of_scope_result)
                 if parsed.get("status") == "valid" and "keywords" in parsed:
                     state["keywords"] = parsed["keywords"]
-                    yield {"thought": f"Extracted keywords: {state['keywords']}", "is_final": False, "final_content": None}
+                    yield {
+                        "thought": f"Extracted keywords: {state['keywords']}",
+                        "is_final": False,
+                        "final_content": None,
+                    }
             except Exception as e:
                 logger.error(f"Error parsing out_of_scope_result: {e}")
 
         # Step 3: Quality control
-        yield {"thought": "Performing quality control and filter detection...", "is_final": False, "final_content": None}
+        yield {
+            "thought": "Performing quality control and filter detection...",
+            "is_final": False,
+            "final_content": None,
+        }
         state = quality_control_node(state)
 
         # Check if query is out of scope
         qc_decision = state.get("qc_decision", "accept")
         if qc_decision == "out_of_scope":
-            yield {"thought": "Query determined to be out of scope. Generating explanation...", "is_final": False, "final_content": None}
+            yield {
+                "thought": "Query determined to be out of scope. Generating explanation...",
+                "is_final": False,
+                "final_content": None,
+            }
             state = out_of_scope_handler_node(state)
 
             # Return out-of-scope message
@@ -725,56 +873,92 @@ def trigger_stategraph_agent_show_thoughts(user_message: str):
             yield {
                 "thought": "Query rejected as out of scope. Please provide a new query.",
                 "is_final": True,
-                "final_content": json.dumps({
-                    "type": "out_of_scope",
-                    "message": out_of_scope_message,
-                    "requires_user_input": True
-                })
+                "final_content": json.dumps(
+                    {
+                        "type": "out_of_scope",
+                        "message": out_of_scope_message,
+                        "requires_user_input": True,
+                    }
+                ),
             }
             return
 
         # If split, expand subqueries
         if qc_decision == "split":
-            yield {"thought": "Splitting query into subqueries...", "is_final": False, "final_content": None}
+            yield {
+                "thought": "Splitting query into subqueries...",
+                "is_final": False,
+                "final_content": None,
+            }
             state = expand_subqueries_node(state)
 
         # Step 4: Update papers
-        yield {"thought": "Updating paper database with latest research...", "is_final": False, "final_content": None}
+        yield {
+            "thought": "Updating paper database with latest research...",
+            "is_final": False,
+            "final_content": None,
+        }
         state = update_papers_by_project_node(state)
 
         # Step 5: Get best papers
-        yield {"thought": "Retrieving most relevant papers...", "is_final": False, "final_content": None}
+        yield {
+            "thought": "Retrieving most relevant papers...",
+            "is_final": False,
+            "final_content": None,
+        }
         state = get_best_papers_node(state)
 
         # Step 6: Filter papers
-        yield {"thought": "Applying filters to refine results...", "is_final": False, "final_content": None}
+        yield {
+            "thought": "Applying filters to refine results...",
+            "is_final": False,
+            "final_content": None,
+        }
         state = filter_papers_node(state)
 
         # Check for no results
         papers_filtered = state.get("papers_filtered", [])
         if not papers_filtered:
-            yield {"thought": "No papers found after filtering. Generating smart no-results explanation...", "is_final": False, "final_content": None}
+            yield {
+                "thought": "No papers found after filtering. Generating smart no-results explanation...",
+                "is_final": False,
+                "final_content": None,
+            }
             state = no_results_handler_node(state)
             no_results_message = state.get("no_results_message", {})
             yield {
                 "thought": "No papers found. Please try broadening your search or adjusting your filter.",
                 "is_final": True,
-                "final_content": json.dumps({
-                    "type": "no_results",
-                    "message": no_results_message,
-                    "requires_user_input": True
-                })
+                "final_content": json.dumps(
+                    {
+                        "type": "no_results",
+                        "message": no_results_message,
+                        "requires_user_input": True,
+                    }
+                ),
             }
             return
 
         # Final step: store papers for project
-        yield {"thought": "Storing recommended papers for this project...", "is_final": False, "final_content": None}
+        yield {
+            "thought": "Storing recommended papers for this project...",
+            "is_final": False,
+            "final_content": None,
+        }
         state = store_papers_for_project_node(state)
         store_result = state.get("store_papers_result", "No result")
-        yield {"thought": "Agent workflow complete.", "is_final": True, "final_content": json.dumps({"status": store_result})}
+        yield {
+            "thought": "Agent workflow complete.",
+            "is_final": True,
+            "final_content": json.dumps({"status": store_result}),
+        }
     except Exception as e:
         logger.error(f"Error in Stategraph agent: {e}")
-        yield {"thought": f"An error occurred: {str(e)}", "is_final": True, "final_content": None}
+        yield {
+            "thought": f"An error occurred: {str(e)}",
+            "is_final": True,
+            "final_content": None,
+        }
 
 
 # NOTE: This block is for local testing only. Uncomment to run local tests.
