@@ -38,8 +38,8 @@ def add_new_project_to_db(title: str, description: str) -> str:
 
     if not request.auth:
         raise Exception("Not authenticated")
-    
-    user_id = request.auth['user_id']
+
+    user_id = request.auth["user_id"]
 
     conn = connect_to_db()
     cursor = conn.cursor()
@@ -52,12 +52,7 @@ def add_new_project_to_db(title: str, description: str) -> str:
         VALUES (%s, %s, %s, %s)
     """
 
-    cursor.execute(sql_insert,
-                   (project_id,
-                    user_id,
-                    title,
-                    description
-                    ))
+    cursor.execute(sql_insert, (project_id, user_id, title, description))
     conn.commit()
     cursor.close()
     conn.close()
@@ -87,12 +82,12 @@ def add_user_profile_embedding(project_id: str, embedding: List[float]):
 
     if not request.auth:
         raise Exception("Not authenticated")
-    
+
     user_id = request.auth["user_id"]
 
     if not request.auth:
         raise Exception("Not authenticated")
-    
+
     user_id = request.auth["user_id"]
 
     cursor.execute(
@@ -100,7 +95,9 @@ def add_user_profile_embedding(project_id: str, embedding: List[float]):
         UPDATE projects_table
         SET user_profile_embedding = %s
         WHERE project_id = %s AND user_id = %s 
-    """, (embedding_json, project_id, user_id))
+    """,
+        (embedding_json, project_id, user_id),
+    )
 
     if cursor.rowcount == 0:
         raise Exception("Project not found or not owned by the current user")
@@ -126,12 +123,12 @@ def get_user_profile_embedding(project_id: str) -> List[float] | None:
 
     if not request.auth:
         raise Exception("Not authenticated")
-    
+
     user_id = request.auth["user_id"]
 
     if not request.auth:
         raise Exception("Not authenticated")
-    
+
     user_id = request.auth["user_id"]
 
     cursor.execute(
@@ -139,7 +136,9 @@ def get_user_profile_embedding(project_id: str) -> List[float] | None:
         SELECT user_profile_embedding
         FROM projects_table
         WHERE project_id = %s AND user_id = %s
-    """, (project_id, user_id))
+    """,
+        (project_id, user_id),
+    )
 
     result = cursor.fetchone()
     cursor.close()
@@ -175,21 +174,26 @@ def add_queries_to_project_db(queries: list[str], project_id: str):
 
     if not request.auth:
         raise Exception("Not authenticated")
-    
+
     user_id = request.auth["user_id"]
 
     logger.info("Updating projects_table with new queries")
 
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
         UPDATE projects_table SET queries = %s WHERE project_id = %s AND user_id = %s
-        """, (queries_str, project_id, user_id))
+        """,
+            (queries_str, project_id, user_id),
+        )
     except Exception as e:
         logger.error(f"Error updating projects_table with project queries: {e}")
         conn.rollback()
         return Status.FAILURE
 
-    logger.info(f"Updated projects_table with new queries for project {project_id} owned by user {user_id}")
+    logger.info(
+        f"Updated projects_table with new queries for project {project_id} owned by user {user_id}"
+    )
     conn.commit()
     cursor.close()
     conn.close()
@@ -209,14 +213,16 @@ def get_queries_for_project(project_id: str):
 
     if not request.auth:
         raise Exception("Not authenticated")
-    
+
     user_id = request.auth["user_id"]
 
-    cursor.execute(""" 
+    cursor.execute(
+        """ 
     SELECT queries 
     FROM projects_table 
-    WHERE project_id = %s AND user_id = %s"""
-                   , (project_id, user_id))
+    WHERE project_id = %s AND user_id = %s""",
+        (project_id, user_id),
+    )
 
     queries = cursor.fetchone()
     return queries
@@ -235,18 +241,20 @@ def get_project_prompt(project_id: str):
 
     if not request.auth:
         raise Exception("Not authenticated")
-    
+
     user_id = request.auth["user_id"]
 
     if not request.auth:
         raise Exception("Not authenticated")
-    
+
     user_id = request.auth["user_id"]
 
     cursor.execute(
         """ SELECT description
                        FROM projects_table
-                       WHERE project_id = %s AND user_id = %s""", (project_id, user_id))
+                       WHERE project_id = %s AND user_id = %s""",
+        (project_id, user_id),
+    )
 
     prompt = cursor.fetchone()
     return prompt
@@ -261,7 +269,9 @@ def get_all_projects() -> list[dict]:
     conn = connect_to_db()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    cursor.execute("SELECT project_id, title, description, creation_date FROM projects_table")
+    cursor.execute(
+        "SELECT project_id, title, description, creation_date FROM projects_table"
+    )
 
     projects = [dict(row) for row in cursor.fetchall()]
     cursor.close()
@@ -285,12 +295,12 @@ def get_project_data(project_id: str):
 
     if not request.auth:
         raise Exception("Not authenticated")
-    
+
     user_id = request.auth["user_id"]
 
     if not request.auth:
         raise Exception("Not authenticated")
-    
+
     user_id = request.auth["user_id"]
 
     cursor.execute(
@@ -298,7 +308,9 @@ def get_project_data(project_id: str):
                    SELECT *
                    FROM projects_table
                    WHERE project_id = %s AND user_id = %s
-                   """, (project_id, user_id))
+                   """,
+        (project_id, user_id),
+    )
     result = cursor.fetchone()
     if result is None:
         return None
@@ -324,14 +336,17 @@ def add_email_to_project_db(email: str, project_id: str):
 
     if not request.auth:
         raise Exception("Not authenticated")
-    
+
     user_id = request.auth["user_id"]
 
-    cursor.execute("""
+    cursor.execute(
+        """
     UPDATE projects_table
     SET email = %s
     WHERE project_id = %s AND user_id = %s
-""", (email, project_id, user_id))
+""",
+        (email, project_id, user_id),
+    )
 
     conn.commit()
     cursor.close()
@@ -364,7 +379,7 @@ def get_project_by_id(project_id: str):
 
     if not request.auth:
         raise Exception("Not authenticated")
-    
+
     user_id = request.auth["user_id"]
 
     conn = connect_to_db()
@@ -374,7 +389,9 @@ def get_project_by_id(project_id: str):
         SELECT *
           FROM projects_table
          WHERE project_id = %s AND user_id = %s
-    """, (project_id, user_id))
+    """,
+        (project_id, user_id),
+    )
     row = cursor.fetchone()
     cursor.close()
     conn.close()
@@ -397,7 +414,7 @@ def update_project_description(project_id: str, new_description: str):
 
     if not request.auth:
         raise Exception("Not authenticated")
-    
+
     user_id = request.auth["user_id"]
 
     try:
@@ -406,7 +423,9 @@ def update_project_description(project_id: str, new_description: str):
             UPDATE projects_table
             SET description = %s
             WHERE project_id = %s AND user_id = %s
-        """, (new_description, project_id, user_id))
+        """,
+            (new_description, project_id, user_id),
+        )
         conn.commit()
         status = Status.SUCCESS
     except Exception as e:

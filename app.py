@@ -68,7 +68,7 @@ app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB
 
 
 # Initialize Clerk
-clerk_sdk = Clerk(bearer_auth=os.getenv('CLERK_SECRET_KEY'))
+clerk_sdk = Clerk(bearer_auth=os.getenv("CLERK_SECRET_KEY"))
 
 
 @app.before_request
@@ -80,10 +80,7 @@ def authenticate_user():
     try:
         # Authenticate the request using Clerk
         request_state = clerk_sdk.authenticate_request(
-            request,
-            AuthenticateRequestOptions(
-                authorized_parties=['http://localhost']
-            )
+            request, AuthenticateRequestOptions(authorized_parties=["http://localhost"])
         )
 
     except Exception as e:
@@ -102,16 +99,20 @@ def authenticate_user():
 
         try:
             user_info = clerk_sdk.users.get(user_id=user_id)
-            request.auth['username'] = user_info.username
-            request.auth['first_name'] = user_info.first_name
-            request.auth['last_name'] = user_info.last_name
+            request.auth["username"] = user_info.username
+            request.auth["first_name"] = user_info.first_name
+            request.auth["last_name"] = user_info.last_name
             if user_info.email_addresses and len(user_info.email_addresses) > 0:
-                request.auth['email'] = user_info.email_addresses[0].email_address if user_info.email_addresses else None
-            
-            request.auth['profile_image_url'] = user_info.profile_image_url
+                request.auth["email"] = (
+                    user_info.email_addresses[0].email_address
+                    if user_info.email_addresses
+                    else None
+                )
+
+            request.auth["profile_image_url"] = user_info.profile_image_url
         except Exception as e:
             logging.error(f"Error fetching user info from Clerk:\n{e}")
-    
+
     else:
         request.auth = None
 
@@ -143,8 +144,8 @@ def home():
         "dashboard.html",
         auth=request.auth,
         showCreateProjectButton=True,
-        CLERK_PUBLISHABLE_KEY = os.getenv("CLERK_PUBLISHABLE_KEY"),
-        CLERK_FRONTEND_API_URL = os.getenv("CLERK_FRONTEND_API_URL"),
+        CLERK_PUBLISHABLE_KEY=os.getenv("CLERK_PUBLISHABLE_KEY"),
+        CLERK_FRONTEND_API_URL=os.getenv("CLERK_FRONTEND_API_URL"),
     )
 
 
@@ -158,10 +159,11 @@ def create_project_page():
     if not request.auth:
         return {"error": "Not authenticated"}, 401
 
-    return render_template('create_project.html',
+    return render_template(
+        "create_project.html",
         auth=request.auth,
-        CLERK_PUBLISHABLE_KEY = os.getenv("CLERK_PUBLISHABLE_KEY"),
-        CLERK_FRONTEND_API_URL = os.getenv("CLERK_FRONTEND_API_URL"),
+        CLERK_PUBLISHABLE_KEY=os.getenv("CLERK_PUBLISHABLE_KEY"),
+        CLERK_FRONTEND_API_URL=os.getenv("CLERK_FRONTEND_API_URL"),
     )
 
 
@@ -175,20 +177,23 @@ def project_overview_page(project_id):
         Response: Rendered project_overview.html template.
     """
     if not request.auth:
-        return render_template('dashboard.html',
+        return render_template(
+            "dashboard.html",
             auth=None,
-            CLERK_PUBLISHABLE_KEY = os.getenv("CLERK_PUBLISHABLE_KEY"),
-            CLERK_FRONTEND_API_URL = os.getenv("CLERK_FRONTEND_API_URL"),
+            CLERK_PUBLISHABLE_KEY=os.getenv("CLERK_PUBLISHABLE_KEY"),
+            CLERK_FRONTEND_API_URL=os.getenv("CLERK_FRONTEND_API_URL"),
         )
 
     project = get_project_by_id(project_id)
     if project["user_id"] != request.auth["user_id"]:
         return {"error": "Forbidden"}, 403
 
-    return render_template('project_overview.html', project_id=project_id,
+    return render_template(
+        "project_overview.html",
+        project_id=project_id,
         auth=request.auth,
-        CLERK_PUBLISHABLE_KEY = os.getenv("CLERK_PUBLISHABLE_KEY"),
-        CLERK_FRONTEND_API_URL = os.getenv("CLERK_FRONTEND_API_URL"),
+        CLERK_PUBLISHABLE_KEY=os.getenv("CLERK_PUBLISHABLE_KEY"),
+        CLERK_FRONTEND_API_URL=os.getenv("CLERK_FRONTEND_API_URL"),
     )
 
 
@@ -355,7 +360,7 @@ def extract_pdf_text():
     if not request.auth:
         return jsonify({"error": "Unauthorized"}), 401
 
-    if 'file' not in request.files:
+    if "file" not in request.files:
         return jsonify({"error": "No file provided"}), 400
 
     file = request.files["file"]
@@ -443,7 +448,7 @@ def api_get_newsletter():
     if not request.auth:
         return jsonify({"error": "Unauthorized"}), 401
 
-    project_id = request.args.get('projectId') or request.args.get('project_id')
+    project_id = request.args.get("projectId") or request.args.get("project_id")
     if not project_id:
         return jsonify({"error": "Missing projectId"}), 400
 
