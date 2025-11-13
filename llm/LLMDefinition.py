@@ -38,5 +38,16 @@ llm_4o = ChatOpenAI(
     temperature=0.3,
 )
 
-# Default LLM used throughout the codebase
-LLM = llm_41
+# GPT-4o-mini model for cost-optimized testing
+llm_mini = ChatOpenAI(
+    api_key=OPENAI_API_KEY,
+    model="gpt-4o-mini",
+    temperature=0.5,
+)
+
+# Default LLM - switches to mini model in test environment
+# Set TEST_MODE=true in tests to use cheaper model
+if os.getenv("TEST_MODE") == "true":
+    LLM = llm_mini
+else:
+    LLM = llm_41

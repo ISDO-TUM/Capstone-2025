@@ -178,6 +178,25 @@ docker compose up -d
 
 ---
 
+### Testing
+
+The project includes comprehensive end-to-end (E2E) tests using Playwright and Pytest. Tests run automatically in CI/CD on pull requests and pushes to main.
+
+For local testing and debugging, see the complete testing guide:
+- **[E2E Testing Documentation](tests/README.md)**
+
+## Testing
+
+The project includes comprehensive end-to-end (E2E) tests using Playwright. For detailed testing documentation, see [tests/e2e/README.md](tests/e2e/README.md).
+
+### Quick Test Commands
+```bash
+# Run all E2E tests
+cd tests/e2e/
+./run_e2e_tests.sh .
+```
+---
+
 ### Contribution workflow
 * Before creating a PR, make sure that your local commits go through pre-commit hooks, which check
 for formatting, linting and security issues. They also update the needed modules in
