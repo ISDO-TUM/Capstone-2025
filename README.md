@@ -81,12 +81,12 @@ The Capstone-2025 project is a modular, extensible academic paper recommendation
 - User requests recommendations for a project.
 - The agent runs a multi-step workflow:
   1. **Input Handling**: Extracts query and project ID.
-  2. **Out-of-Scope Detection**: Filters out non-research queries.
-  3. **Quality Control**: Reformulates, broadens, narrows, or splits queries as needed.
-  4. **Paper Ingestion**: Ensures the latest papers are available for the project.
-  5. **Vector Search**: Retrieves the most relevant papers using ChromaDB similarity search.
-  6. **Filtering**: Applies natural language or user-defined filters, always preserving vector search order and limiting to top 10 results.
-  7. **Result Storage**: Stores recommendations and relevance summaries for the project.
+  1. **Out-of-Scope Detection**: Filters out non-research queries.
+  1. **Quality Control**: Reformulates, broadens, narrows, or splits queries as needed.
+  1. **Paper Ingestion**: Ensures the latest papers are available for the project.
+  1. **Vector Search**: Retrieves the most relevant papers using ChromaDB similarity search.
+  1. **Filtering**: Applies natural language or user-defined filters, always preserving vector search order and limiting to top 10 results.
+  1. **Result Storage**: Stores recommendations and relevance summaries for the project.
 
 #### **3. Paper Rating & Replacement**
 - User rates a paper; if the rating is low, the system automatically finds and recommends a replacement using vector search and project-specific filtering.
@@ -106,8 +106,8 @@ The Capstone-2025 project is a modular, extensible academic paper recommendation
 
 ### Prerequisites
 
-* Python 3.13+
-* Pip
+* [uv](https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_1)
+* Python 3.11 (managed by uv)
 * An active OpenAI API Key
 * Docker Desktop (or docker + docker-compose)
 
@@ -118,18 +118,12 @@ The Capstone-2025 project is a modular, extensible academic paper recommendation
     git clone https://github.com/ISDO-TUM/Capstone-2025.git
     ```
 
-2.  **Create a virtual environment (recommended):**
+1.  **Replicate the virtual environment with all dependencies:**
     ```bash
-    python -m venv .venv
-    source .venv/bin/activate  # On Windows: venv\Scripts\activate
+    uv sync
     ```
 
-3.  **Install dependencies:  (good to be done after every fetch and pull from the repository)**
-    ```bash
-    pip install -r requirements.txt -r requirements-dev.txt
-    ```
-
-4.  **Set up Environment Variables:**
+1.  **Set up Environment Variables:**
     This project requires an OpenAI API key to function. You need to set the `OPENAI_API_KEY` environment variable.
 
     **Option 1: Using a `.env` file (Recommended for local development)**
@@ -160,7 +154,7 @@ The Capstone-2025 project is a modular, extensible academic paper recommendation
         ```
         (For permanent storage on Windows, search for "environment variables" in the Start Menu).
 
-5. **Set up Database Environment Variables:**
+1. **Set up Database Environment Variables:**
     This project uses also a **PostgreSQL** database, and you must connect to a local copy of it.
     You need to set also the environment variables for the connection to it (used for **Docker**):
     ```
@@ -170,6 +164,18 @@ The Capstone-2025 project is a modular, extensible academic paper recommendation
     DB_USER="your_username_for_postgresql"
     DB_PASSWORD="your_password_for_postgresql"
    ```
+
+1.  **Running individual files in the project:**
+    ```bash
+    uv run path/to/file
+    ```
+    This command also updates dependencies according to uv.lock/pyproject.toml if changes have been made, e.g. after you pull some new changes.
+
+1. (For completeness) If you want to add a new dependency it can be done using:
+    ```bash
+    uv add dependency-name
+    ```
+
 
 ### Running the Project
 ```bash
@@ -201,29 +207,29 @@ cd tests/e2e/
 * Before creating a PR, make sure that your local commits go through pre-commit hooks, which check
 for formatting, linting and security issues. They also update the needed modules in
 **requirements.txt**. First you have to set this up:
-1. Make sure you install `pre-commit` and `pigar` modules with:
-```
-pip install -r requirements-dev.txt
-```
+1.  Make sure you install `pre-commit` and `pigar` modules with:
+    ```
+    pip install -r requirements-dev.txt
+    ```
 
-2. Issue the following command in your virtual environment (needed only after initial setup):
-```
-pre-commit install
-```
+1.  Issue the following command in your virtual environment (needed only after initial setup):
+    ```
+    pre-commit install
+    ```
 
-3. Pre-commit hooks are triggered on commits and they can also make changes to the files
-   (formatting and updating **requirements.txt**). In this case, if the pre-commit hook has run and
-made changes to your files, you have to stage your changes again and commit them again:
-```
-git add .
-git commit -m "Your commit message"
-```
+1.  Pre-commit hooks are triggered on commits and they can also make changes to the files
+    (formatting and updating **requirements.txt**). In this case, if the pre-commit hook has run and
+    made changes to your files, you have to stage your changes again and commit them again:
+    ```
+    git add .
+    git commit -m "Your commit message"
+    ```
 
-4. If **pigar** has made undesirable changes to the **requirements.txt** file, you can commit with:
+1.  If **pigar** has made undesirable changes to the **requirements.txt** file, you can commit with:
 
-```
-git commit -m "Your commit message" --no-verify
-```
+    ```
+    git commit -m "Your commit message" --no-verify
+    ```
 
 ---
 

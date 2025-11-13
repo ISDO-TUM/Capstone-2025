@@ -17,6 +17,7 @@ from utils.status import Status
 import traceback
 import sys
 import os
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 logger = logging.getLogger(__name__)
@@ -35,7 +36,7 @@ class PaperData(TypedDict):
 # For testing run like this:
 # docker compose up -d chromadb
 # CHROMA_HOST=localhost python -m llm.tools.paper_handling_tools
-CHROMA_HOST = os.getenv("CHROMA_HOST", "chromadb")   # default for Docker
+CHROMA_HOST = os.getenv("CHROMA_HOST", "chromadb")  # default for Docker
 CHROMA_PORT = int(os.getenv("CHROMA_PORT", 8000))
 
 
@@ -52,7 +53,9 @@ class ChromaVectorDB:
         """
         # single code-path, host decided by env-var
         self.client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
-        self.collection: Collection = self.client.get_or_create_collection(collection_name)
+        self.collection: Collection = self.client.get_or_create_collection(
+            collection_name
+        )
 
     def store_embeddings(self, data: List[PaperData]) -> int:
         """
@@ -77,7 +80,9 @@ class ChromaVectorDB:
                 )
 
             except Exception as e:
-                logger.error(f"Failed to store embedding for hash={item.get('hash')}: {e}")
+                logger.error(
+                    f"Failed to store embedding for hash={item.get('hash')}: {e}"
+                )
                 any_failure = True
 
         return Status.FAILURE if any_failure else Status.SUCCESS
@@ -87,7 +92,7 @@ class ChromaVectorDB:
         k: int,
         user_profile_embedding: List[float],
         return_scores: bool = False,
-        min_similarity: float = 0.0
+        min_similarity: float = 0.0,
     ) -> Optional[Union[List[str], tuple[List[str], List[float]]]]:
         """
         Perform similarity search on ChromaDB.
@@ -124,7 +129,7 @@ class ChromaVectorDB:
             results = self.collection.query(
                 query_embeddings=[user_profile_embedding],
                 n_results=n_results,
-                include=include_params  # type: ignore
+                include=include_params,  # type: ignore
             )
 
             ids_result = results.get("ids", [[]])
@@ -179,14 +184,12 @@ class ChromaVectorDB:
             Optional[List[float]]: The embedding vector for the paper, or None if not found
         """
         try:
-            results = self.collection.get(
-                ids=[paper_hash],
-                include=["embeddings"]
-            )
+            results = self.collection.get(ids=[paper_hash], include=["embeddings"])
 
             embeddings = results.get("embeddings", [])
             logger.debug(
-                f"Raw embeddings result for {paper_hash}: {type(embeddings)}, length: {len(embeddings) if embeddings is not None else 'None'}")
+                f"Raw embeddings result for {paper_hash}: {type(embeddings)}, length: {len(embeddings) if embeddings is not None else 'None'}"
+            )
 
             if embeddings is not None and len(embeddings) > 0:
                 embedding = embeddings[0]
@@ -200,7 +203,9 @@ class ChromaVectorDB:
                         try:
                             return [float(x) for x in embedding]
                         except (TypeError, ValueError):
-                            logger.warning(f"Unexpected embedding type for paper hash {paper_hash}: {type(embedding)}")
+                            logger.warning(
+                                f"Unexpected embedding type for paper hash {paper_hash}: {type(embedding)}"
+                            )
                             return None
                 return None
             else:

@@ -42,7 +42,9 @@ def _fetch_works_single_query(query, from_publication_date=None, per_page=10):
             .sort(relevance_score="desc")
         )
         if from_publication_date:
-            works_query = works_query.filter(from_publication_date=from_publication_date)
+            works_query = works_query.filter(
+                from_publication_date=from_publication_date
+            )
         works = works_query.get(per_page=per_page)
     except Exception as e:
         print(f"Error fetching works for query '{query}': {e}")
@@ -66,9 +68,7 @@ def _fetch_works_single_query(query, from_publication_date=None, per_page=10):
 
             # Extract authors as a comma-separated string
             authorships = work.get("authorships", [])
-            authors = ", ".join([
-                a["author"]["display_name"] for a in authorships
-            ])
+            authors = ", ".join([a["author"]["display_name"] for a in authorships])
 
             # Extract URLs
             primary_location = work.get("primary_location", {})
@@ -96,26 +96,28 @@ def _fetch_works_single_query(query, from_publication_date=None, per_page=10):
 
             topics = clean_topics_field(work.get("topics"))
 
-            results.append({
-                "id": work_id,
-                "title": title,
-                "abstract": abstract,
-                "authors": authors,
-                "publication_date": publication_date,
-                "fwci": fwci,
-                "citation_normalized_percentile": citation_normalized_percentile,
-                "cited_by_count": cited_by_count,
-                "counts_by_year": counts_by_year,
-                "topics": topics,
-                "landing_page_url": landing_page_url,
-                "similarity_score": relevance,
-                "pdf_url": pdf_url,
-                "venue_name": venue_name,
-                "venue_type": venue_type,
-                "is_oa": is_oa,
-                "oa_status": oa_status,
-                "oa_url": oa_url
-            })
+            results.append(
+                {
+                    "id": work_id,
+                    "title": title,
+                    "abstract": abstract,
+                    "authors": authors,
+                    "publication_date": publication_date,
+                    "fwci": fwci,
+                    "citation_normalized_percentile": citation_normalized_percentile,
+                    "cited_by_count": cited_by_count,
+                    "counts_by_year": counts_by_year,
+                    "topics": topics,
+                    "landing_page_url": landing_page_url,
+                    "similarity_score": relevance,
+                    "pdf_url": pdf_url,
+                    "venue_name": venue_name,
+                    "venue_type": venue_type,
+                    "is_oa": is_oa,
+                    "oa_status": oa_status,
+                    "oa_url": oa_url
+                }
+            )
         except Exception as ex:
             print(f"Error processing work '{work.get('id', 'unknown')}': {ex}")
             continue
@@ -137,7 +139,9 @@ def fetch_works_multiple_queries(queries, from_publication_date=None, per_page=1
     any_failure = False
     for query in queries:
         try:
-            works, status = _fetch_works_single_query(query, from_publication_date, per_page)
+            works, status = _fetch_works_single_query(
+                query, from_publication_date, per_page
+            )
             all_works.extend(works)
             if status == Status.FAILURE:
                 any_failure = True
@@ -156,6 +160,7 @@ def clean_topics_field(topics: list[dict]) -> list[dict]:
     Returns:
         list[dict]: Cleaned list of topic information.
     """
+
     def get_names(entry):
         if isinstance(entry, list):
             return [e.get("display_name") for e in entry if "display_name" in e]
@@ -171,7 +176,7 @@ def clean_topics_field(topics: list[dict]) -> list[dict]:
             "score": topic.get("score"),
             "subfields": get_names(topic.get("subfield")),
             "fields": get_names(topic.get("field")),
-            "domains": get_names(topic.get("domain"))
+            "domains": get_names(topic.get("domain")),
         }
         cleaned.append(cleaned_entry)
     return cleaned
@@ -196,9 +201,14 @@ def is_valid_abstract(text, min_words=50, max_words=500):
 
     # Reject if it contains obvious non-abstract elements
     spam_indicators = [
-        "previous article", "next article",
-        "google scholar", "crossref", "bibtex",
-        "https://doi.org", "add to favorites", "export citation"
+        "previous article",
+        "next article",
+        "google scholar",
+        "crossref",
+        "bibtex",
+        "https://doi.org",
+        "add to favorites",
+        "export citation",
     ]
     if any(indicator in lower_text for indicator in spam_indicators):
         return False
@@ -215,7 +225,9 @@ def is_valid_abstract(text, min_words=50, max_words=500):
     return True
 
 
-def search_and_filter_papers(chroma_db, user_profile_embedding, current_paper_hashes, min_similarity=0.3):
+def search_and_filter_papers(
+    chroma_db, user_profile_embedding, current_paper_hashes, min_similarity=0.3
+):
     """
     Search for papers using vector similarity and filter out already shown ones.
     Args:
@@ -234,13 +246,15 @@ def search_and_filter_papers(chroma_db, user_profile_embedding, current_paper_ha
         return []
 
     candidate_hashes, similarity_scores = candidate_result
-    print(f"ChromaDB returned {len(candidate_hashes)} candidate hashes with similarity >= {min_similarity}")
+    print(
+        f"ChromaDB returned {len(candidate_hashes)} candidate hashes with similarity >= {min_similarity}"
+    )
     all_papers = get_papers_by_hash(candidate_hashes)
 
     # Filter out already shown papers and take first 10
     available_papers = []
     for paper in all_papers:
-        if paper.get('paper_hash') not in current_paper_hashes:
+        if paper.get("paper_hash") not in current_paper_hashes:
             available_papers.append(paper)
             if len(available_papers) >= 10:
                 break
@@ -261,16 +275,18 @@ def generate_paper_summary(paper, project_description):
     Generate a concise summary explaining why this paper is relevant to the user's research interests.
 
     User's research interests: {project_description}
-    Paper title: {paper.get('title', 'Unknown')}
-    Paper abstract: {paper.get('abstract', 'No abstract available')}
+    Paper title: {paper.get("title", "Unknown")}
+    Paper abstract: {paper.get("abstract", "No abstract available")}
 
     Write a brief summary (2 short sentences).
     """
     try:
         summary_response = LLM.invoke(summary_prompt)
-        if hasattr(summary_response, 'content'):
+        if hasattr(summary_response, "content"):
             content = summary_response.content
-            summary = content.strip() if isinstance(content, str) else str(content).strip()
+            summary = (
+                content.strip() if isinstance(content, str) else str(content).strip()
+            )
         else:
             summary = str(summary_response).strip()
         if not summary:
@@ -313,7 +329,9 @@ def create_paper_dict(paper, summary, is_replacement=False):
     }
 
 
-def process_available_papers(available_papers, project_id, project_description, max_papers=10):
+def process_available_papers(
+    available_papers, project_id, project_description, max_papers=10
+):
     """
     Process available papers and return recommendations, storing them for the project.
     Args:
@@ -332,7 +350,7 @@ def process_available_papers(available_papers, project_id, project_description, 
     new_recommendations = []
     for paper in available_papers[:max_papers]:
         summary = generate_paper_summary(paper, project_description)
-        assign_paper_to_project(paper['paper_hash'], project_id, summary)
+        assign_paper_to_project(paper["paper_hash"], project_id, summary)
         paper_dict = create_paper_dict(paper, summary)
         new_recommendations.append(paper_dict)
 
