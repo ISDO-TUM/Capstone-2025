@@ -207,9 +207,24 @@ pytest . -v --maxfail=1 # Stop after first failure
 cd ../..
 ```
 
+## Mock LLM
+
+Tests use a **Mock LLM** (defined in `mock_llm.py`) instead of real OpenAI API calls:
+
+**Benefits:**
+- ✅ **Zero cost** - No API charges
+- ✅ **Deterministic** - Same responses every time
+- ✅ **Fast** - No network latency
+- ✅ **Offline** - Works without internet
+- ✅ **No rate limits** - Run tests infinitely
+
+**Customization:**
+Edit `tests/e2e/mock_llm.py` to modify mock responses for different scenarios.
+
 ## Important Notes
 
-- **SSE Streams**: Generous timeouts (90s) used for recommendation loading due to LLM processing
+- **Mock LLM**: All tests use mocked LLM responses (no real API calls)
+- **SSE Streams**: Generous timeouts (90s) used for recommendation loading
 - **Test Independence**: Each test gets a fresh browser page and database state
 - **Async Operations**: Appropriate waits for rating/replacement (10s+)
 - **Screenshots**: Automatically captured on test failure in `tests/e2e/screenshots/`
@@ -231,8 +246,8 @@ Provides fresh Playwright Page for each test with:
 Sample project data with name, description, deadline, and paper count.
 
 ### `enable_test_mode` (session scope, autouse)
-Automatically enables TEST_MODE for cost optimization:
-- Switches LLM to GPT-4o-mini (~98% cheaper than GPT-4.1)
+Automatically enables TEST_MODE and Mock LLM:
+- Replaces real LLM with Mock LLM (zero API calls, deterministic responses)
 - Sets database connection parameters
 - Configures ChromaDB host
 
@@ -242,7 +257,7 @@ Automatically enables TEST_MODE for cost optimization:
 ```
 ValueError: Could not connect to a Chroma server
 ```
-**Solution**: 
+**Solution**:
 ```bash
 # Start ChromaDB
 docker compose up -d chromadb
@@ -254,7 +269,7 @@ export CHROMA_HOST=localhost
 ```
 connection to server failed: fe_sendauth: no password supplied
 ```
-**Solution**: 
+**Solution**:
 ```bash
 # Start PostgreSQL
 docker compose up -d db
@@ -270,7 +285,7 @@ export DB_PORT=5432
 ```
 ModuleNotFoundError: No module named 'playwright'
 ```
-**Solution**: 
+**Solution**:
 ```bash
 pip install pytest pytest-playwright
 playwright install chromium

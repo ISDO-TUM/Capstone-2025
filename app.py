@@ -225,18 +225,18 @@ def get_recommendations():
                     if paper is not None:
                         # Use the centralized create_paper_dict function
                         paper_dict = create_paper_dict(
-                            paper, 
+                            paper,
                             rec.get("summary", "Relevant based on user interest."),
-                            rec.get('is_replacement', False)
+                            rec.get("is_replacement", False),
                         )
                     else:
                         # Fallback for missing papers
                         paper_dict = {
-                            'title': "N/A",
-                            'link': "#",
-                            'description': "Relevant based on user interest.",
-                            'hash': "N/A",
-                            'is_replacement': False
+                            "title": "N/A",
+                            "link": "#",
+                            "description": "Relevant based on user interest.",
+                            "hash": "N/A",
+                            "is_replacement": False,
                         }
                     recommendations.append(paper_dict)
                 yield f"data: {json.dumps({'recommendations': recommendations})}\n\n"

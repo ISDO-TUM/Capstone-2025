@@ -458,31 +458,34 @@ function createPaperCard(paper) {
     // Key metrics on the right side of title
     const keyMetrics = document.createElement('div');
     keyMetrics.style.cssText = 'display: flex; gap: 16px; align-items: center; flex-shrink: 0;';
-    
+
     let metricsHTML = '';
-    
+
     // Citations
     if (paper.cited_by_count !== undefined && paper.cited_by_count !== null) {
         metricsHTML += `
-            <div style="text-align: center;">
+            <div style="text-align: center; position: relative; cursor: help;" class="metric-with-tooltip">
                 <div style="color: #6c757d; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Citations</div>
                 <div style="color: #212529; font-size: 18px; font-weight: 700;">${paper.cited_by_count}</div>
+                <span class="metric-tooltip">Source: OpenAlex API</span>
             </div>
         `;
     }
-    
-    // FWCI
+
+    // FWCI with tooltip and smart formatting
     if (paper.fwci !== undefined && paper.fwci !== null) {
-        const fwciValue = paper.fwci.toFixed(2);
+        // Smart formatting: show decimals for values < 10, round for larger values
+        const fwciValue = paper.fwci < 10 ? paper.fwci.toFixed(2) : Math.round(paper.fwci);
         const fwciColor = paper.fwci >= 1.5 ? '#28a745' : paper.fwci >= 1.0 ? '#ffc107' : '#6c757d';
         metricsHTML += `
-            <div style="text-align: center;">
+            <div style="text-align: center; position: relative; cursor: help;" class="metric-with-tooltip">
                 <div style="color: #6c757d; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">FWCI</div>
                 <div style="color: ${fwciColor}; font-size: 18px; font-weight: 700;">${fwciValue}</div>
+                <span class="metric-tooltip">Source: OpenAlex API<br>Field-Weighted Citation Impact</span>
             </div>
         `;
     }
-    
+
     // Percentile with badge
     if (paper.citation_normalized_percentile !== undefined && paper.citation_normalized_percentile !== null) {
         const pct = paper.citation_normalized_percentile;
@@ -497,7 +500,7 @@ function createPaperCard(paper) {
                 badgeColor = '#ffc107';
                 badgeText = 'TOP 10%';
             }
-            
+
             if (badgeText) {
                 metricsHTML += `
                     <div style="text-align: center;">
@@ -515,17 +518,17 @@ function createPaperCard(paper) {
             }
         }
     }
-    
+
     if (metricsHTML) {
         keyMetrics.innerHTML = metricsHTML;
     }
-    
+
     // Add star rating to the right side
     const topStarRatingEl = document.createElement('div');
     topStarRatingEl.classList.add('star-rating');
     topStarRatingEl.style.cssText = 'display: flex; gap: 4px; padding-left: 16px; border-left: 2px solid #dee2e6;';
     topStarRatingEl.innerHTML = createStarRatingHTML();
-    
+
     titleRow.appendChild(titleEl);
     if (metricsHTML) {
         titleRow.appendChild(keyMetrics);
@@ -565,19 +568,19 @@ function createPaperCard(paper) {
     const accessEl = document.createElement('p');
     accessEl.style.cssText = 'margin: 8px 0; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;';
     let accessHTML = '';
-    
+
     // Read Paper button (OpenAlex landing page)
     if (paper.link) {
         accessHTML += `<span style="display: inline-flex; align-items: center; gap: 6px; background: #6c757d; color: white; padding: 4px 10px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: 600; transition: background 0.2s; cursor: pointer;" onmouseover="this.style.background='#5a6268'" onmouseout="this.style.background='#6c757d'" onclick="window.open('${paper.link}', '_blank')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>Read Paper</span>`;
     }
-    
+
     if (paper.is_oa !== undefined) {
         const oaBadgeColor = paper.is_oa ? '#28a745' : '#6c757d';
         const oaIcon = paper.is_oa ? '🔓' : '🔒';
         const oaText = paper.is_oa ? `Open Access (${paper.oa_status || 'available'})` : 'Closed Access';
         accessHTML += `<span style="display: inline-flex; align-items: center; background: ${oaBadgeColor}; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px;">${oaIcon} ${oaText}</span>`;
     }
-    
+
     // Single PDF button - prioritize pdf_url, fallback to oa_url
     const pdfUrl = paper.pdf_url || (paper.is_oa && paper.oa_url ? paper.oa_url : null);
     if (pdfUrl) {

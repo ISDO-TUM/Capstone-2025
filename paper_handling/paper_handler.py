@@ -74,14 +74,14 @@ def _fetch_works_single_query(query, from_publication_date=None, per_page=10):
             primary_location = work.get("primary_location", {})
             landing_page_url = primary_location.get("landing_page_url")
             pdf_url = primary_location.get("pdf_url")
-            
+
             # Extract venue information from primary_location source
             source = primary_location.get("source", {}) if primary_location else {}
             venue_name = source.get("display_name") if source else None
             venue_type = source.get("type") if source else None
 
             publication_date = work.get("publication_date")
-            
+
             # Extract open access information
             open_access = work.get("open_access", {})
             is_oa = open_access.get("is_oa", False) if open_access else False
@@ -115,7 +115,7 @@ def _fetch_works_single_query(query, from_publication_date=None, per_page=10):
                     "venue_type": venue_type,
                     "is_oa": is_oa,
                     "oa_status": oa_status,
-                    "oa_url": oa_url
+                    "oa_url": oa_url,
                 }
             )
         except Exception as ex:
@@ -300,7 +300,7 @@ def create_paper_dict(paper, summary, is_replacement=False):
     """
     Create a standardized paper dictionary for frontend consumption with all metadata.
     This is the single source of truth for the paper data structure sent to the frontend.
-    
+
     Args:
         paper (dict): Paper metadata dict from database.
         summary (str): Relevance summary/description.
@@ -309,23 +309,23 @@ def create_paper_dict(paper, summary, is_replacement=False):
         dict: Standardized paper dict with all metadata fields for frontend display.
     """
     return {
-        'title': paper.get("title", "N/A"),
-        'link': paper.get("landing_page_url", "#"),
-        'description': summary,
-        'hash': paper.get('paper_hash', 'N/A'),
-        'is_replacement': is_replacement,
+        "title": paper.get("title", "N/A"),
+        "link": paper.get("landing_page_url", "#"),
+        "description": summary,
+        "hash": paper.get("paper_hash", "N/A"),
+        "is_replacement": is_replacement,
         # Metadata fields
-        'authors': paper.get("authors"),
-        'publication_date': paper.get("publication_date"),
-        'venue_name': paper.get("venue_name"),
-        'venue_type': paper.get("venue_type"),
-        'is_oa': paper.get("is_oa"),
-        'oa_status': paper.get("oa_status"),
-        'oa_url': paper.get("oa_url"),
-        'pdf_url': paper.get("pdf_url"),
-        'cited_by_count': paper.get("cited_by_count"),
-        'fwci': paper.get("fwci"),
-        'citation_normalized_percentile': paper.get("citation_normalized_percentile")
+        "authors": paper.get("authors"),
+        "publication_date": paper.get("publication_date"),
+        "venue_name": paper.get("venue_name"),
+        "venue_type": paper.get("venue_type"),
+        "is_oa": paper.get("is_oa"),
+        "oa_status": paper.get("oa_status"),
+        "oa_url": paper.get("oa_url"),
+        "pdf_url": paper.get("pdf_url"),
+        "cited_by_count": paper.get("cited_by_count"),
+        "fwci": paper.get("fwci"),
+        "citation_normalized_percentile": paper.get("citation_normalized_percentile"),
     }
 
 

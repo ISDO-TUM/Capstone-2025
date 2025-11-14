@@ -149,7 +149,7 @@ def insert_papers(papers_data_list):
                     venue_type,
                     is_oa,
                     oa_status,
-                    oa_url
+                    oa_url,
                 ),
             )
 
