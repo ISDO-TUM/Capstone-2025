@@ -57,12 +57,65 @@ from paper_handling.paper_handler import (
 from pubsub.pubsub_main import update_newsletter_papers
 from pubsub.pubsub_params import DAYS_FOR_UPDATE
 from utils.status import Status
+from clerk_backend_api import Clerk
+from clerk_backend_api.security.types import AuthenticateRequestOptions
 
 logger = logging.getLogger(__name__)
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB
+
+
+# Initialize Clerk
+clerk_sdk = Clerk(bearer_auth=os.getenv("CLERK_SECRET_KEY"))
+
+
+@app.before_request
+def authenticate_user():
+    """
+    Middleware to authenticate the user with Clerk and inject auth information into the request object.
+    """
+
+    try:
+        # Authenticate the request using Clerk
+        request_state = clerk_sdk.authenticate_request(
+            request,
+            AuthenticateRequestOptions(authorized_parties=[os.getenv("HOSTNAME")]),
+        )
+
+    except Exception as e:
+        # Log the error and set default values for unauthenticated requests
+        logger.error(f"Authentication error: {e}")
+        request.auth = None
+        return
+
+    # Attach authentication information to the request object
+    if request_state.is_signed_in:
+        user_id = request_state.payload.get("sub")
+
+        request.auth = {
+            "user_id": user_id,
+        }
+
+        try:
+            user_info = clerk_sdk.users.get(user_id=user_id)
+            request.auth["username"] = user_info.username
+            request.auth["first_name"] = user_info.first_name
+            request.auth["last_name"] = user_info.last_name
+            if user_info.email_addresses and len(user_info.email_addresses) > 0:
+                request.auth["email"] = (
+                    user_info.email_addresses[0].email_address
+                    if user_info.email_addresses
+                    else None
+                )
+
+            request.auth["profile_image_url"] = user_info.profile_image_url
+        except Exception as e:
+            logging.error(f"Error fetching user info from Clerk:\n{e}")
+
+    else:
+        request.auth = None
 
 
 @app.errorhandler(413)
@@ -617,4 +670,24 @@ def load_more_papers():
 
 
 if __name__ == "__main__":
+    if not os.getenv("CLERK_SECRET_KEY"):
+        raise ValueError(
+            "CLERK_SECRET_KEY environment variable is required for authentication."
+        )
+
+    if not os.getenv("CLERK_PUBLISHABLE_KEY"):
+        raise ValueError(
+            "CLERK_PUBLISHABLE_KEY environment variable is required for authentication."
+        )
+
+    if not os.getenv("CLERK_FRONTEND_API_URL"):
+        raise ValueError(
+            "CLERK_FRONTEND_API_URL environment variable is required for authentication."
+        )
+
+    if not os.getenv("HOSTNAME"):
+        raise ValueError(
+            "HOSTNAME environment variable is required for authentication."
+        )
+
     app.run(host="0.0.0.0", debug=True, port=80)  # nosec B201, B104
