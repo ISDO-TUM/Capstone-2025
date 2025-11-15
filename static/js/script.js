@@ -56,7 +56,8 @@ async function loadPubSubPapers(projectId) {
         const updateRes = await fetch('/api/pubsub/update_newsletter_papers', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ projectId })
+            body: JSON.stringify({ projectId }),
+            credentials: 'include'
         });
         const updateJson = await updateRes.json();
         if (!updateRes.ok) {
@@ -73,7 +74,9 @@ async function loadPubSubPapers(projectId) {
 
         // Then fetch the papers
         const papers = await fetch(
-            `/api/pubsub/get_newsletter_papers?projectId=${projectId}`
+            `/api/pubsub/get_newsletter_papers?projectId=${projectId}`, {
+                credentials: 'include'
+            }
         ).then(r => {
             console.log('📡 PubSub papers response status:', r.status);
             return r.json();
@@ -149,7 +152,8 @@ async function handleRouting () {
             const res = await fetch('/api/projects', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ title, description })
+              body: JSON.stringify({ title, description }),
+              credentials: 'include'
             });
             if (!res.ok) {
               return alert('Error creating project');
@@ -286,7 +290,8 @@ function setupPDFUpload() {
 
             const response = await fetch('/api/extract-pdf-text', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'include'
             });
 
             if (!response.ok) {
@@ -361,6 +366,7 @@ function setupPDFUpload() {
                     projectId: projectId,
                     update_recommendations : updateRecommendations //set this to true only if new project or if future 'refresh recommendations' button pressed
                 }),
+                credentials: 'include'
             });
 
         if (!response.ok) {
@@ -1124,7 +1130,8 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/api/rate_paper', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paper_hash: paperHash, rating: value, project_id: currentProjectId })
+            body: JSON.stringify({ paper_hash: paperHash, rating: value, project_id: currentProjectId }),
+            credentials: 'include'
         })
         .then(res => {
             if (!res.ok) {
@@ -1463,7 +1470,8 @@ function updateProjectPrompt(projectId, newPrompt) {
     return fetch(`/api/project/${projectId}/update_prompt`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: newPrompt })
+        body: JSON.stringify({ prompt: newPrompt }),
+        credentials: 'include'
     })
     .then(response => response.json());
 }
