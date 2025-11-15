@@ -1,0 +1,12 @@
+-- This file is now deprecated in favor of pgroll migrations
+-- All schema changes are managed through migrations in the migrations/ directory
+
+-- To initialize the database, use pgroll migrations:
+--   docker compose up -d
+-- Or manually:
+--   ./scripts/migrate.sh
+
+-- For reference, the initial schema is defined in: migrations/01_initial_schema.json
+
+-- DO NOT MODIFY THIS FILE
+-- Create new migrations using: ./scripts/new_migration.sh <migration_name>

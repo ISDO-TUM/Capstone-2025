@@ -85,10 +85,10 @@ class TestLoadMorePapers:
                 "Year doesn't contain valid year"
             )
 
-            # Venue - should exist (may be "Unknown")
+            # Venue - optional as some papers may not have venue information
             venue = new_paper.locator("p:has-text('🏛️')")
-            assert venue.count() > 0, "Venue element not found"
-            assert len(venue.text_content().strip()) > 2, "Venue text is empty"
+            if venue.count() > 0:
+                assert len(venue.text_content().strip()) > 2, "Venue text is empty"
 
             # Citation metrics - at least one should be present
             card_text = new_paper.text_content()

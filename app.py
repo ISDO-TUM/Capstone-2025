@@ -59,11 +59,86 @@ from pubsub.pubsub_main import update_newsletter_papers
 from pubsub.pubsub_params import DAYS_FOR_UPDATE
 from utils.status import Status
 
+# Only import Clerk if not in test mode
+if os.getenv("TEST_MODE") != "true":
+    from clerk_backend_api import Clerk
+    from clerk_backend_api.security.types import AuthenticateRequestOptions
+
 logger = logging.getLogger(__name__)
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB
+
+
+# Initialize Clerk only if not in test mode
+if os.getenv("TEST_MODE") == "true":
+    clerk_sdk = None
+else:
+    clerk_sdk = Clerk(bearer_auth=os.getenv("CLERK_SECRET_KEY"))
+
+
+@app.before_request
+def authenticate_user():
+    """
+    Middleware to authenticate the user with Clerk and inject auth information into the request object.
+    In TEST_MODE, automatically authenticates with a test user.
+    """
+
+    # In test mode, bypass Clerk and set a test user
+    if os.getenv("TEST_MODE") == "true":
+        request.auth = {
+            "user_id": "test_user_id",
+            "username": "test_user",
+            "first_name": "Test",
+            "last_name": "User",
+            "email": "test@example.com",
+            "profile_image_url": None,
+        }
+        return
+
+    try:
+        # Authenticate the request using Clerk
+        hostname = os.getenv("HOSTNAME")
+        if hostname:
+            auth_options = AuthenticateRequestOptions(authorized_parties=[hostname])
+        else:
+            auth_options = AuthenticateRequestOptions()
+
+        request_state = clerk_sdk.authenticate_request(request, auth_options)
+
+    except Exception as e:
+        # Log the error and set default values for unauthenticated requests
+        logger.error(f"Authentication error for {request.path}: {e}")
+        request.auth = None
+        return
+
+    # Attach authentication information to the request object
+    if request_state.is_signed_in:
+        user_id = request_state.payload.get("sub")
+
+        request.auth = {
+            "user_id": user_id,
+        }
+
+        try:
+            user_info = clerk_sdk.users.get(user_id=user_id)
+            request.auth["username"] = user_info.username
+            request.auth["first_name"] = user_info.first_name
+            request.auth["last_name"] = user_info.last_name
+            if user_info.email_addresses and len(user_info.email_addresses) > 0:
+                request.auth["email"] = (
+                    user_info.email_addresses[0].email_address
+                    if user_info.email_addresses
+                    else None
+                )
+
+            request.auth["profile_image_url"] = user_info.profile_image_url
+        except Exception as e:
+            logging.error(f"Error fetching user info from Clerk:\n{e}")
+
+    else:
+        request.auth = None
 
 
 @app.errorhandler(413)
@@ -84,11 +159,18 @@ def request_entity_too_large(error):
 @app.route("/")
 def home():
     """
-    Render the dashboard homepage.
+    Render the dashboard homepage or login view based on user authentication.
     Returns:
-        Response: Rendered dashboard.html template.
+        Response: Rendered dashboard.html template or login view.
     """
-    return render_template("dashboard.html")
+
+    return render_template(
+        "dashboard.html",
+        auth=request.auth,
+        showCreateProjectButton=True,
+        CLERK_PUBLISHABLE_KEY=os.getenv("CLERK_PUBLISHABLE_KEY"),
+        CLERK_FRONTEND_API_URL=os.getenv("CLERK_FRONTEND_API_URL"),
+    )
 
 
 @app.route("/create-project")
@@ -98,7 +180,15 @@ def create_project_page():
     Returns:
         Response: Rendered create_project.html template.
     """
-    return render_template("create_project.html")
+    if not request.auth:
+        return {"error": "Not authenticated"}, 401
+
+    return render_template(
+        "create_project.html",
+        auth=request.auth,
+        CLERK_PUBLISHABLE_KEY=os.getenv("CLERK_PUBLISHABLE_KEY"),
+        CLERK_FRONTEND_API_URL=os.getenv("CLERK_FRONTEND_API_URL"),
+    )
 
 
 @app.route("/project/<project_id>")
@@ -110,16 +200,37 @@ def project_overview_page(project_id):
     Returns:
         Response: Rendered project_overview.html template.
     """
-    return render_template("project_overview.html", project_id=project_id)
+    if not request.auth:
+        return render_template(
+            "dashboard.html",
+            auth=None,
+            CLERK_PUBLISHABLE_KEY=os.getenv("CLERK_PUBLISHABLE_KEY"),
+            CLERK_FRONTEND_API_URL=os.getenv("CLERK_FRONTEND_API_URL"),
+        )
+
+    project = get_project_by_id(project_id)
+    if project["user_id"] != request.auth["user_id"]:
+        return {"error": "Forbidden"}, 403
+
+    return render_template(
+        "project_overview.html",
+        project_id=project_id,
+        auth=request.auth,
+        CLERK_PUBLISHABLE_KEY=os.getenv("CLERK_PUBLISHABLE_KEY"),
+        CLERK_FRONTEND_API_URL=os.getenv("CLERK_FRONTEND_API_URL"),
+    )
 
 
 @app.route("/api/projects", methods=["POST"])
 def api_create_project():
     """
-    Create a new project with the given title and description.
+    Create a new project for the signed-in user with the given title and description.
     Returns:
         Response: JSON with new projectId or error message.
     """
+    if not request.auth:
+        return {"error": "Not authenticated"}, 401
+
     data = request.get_json() or {}
     title = data.get("title")
     desc = data.get("description")
@@ -132,11 +243,14 @@ def api_create_project():
 @app.route("/api/getProjects", methods=["GET"])
 def get_projects():
     """
-    Get all projects with project_id and metadata.
+    Get all projects owned by the current user with project_id and metadata.
     Returns:
         Response: JSON with all projects and their metadata.
     """
     """Get all projects with project_id and metadata."""
+
+    if not request.auth:
+        return {"error": "Not authenticated"}, 401
 
     projects = get_all_projects()
     complete_projects = []
@@ -164,6 +278,10 @@ def get_recommendations():
     Returns:
         Response: Server-sent event stream with recommendations or agent thoughts.
     """
+
+    if not request.auth:
+        return {"error": "Not authenticated"}, 401
+
     print("Attempting to get recommendations")
     """Get recommendations for a project. Updated to use project_id and update_recommendations flag."""
     try:
@@ -261,6 +379,9 @@ def extract_pdf_text():
     Returns:
         Response: JSON with extracted text or error message.
     """
+    if not request.auth:
+        return jsonify({"error": "Unauthorized"}), 401
+
     if "file" not in request.files:
         return jsonify({"error": "No file provided"}), 400
 
@@ -302,6 +423,9 @@ def api_update_newsletter():
     Returns:
         Response: JSON status message.
     """
+    if not request.auth:
+        return jsonify({"error": "Unauthorized"}), 401
+
     logger.info("Triggered api_update_newsletter")
     payload = request.get_json() or {}
     project_id = payload.get("projectId")
@@ -343,6 +467,9 @@ def api_get_newsletter():
     Returns:
         Response: JSON list of newsletter papers with metadata.
     """
+    if not request.auth:
+        return jsonify({"error": "Unauthorized"}), 401
+
     project_id = request.args.get("projectId") or request.args.get("project_id")
     if not project_id:
         return jsonify({"error": "Missing projectId"}), 400
@@ -384,6 +511,9 @@ def rate_paper():
     Returns:
         Response: JSON status message and replacement info if applicable.
     """
+    if not request.auth:
+        return jsonify({"error": "Unauthorized"}), 401
+
     data = request.get_json()
     if not data:
         return jsonify({"status": "error", "message": "No data provided"}), 400
@@ -478,6 +608,9 @@ def api_get_project(project_id):
     Returns:
         Response: JSON with project metadata or error message.
     """
+    if not request.auth:
+        return jsonify({"error": "Unauthorized"}), 401
+
     proj = get_project_by_id(project_id)
     if not proj:
         return jsonify({"error": "Project not found"}), 404
@@ -505,6 +638,9 @@ def api_update_project_prompt(project_id):
     Returns:
         Response: JSON with updated description or error message.
     """
+    if not request.auth:
+        return jsonify({"error": "Unauthorized"}), 401
+
     data = request.get_json() or {}
     new_prompt = data.get("prompt")
     if not new_prompt:
@@ -527,6 +663,9 @@ def load_more_papers():
     Returns:
         Response: Server-sent event stream with more recommendations or error message.
     """
+    if not request.auth:
+        return jsonify({"error": "Unauthorized"}), 401
+
     try:
         data = request.get_json()
         project_id = data.get("project_id") if data else None
@@ -616,4 +755,24 @@ def load_more_papers():
 
 
 if __name__ == "__main__":
+    if not os.getenv("CLERK_SECRET_KEY"):
+        raise ValueError(
+            "CLERK_SECRET_KEY environment variable is required for authentication."
+        )
+
+    if not os.getenv("CLERK_PUBLISHABLE_KEY"):
+        raise ValueError(
+            "CLERK_PUBLISHABLE_KEY environment variable is required for authentication."
+        )
+
+    if not os.getenv("CLERK_FRONTEND_API_URL"):
+        raise ValueError(
+            "CLERK_FRONTEND_API_URL environment variable is required for authentication."
+        )
+
+    if not os.getenv("HOSTNAME"):
+        raise ValueError(
+            "HOSTNAME environment variable is required for authentication."
+        )
+
     app.run(host="0.0.0.0", debug=True, port=80)  # nosec B201, B104

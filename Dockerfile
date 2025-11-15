@@ -2,8 +2,12 @@
 FROM python:3.13-slim
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Install PostgreSQL client tools (psql + pg_isready)
-RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+# Install PostgreSQL client tools, wget, jq, and pgroll
+RUN apt-get update && \
+    apt-get install -y postgresql-client wget jq && \
+    wget -O /usr/local/bin/pgroll https://github.com/xataio/pgroll/releases/download/v0.14.3/pgroll.linux.amd64 && \
+    chmod +x /usr/local/bin/pgroll && \
+    rm -rf /var/lib/apt/lists/*
 
 # Set environment variables for Python
 ENV PYTHONDONTWRITEBYTECODE 1

@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS public.papers_table (
 
 CREATE TABLE IF NOT EXISTS public.projects_table (
     project_id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     email TEXT,

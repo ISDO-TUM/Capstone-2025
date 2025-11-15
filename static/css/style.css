@@ -517,6 +517,7 @@ body {
     font-size: 1.15rem;
     padding: 16px 38px;
     border-radius: 32px;
+    order: 1;
     background: linear-gradient(90deg, #007bff 60%, #4f8cff 100%);
     color: #fff;
     box-shadow: 0 4px 24px 0 rgba(0,123,255,0.13);
@@ -530,6 +531,21 @@ body {
     background: linear-gradient(90deg, #0056b3 60%, #007bff 100%);
     transform: translateY(-2px) scale(1.045);
     box-shadow: 0 8px 32px 0 rgba(0,123,255,0.18);
+}
+
+.header-actions {
+    display: flex;
+    flex-direction: row-reverse;
+    gap: 40px;
+}
+
+#clerk-user-button button span span {
+    order: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    width: 40px;
 }
 
 /* --- SEARCH BAR --- */
@@ -1205,7 +1221,6 @@ body {
     max-width: none;
     transition: background 0.2s, border-color 0.2s;
     box-sizing: border-box;
-    display: block;
 }
 
 .no-results-explanation {
@@ -1855,4 +1870,12 @@ body {
 
 .recommendations-section + .recommendations-section {
     margin-top: 20px;
+}
+
+.login-dialog-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
 }
