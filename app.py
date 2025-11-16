@@ -58,6 +58,8 @@ from paper_handling.paper_handler import (
 from pubsub.pubsub_main import update_newsletter_papers
 from pubsub.pubsub_params import DAYS_FOR_UPDATE
 from utils.status import Status
+from clerk_backend_api import Clerk
+from clerk_backend_api.security.types import AuthenticateRequestOptions
 
 # Only import Clerk if not in test mode
 if os.getenv("TEST_MODE") != "true":
