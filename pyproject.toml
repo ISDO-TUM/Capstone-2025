@@ -23,6 +23,9 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "fuzzywuzzy>=0.18.0",
+    "pandas>=2.3.3",
+    "python-levenshtein>=0.27.3",
     "ruff>=0.14.4",
 ]
 
