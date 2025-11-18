@@ -23,17 +23,12 @@
             "filename": "logs/app.log.jsonl",
             "maxBytes": 10485760,
             "backupCount": 5
-        },
-        "queue_handler": {
-            "class": "logging.handlers.QueueHandler",
-            "handlers": ["stdout", "file"],
-            "respect_handler_level": true
         }
     },
     "loggers": {
         "root": {
             "level": "INFO",
-            "handlers": ["queue_handler"]
+            "handlers": ["stdout", "file"]
         }
     }
 }
