@@ -42,15 +42,7 @@ services:
         echo 'Database ready. Running migrations with pgroll...' &&
         export PGROLL_PG_URL='postgres://${DB_USER:-user}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-papers}?sslmode=disable' &&
         pgroll init || true &&
-        
-        for migration in /app/migrations/*.json; do
-          if [ -f \"$$migration\" ]; then
-            echo \"Applying migration: $$migration\" &&
-            pgroll start \"$$migration\" 2>&1 | grep -v 'migration.*already exists' || true &&
-            pgroll complete 2>/dev/null || true
-          fi
-        done &&
-        
+        pgroll migrate --complete &&
         echo 'Migrations complete. Starting application...' &&
         uv run app.py --no-dev
       "
