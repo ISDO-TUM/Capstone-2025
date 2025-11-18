@@ -8,6 +8,12 @@ on:
   workflow_dispatch:
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder for renamed job
+        run: echo "This job was renamed to lint-and-format. Please update branch protection rules."
+
   lint-and-format:
     runs-on: ubuntu-latest
     steps:
