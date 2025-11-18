@@ -1,0 +1,414 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.0.3 Chrome/140.0.7339.249 Electron/38.7.0 Safari/537.36" version="29.0.3">
+  <diagram name="Page-1" id="FukHRQ8e_zQ-OFhw0y5I">
+    <mxGraphModel dx="3033" dy="1793" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="2336" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-1" value="User" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="1480" y="25" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-2" value="LLM" style="html=1;whiteSpace=wrap;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="140" y="30" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-4" value="Agent" style="html=1;whiteSpace=wrap;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="1073.25" y="30" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-5" value="" style="endArrow=none;html=1;rounded=0;dashed=1;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="806" y="2320" as="sourcePoint" />
+            <mxPoint x="806" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-6" value="" style="endArrow=none;html=1;rounded=0;dashed=1;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1353" y="2330" as="sourcePoint" />
+            <mxPoint x="1354.25" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="5smG3ASLPOnaUx3MoHnq-12" target="5smG3ASLPOnaUx3MoHnq-8" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-7" value="Input initial Query" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1437.5" y="160" width="115" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-16" target="5smG3ASLPOnaUx3MoHnq-14" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-8" value="Initialize State" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1070.75" y="160" width="115" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="5smG3ASLPOnaUx3MoHnq-7" target="5smG3ASLPOnaUx3MoHnq-12" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1391.25" y="175" as="sourcePoint" />
+            <mxPoint x="1186.25" y="175" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-12" value="&lt;p&gt;&lt;font face=&quot;Lucida Console&quot; style=&quot;line-height: 60%;&quot;&gt;I am looking for papers in the field of machine learning applied to healthcare, published after 2018. Please prioritize papers with high Field-Weighted Citation Impact (FWCI), high citation counts, and high similarity to my interests.project ID: 3744ee6c-6194-46a4-9627-d932f9ae22fd&lt;/font&gt;&lt;/p&gt;" style="shape=parallelogram;html=1;strokeWidth=2;perimeter=parallelogramPerimeter;whiteSpace=wrap;rounded=1;arcSize=12;size=0.23;align=left;fontSize=4;spacingTop=3;spacingLeft=18;spacingRight=23;" parent="1" vertex="1">
+          <mxGeometry x="1233.25" y="145" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-14" target="5smG3ASLPOnaUx3MoHnq-19" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-21" value="HTTP Stream" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="5smG3ASLPOnaUx3MoHnq-20" vertex="1" connectable="0">
+          <mxGeometry x="0.109" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-23" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-24" target="5smG3ASLPOnaUx3MoHnq-22" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-14" value="Input Node" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1070.75" y="290" width="115" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-8" target="5smG3ASLPOnaUx3MoHnq-16" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1128.25" y="190" as="sourcePoint" />
+            <mxPoint x="1128.25" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-16" value="&lt;p&gt;&lt;font face=&quot;Lucida Console&quot; style=&quot;line-height: 60%;&quot;&gt;{&lt;/font&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot;font-family: &amp;quot;Lucida Console&amp;quot;; background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp; &amp;nbsp; user_query&quot;: &quot;I am looking for papers...&quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot;font-family: &amp;quot;Lucida Console&amp;quot;; background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;}&lt;/span&gt;&lt;/p&gt;" style="shape=parallelogram;html=1;strokeWidth=2;perimeter=parallelogramPerimeter;whiteSpace=wrap;rounded=1;arcSize=12;size=0.23;align=left;fontSize=4;spacingTop=3;spacingLeft=18;spacingRight=23;" parent="1" vertex="1">
+          <mxGeometry x="1078.25" y="210" width="105" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-19" value="&lt;p&gt;&lt;font face=&quot;Lucida Console&quot; style=&quot;line-height: 60%;&quot;&gt;Display&lt;/font&gt;&lt;/p&gt;&lt;p&gt;&lt;font face=&quot;Lucida Console&quot;&gt;{&lt;/font&gt;&lt;/p&gt;&lt;p&gt;&lt;font face=&quot;Lucida Console&quot;&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &quot;thought&quot;: &quot;Processing user input...&quot;,&lt;/font&gt;&lt;/p&gt;&lt;p&gt;&lt;font face=&quot;Lucida Console&quot;&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &quot;is_final&quot;: False,&lt;/font&gt;&lt;/p&gt;&lt;p&gt;&lt;font face=&quot;Lucida Console&quot;&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &quot;final_content&quot;: None,&lt;/font&gt;&lt;/p&gt;&lt;p&gt;&lt;font face=&quot;Lucida Console&quot; style=&quot;line-height: 60%;&quot;&gt;&lt;/font&gt;&lt;/p&gt;&lt;p&gt;&lt;font face=&quot;Lucida Console&quot;&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; }&lt;/font&gt;&lt;/p&gt;" style="shape=parallelogram;html=1;strokeWidth=2;perimeter=parallelogramPerimeter;whiteSpace=wrap;rounded=1;arcSize=12;size=0.23;align=left;fontSize=4;spacingTop=3;spacingLeft=18;spacingRight=23;" parent="1" vertex="1">
+          <mxGeometry x="1435" y="275" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-36" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-37" target="5smG3ASLPOnaUx3MoHnq-28" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-45" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-22" target="5smG3ASLPOnaUx3MoHnq-44" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-46" value="HTTP Stream" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="5smG3ASLPOnaUx3MoHnq-45" vertex="1" connectable="0">
+          <mxGeometry x="0.0887" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-48" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-22" target="5smG3ASLPOnaUx3MoHnq-47" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-22" value="Out Of Scope Check" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1059.5" y="440" width="142.5" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-25" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-14" target="5smG3ASLPOnaUx3MoHnq-24" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1128.25" y="320" as="sourcePoint" />
+            <mxPoint x="1128.25" y="410" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-24" value="&lt;div style=&quot;color: rgb(59, 59, 59); background-color: rgb(255, 255, 255); font-family: Consolas, &amp;quot;Courier New&amp;quot;, monospace; white-space: pre; line-height: 100%;&quot;&gt;&lt;div&gt;&lt;font style=&quot;line-height: 100%; font-size: 5px;&quot;&gt;{&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 100%; font-size: 5px;&quot;&gt;&amp;nbsp; &amp;nbsp; &lt;span style=&quot;color: #0451a5;&quot;&gt;&quot;final_output&quot;&lt;/span&gt;: &lt;span style=&quot;color: #0000ff;&quot;&gt;null&lt;/span&gt;,&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 100%; font-size: 5px;&quot;&gt;&amp;nbsp; &amp;nbsp; &lt;span style=&quot;color: #0451a5;&quot;&gt;&quot;keywords&quot;&lt;/span&gt;: [],&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 100%; font-size: 5px;&quot;&gt;&amp;nbsp; &amp;nbsp; &lt;span style=&quot;color: #0451a5;&quot;&gt;&quot;papers_filtered&quot;&lt;/span&gt;: [],&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 100%; font-size: 5px;&quot;&gt;&amp;nbsp; &amp;nbsp; &lt;span style=&quot;color: #0451a5;&quot;&gt;&quot;papers_raw&quot;&lt;/span&gt;: [],&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 100%; font-size: 5px;&quot;&gt;&amp;nbsp; &amp;nbsp; &lt;span style=&quot;color: #0451a5;&quot;&gt;&quot;project_id&quot;&lt;/span&gt;: &lt;span style=&quot;color: #a31515;&quot;&gt;&quot;3744ee6c-6194-46a4-9627-d932f9ae22fd&quot;&lt;/span&gt;,&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 100%; font-size: 5px;&quot;&gt;&amp;nbsp; &amp;nbsp; &lt;span style=&quot;color: #0451a5;&quot;&gt;&quot;reformulated_query&quot;&lt;/span&gt;: &lt;span style=&quot;color: #0000ff;&quot;&gt;null&lt;/span&gt;,&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 100%; font-size: 5px;&quot;&gt;&amp;nbsp; &amp;nbsp; &lt;span style=&quot;color: #0451a5;&quot;&gt;&quot;user_query&quot;&lt;/span&gt;: &lt;span style=&quot;color: #a31515;&quot;&gt;&quot;I am looking for papers...&quot;&lt;/span&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 100%; font-size: 5px;&quot;&gt;}&lt;/font&gt;&lt;/div&gt;&lt;/div&gt;" style="shape=parallelogram;html=1;strokeWidth=2;perimeter=parallelogramPerimeter;whiteSpace=wrap;rounded=1;arcSize=12;size=0.23;align=left;fontSize=4;spacingTop=3;spacingLeft=18;spacingRight=23;" parent="1" vertex="1">
+          <mxGeometry x="1037" y="350" width="182.5" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-26" value="Tools" style="html=1;whiteSpace=wrap;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="549.37" y="30" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-27" value="" style="endArrow=none;html=1;rounded=0;dashed=1;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="386" y="2320" as="sourcePoint" />
+            <mxPoint x="387.25" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-33" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-32" target="5smG3ASLPOnaUx3MoHnq-22" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1030" y="542" />
+              <mxPoint x="1030" y="460" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-40" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-28" target="5smG3ASLPOnaUx3MoHnq-39" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="330" y="460" />
+              <mxPoint x="330" y="460" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-41" value="prompt" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="5smG3ASLPOnaUx3MoHnq-40" vertex="1" connectable="0">
+          <mxGeometry x="0.2321" y="-2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-28" value="detect_out_of_scope_query" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="463.12" y="430" width="196.25" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-34" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-28" target="5smG3ASLPOnaUx3MoHnq-32" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="659.25" y="492" as="sourcePoint" />
+            <mxPoint x="1059.25" y="405" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="666.25" y="540" />
+              <mxPoint x="666.25" y="540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-32" value="&lt;div style=&quot;color: rgb(59, 59, 59); background-color: rgb(255, 255, 255); font-family: Consolas, &amp;quot;Courier New&amp;quot;, monospace; white-space: pre; line-height: 100%;&quot;&gt;&lt;div&gt;&lt;div&gt;{&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &lt;span style=&quot;color: #0451a5;&quot;&gt;&quot;status&quot;&lt;/span&gt;: &lt;span style=&quot;color: #a31515;&quot;&gt;&quot;valid&quot;&lt;/span&gt; &lt;span style=&quot;color: #cd3131;&quot;&gt;|&lt;/span&gt; &lt;span style=&quot;color: #a31515;&quot;&gt;&quot;out_of_scope&quot;&lt;/span&gt;,&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &lt;span style=&quot;color: #0451a5;&quot;&gt;&quot;reason&quot;&lt;/span&gt;: &lt;span style=&quot;color: #a31515;&quot;&gt;&quot;...&quot;&lt;/span&gt;, &amp;nbsp;&lt;span style=&quot;color: #008000;&quot;&gt;// explanation for decision&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &lt;span style=&quot;color: #0451a5;&quot;&gt;&quot;keywords&quot;&lt;/span&gt;: [ &lt;span style=&quot;color: #cd3131;&quot;&gt;...&lt;/span&gt; ] &lt;span style=&quot;color: #008000;&quot;&gt;// list of keyword phrases (empty if out_of_scope)&lt;/span&gt;&lt;/div&gt;&lt;div&gt;}&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;" style="shape=parallelogram;html=1;strokeWidth=2;perimeter=parallelogramPerimeter;rounded=1;arcSize=12;size=0.23;align=left;fontSize=6;spacingTop=3;spacingLeft=18;spacingRight=23;whiteSpace=wrap;" parent="1" vertex="1">
+          <mxGeometry x="696.25" y="510" width="270" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-38" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-22" target="5smG3ASLPOnaUx3MoHnq-37" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1059.25" y="455" as="sourcePoint" />
+            <mxPoint x="659.25" y="450" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1018" y="450" />
+              <mxPoint x="1018" y="460" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-37" value="&lt;div style=&quot;background-color: rgb(255, 255, 255); line-height: 100%; color: rgb(59, 59, 59);&quot;&gt;&lt;font face=&quot;Consolas, Courier New, monospace&quot; color=&quot;#3b3b3b&quot;&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;query_description: str&lt;/span&gt;&lt;/font&gt;&lt;/div&gt;" style="shape=parallelogram;html=1;strokeWidth=2;perimeter=parallelogramPerimeter;rounded=1;arcSize=12;size=0.23;align=left;fontSize=6;spacingTop=3;spacingLeft=18;spacingRight=23;whiteSpace=wrap;" parent="1" vertex="1">
+          <mxGeometry x="706.25" y="430" width="270" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-42" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-39" target="5smG3ASLPOnaUx3MoHnq-28" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="320" y="540" />
+              <mxPoint x="320" y="540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-43" value="result" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="5smG3ASLPOnaUx3MoHnq-42" vertex="1" connectable="0">
+          <mxGeometry x="0.0277" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-39" value="&lt;div style=&quot;line-height: 90%;&quot;&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;You are a research paper search assistant.&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; Analyze the following user query and determine if it is a valid academic topic&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; for a scientific literature search or if it is out-of-scope (e.g., a greeting,&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; joke, personal opinion, or unrelated to science).&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; If the query contains an appended paper, extract keywords also based on the paper.&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; If the query is valid, extract a list of 2-5 concise, domain-relevant keyword phrases (each 2-4 words) that best capture the research intent.&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; Guidelines for keyword extraction:&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; - Prefer multi-word, context-rich phrases over single words, but keep each phrase concise (2-4 words).&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; - Avoid full sentences or overly detailed descriptions.&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; - Do NOT repeat the same context in every keyword (e.g., don&#39;t add &quot;in digital health&quot; to every phrase).&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; - Avoid generic or overly broad terms (e.g., &quot;deep learning&quot;, &quot;artificial intelligence&quot;, &quot;healthcare&quot;).&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; - Do NOT simply list synonyms or related fields.&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; - Each keyword should be a phrase that could be used as a precise search query for this specific research interest.&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; - Focus on specificity and informativeness, not quantity.&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; Given the following research query, extract 2-5 highly relevant, expressive academic keyword phrases (each 2-4 words) that would maximize the quality of a literature search. Avoid generic terms, full sentences, and focus on specificity.&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; Query: &quot;{query_description}&quot;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; Respond with a JSON object like:&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; {{&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &quot;status&quot;: &quot;valid&quot; | &quot;out_of_scope&quot;,&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &quot;reason&quot;: &quot;...&quot;,&amp;nbsp; // explanation for decision&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &quot;keywords&quot;: [ ... ] // list of keyword phrases (empty if out_of_scope)&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;line-height: 90%;&quot;&gt;&amp;nbsp; &amp;nbsp; }&lt;/font&gt;&lt;/div&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;align=left;fontSize=4;" parent="1" vertex="1">
+          <mxGeometry x="96.875" y="430" width="196.25" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-44" value="&lt;p&gt;&lt;font face=&quot;Lucida Console&quot;&gt;Extracted keywords: {state[&#39;keywords&#39;]}&lt;/font&gt;&lt;/p&gt;" style="shape=parallelogram;html=1;strokeWidth=2;perimeter=parallelogramPerimeter;whiteSpace=wrap;rounded=1;arcSize=12;size=0.07107496463932107;align=left;fontSize=8;spacingTop=3;spacingLeft=18;spacingRight=23;" parent="1" vertex="1">
+          <mxGeometry x="1406.625" y="425" width="176.75" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-52" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-47" target="5smG3ASLPOnaUx3MoHnq-51" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="490" y="710" />
+              <mxPoint x="490" y="710" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-53" value="prompt" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="5smG3ASLPOnaUx3MoHnq-52" vertex="1" connectable="0">
+          <mxGeometry x="-0.3169" y="-3" relative="1" as="geometry">
+            <mxPoint x="1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-79" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-47" target="5smG3ASLPOnaUx3MoHnq-58" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-47" value="Quality Control&lt;div&gt;Check:&lt;/div&gt;&lt;div&gt;- Was detected as out of scope?&lt;/div&gt;&lt;div&gt;- Includes filters?&lt;/div&gt;&lt;div&gt;- Are the quueries: valid and specific, vague, too broadm too narrow&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="1059.5" y="660" width="142.5" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-49" value="&lt;p&gt;&lt;font face=&quot;Lucida Console&quot;&gt;&quot;thought&quot;: &quot;Performing quality control and filter detection...&quot;,&lt;/font&gt;&lt;/p&gt;" style="shape=parallelogram;html=1;strokeWidth=2;perimeter=parallelogramPerimeter;whiteSpace=wrap;rounded=1;arcSize=12;size=0.07107496463932107;align=left;fontSize=8;spacingTop=3;spacingLeft=18;spacingRight=23;" parent="1" vertex="1">
+          <mxGeometry x="1406.625" y="530" width="176.75" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-50" value="" style="endArrow=classic;html=1;rounded=0;" parent="1" target="5smG3ASLPOnaUx3MoHnq-49" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1130" y="560" as="sourcePoint" />
+            <mxPoint x="1356.28125" y="560" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-55" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-56" target="5smG3ASLPOnaUx3MoHnq-47" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-51" value="&lt;div style=&quot;line-height: 90%;&quot;&gt;&lt;div&gt;You are an academic research assistant. Given the following user query and keywords, decide which action to take:&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; - If the query is valid and specific, respond with &#39;accept&#39;.&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; - If the query is vague, respond with &#39;reformulate&#39;.&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; - If the query is too broad, respond with &#39;narrow&#39;.&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; - If the query is too narrow, respond with &#39;broaden&#39;.&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; - If the query contains multiple topics, respond with &#39;split&#39;.&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; - If the query is not a valid research topic, respond with &#39;out_of_scope&#39;.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; User query: &quot;{user_query}&quot;&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; Keywords: {keywords}&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; Respond with a JSON object:&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; {{&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &quot;qc_decision&quot;: &quot;accept&quot; | &quot;reformulate&quot; | &quot;broaden&quot; | &quot;narrow&quot; | &quot;split&quot; | &quot;out_of_scope&quot;,&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &quot;reason&quot;: &quot;...&quot;&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; }}&lt;/div&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;align=left;fontSize=4;" parent="1" vertex="1">
+          <mxGeometry x="96.875" y="685" width="196.25" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-57" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-51" target="5smG3ASLPOnaUx3MoHnq-56" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="266" y="800" as="sourcePoint" />
+            <mxPoint x="1060" y="800" as="targetPoint" />
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-56" value="&lt;div style=&quot;color: rgb(59, 59, 59); background-color: rgb(255, 255, 255); font-family: Consolas, &amp;quot;Courier New&amp;quot;, monospace; white-space: pre; line-height: 100%;&quot;&gt;&lt;div style=&quot;line-height: 120%;&quot;&gt;&lt;div&gt;&lt;font style=&quot;font-size: 8px; line-height: 120%;&quot;&gt;{&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 8px; line-height: 120%;&quot;&gt;&amp;nbsp; &amp;nbsp; &lt;span style=&quot;color: #0451a5;&quot;&gt;&quot;qc_decision&quot;&lt;/span&gt;: &lt;span style=&quot;color: #a31515;&quot;&gt;&quot;accept&quot;&lt;/span&gt; &lt;span style=&quot;color: #cd3131;&quot;&gt;|&lt;/span&gt; &lt;span style=&quot;color: #a31515;&quot;&gt;&quot;reformulate&quot;&lt;/span&gt; &lt;span style=&quot;color: #cd3131;&quot;&gt;|&lt;/span&gt; &lt;span style=&quot;color: #a31515;&quot;&gt;&quot;broaden&quot;&lt;/span&gt; &lt;span style=&quot;color: #cd3131;&quot;&gt;|&lt;/span&gt; &lt;span style=&quot;color: #a31515;&quot;&gt;&quot;narrow&quot;&lt;/span&gt; &lt;span style=&quot;color: #cd3131;&quot;&gt;|&lt;/span&gt; &lt;span style=&quot;color: #a31515;&quot;&gt;&quot;split&quot;&lt;/span&gt; &lt;span style=&quot;color: #cd3131;&quot;&gt;|&lt;/span&gt; &lt;span style=&quot;color: #a31515;&quot;&gt;&quot;out_of_scope&quot;&lt;/span&gt;,&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 8px; line-height: 120%;&quot;&gt;&amp;nbsp; &amp;nbsp; &lt;span style=&quot;color: #0451a5;&quot;&gt;&quot;reason&quot;&lt;/span&gt;: &lt;span style=&quot;color: #a31515;&quot;&gt;&quot;...&quot;&lt;/span&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 8px; line-height: 120%;&quot;&gt;}&lt;/font&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;" style="shape=parallelogram;html=1;strokeWidth=2;perimeter=parallelogramPerimeter;rounded=1;arcSize=12;size=0.23;align=left;fontSize=6;spacingTop=3;spacingLeft=18;spacingRight=23;whiteSpace=wrap;" parent="1" vertex="1">
+          <mxGeometry x="380" y="770" width="510" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-60" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-58" target="5smG3ASLPOnaUx3MoHnq-59" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1240" y="900" />
+              <mxPoint x="1240" y="1000" />
+              <mxPoint x="1241" y="1000" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-62" value="qc_decision == &quot;reformulate&quot;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];rotation=0;" parent="5smG3ASLPOnaUx3MoHnq-60" vertex="1" connectable="0">
+          <mxGeometry x="0.0602" y="4" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-64" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-58" target="5smG3ASLPOnaUx3MoHnq-63" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1010" y="1130" />
+              <mxPoint x="1210" y="1130" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-65" value="qc_decision == &quot;split&quot;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="5smG3ASLPOnaUx3MoHnq-64" vertex="1" connectable="0">
+          <mxGeometry x="0.4922" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-67" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-58" target="5smG3ASLPOnaUx3MoHnq-66" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1010" y="1280" />
+              <mxPoint x="1220" y="1280" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-68" value="qc_decision == &quot;broaden&quot;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="5smG3ASLPOnaUx3MoHnq-67" vertex="1" connectable="0">
+          <mxGeometry x="0.6699" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-74" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-58" target="5smG3ASLPOnaUx3MoHnq-73" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1010" y="1430" />
+              <mxPoint x="1161" y="1430" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-75" value="qc_decision == &quot;narrow&quot;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="5smG3ASLPOnaUx3MoHnq-74" vertex="1" connectable="0">
+          <mxGeometry x="0.6466" y="2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-77" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-58" target="5smG3ASLPOnaUx3MoHnq-76" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-78" value="qc_decision == &quot;accept&quot;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="5smG3ASLPOnaUx3MoHnq-77" vertex="1" connectable="0">
+          <mxGeometry x="0.7618" y="-4" relative="1" as="geometry">
+            <mxPoint x="4" y="31" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-58" value="LLM Decision" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.decision;whiteSpace=wrap;" parent="1" vertex="1">
+          <mxGeometry x="959.5" y="850" width="100" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-69" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-59" target="5smG3ASLPOnaUx3MoHnq-47" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1330" y="1070" />
+              <mxPoint x="1330" y="730" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-84" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;flowAnimation=0;" parent="1" source="5smG3ASLPOnaUx3MoHnq-59" target="5smG3ASLPOnaUx3MoHnq-83" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="920" y="1060" />
+              <mxPoint x="920" y="1060" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-59" value="&lt;div&gt;Reformulate&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;verticalAlign=middle;" parent="1" vertex="1">
+          <mxGeometry x="1170" y="1050" width="142.5" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-70" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-63" target="5smG3ASLPOnaUx3MoHnq-47" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1330" y="1210" />
+              <mxPoint x="1330" y="730" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-86" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-63" target="5smG3ASLPOnaUx3MoHnq-80" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="900" y="1200" />
+              <mxPoint x="900" y="1200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-63" value="&lt;div&gt;multi_step_reasoning&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;verticalAlign=middle;" parent="1" vertex="1">
+          <mxGeometry x="1130" y="1190" width="142.5" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-71" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-66" target="5smG3ASLPOnaUx3MoHnq-47" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1330" y="1350" />
+              <mxPoint x="1330" y="730" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-72" value="state[&quot;keywords&quot;] = tool_result" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="5smG3ASLPOnaUx3MoHnq-71" vertex="1" connectable="0">
+          <mxGeometry x="0.3216" y="5" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-88" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-66" target="5smG3ASLPOnaUx3MoHnq-81" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="880" y="1340" />
+              <mxPoint x="880" y="1340" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-66" value="&lt;div&gt;retry_broaden&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;verticalAlign=middle;" parent="1" vertex="1">
+          <mxGeometry x="1100" y="1330" width="142.5" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-90" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-73" target="5smG3ASLPOnaUx3MoHnq-82" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="880" y="1500" />
+              <mxPoint x="880" y="1500" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-73" value="&lt;div&gt;narrow_query&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;verticalAlign=middle;" parent="1" vertex="1">
+          <mxGeometry x="1090" y="1490" width="142.5" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-76" value="&lt;div&gt;accept&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;verticalAlign=middle;" parent="1" vertex="1">
+          <mxGeometry x="938.25" y="1630" width="142.5" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-87" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-80" target="5smG3ASLPOnaUx3MoHnq-63" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="900" y="1220" />
+              <mxPoint x="900" y="1220" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-80" value="multi_step_reasoning" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="463.12" y="1180" width="196.25" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-89" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-81" target="5smG3ASLPOnaUx3MoHnq-66" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="880" y="1360" />
+              <mxPoint x="880" y="1360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-81" value="retry_broaden" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="463.13" y="1320" width="196.25" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-92" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-82" target="5smG3ASLPOnaUx3MoHnq-73" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="880" y="1520" />
+              <mxPoint x="880" y="1520" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-82" value="narrow_query" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="463.13" y="1480" width="196.25" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-85" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5smG3ASLPOnaUx3MoHnq-83" target="5smG3ASLPOnaUx3MoHnq-59" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="920" y="1080" />
+              <mxPoint x="920" y="1080" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5smG3ASLPOnaUx3MoHnq-83" value="reformulate_query" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="463.13" y="1040" width="196.25" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
