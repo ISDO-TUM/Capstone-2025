@@ -53,12 +53,18 @@ from paper_handling.paper_handler import (
     fetch_works_multiple_queries,
     process_available_papers,
     search_and_filter_papers,
+    create_paper_dict,
 )
 from pubsub.pubsub_main import update_newsletter_papers
 from pubsub.pubsub_params import DAYS_FOR_UPDATE
 from utils.status import Status
 from clerk_backend_api import Clerk
 from clerk_backend_api.security.types import AuthenticateRequestOptions
+
+# Only import Clerk if not in test mode
+if os.getenv("TEST_MODE") != "true":
+    from clerk_backend_api import Clerk
+    from clerk_backend_api.security.types import AuthenticateRequestOptions
 
 logger = logging.getLogger(__name__)
 
@@ -67,26 +73,45 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB
 
 
-# Initialize Clerk
-clerk_sdk = Clerk(bearer_auth=os.getenv("CLERK_SECRET_KEY"))
+# Initialize Clerk only if not in test mode
+if os.getenv("TEST_MODE") == "true":
+    clerk_sdk = None
+else:
+    clerk_sdk = Clerk(bearer_auth=os.getenv("CLERK_SECRET_KEY"))
 
 
 @app.before_request
 def authenticate_user():
     """
     Middleware to authenticate the user with Clerk and inject auth information into the request object.
+    In TEST_MODE, automatically authenticates with a test user.
     """
+
+    # In test mode, bypass Clerk and set a test user
+    if os.getenv("TEST_MODE") == "true":
+        request.auth = {
+            "user_id": "test_user_id",
+            "username": "test_user",
+            "first_name": "Test",
+            "last_name": "User",
+            "email": "test@example.com",
+            "profile_image_url": None,
+        }
+        return
 
     try:
         # Authenticate the request using Clerk
-        request_state = clerk_sdk.authenticate_request(
-            request,
-            AuthenticateRequestOptions(authorized_parties=[os.getenv("HOSTNAME")]),
-        )
+        hostname = os.getenv("HOSTNAME")
+        if hostname:
+            auth_options = AuthenticateRequestOptions(authorized_parties=[hostname])
+        else:
+            auth_options = AuthenticateRequestOptions()
+
+        request_state = clerk_sdk.authenticate_request(request, auth_options)
 
     except Exception as e:
         # Log the error and set default values for unauthenticated requests
-        logger.error(f"Authentication error: {e}")
+        logger.error(f"Authentication error for {request.path}: {e}")
         request.auth = None
         return
 
@@ -318,21 +343,19 @@ def get_recommendations():
                 for rec in recs_basic_data:
                     paper = get_paper_by_hash(rec["paper_hash"])
                     if paper is not None:
-                        paper_dict = {
-                            "title": paper.get("title", "N/A"),
-                            "link": paper.get("landing_page_url", "#"),
-                            "description": rec.get(
-                                "summary", "Relevant based on user interest."
-                            ),
-                            "hash": rec["paper_hash"],
-                            "is_replacement": rec.get("is_replacement", False),
-                        }
+                        # Use the centralized create_paper_dict function
+                        paper_dict = create_paper_dict(
+                            paper,
+                            rec.get("summary", "Relevant based on user interest."),
+                            rec.get("is_replacement", False),
+                        )
                     else:
+                        # Fallback for missing papers
                         paper_dict = {
                             "title": "N/A",
                             "link": "#",
                             "description": "Relevant based on user interest.",
-                            "hash": "Nan",
+                            "hash": "N/A",
                             "is_replacement": False,
                         }
                     recommendations.append(paper_dict)

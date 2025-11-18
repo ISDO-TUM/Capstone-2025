@@ -81,9 +81,11 @@ def insert_papers(papers_data_list):
             paper_hash, id, title, abstract, authors,
             publication_date, landing_page_url, pdf_url,
             similarity_score, fwci, citation_normalized_percentile,
-            cited_by_count, counts_by_year
+            cited_by_count, counts_by_year,
+            venue_name, venue_type,
+            is_oa, oa_status, oa_url
         )
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         ON CONFLICT (paper_hash) DO NOTHING;
     """
 
@@ -103,6 +105,12 @@ def insert_papers(papers_data_list):
             pub_date = p.get("publication_date")
             landing_url = p.get("landing_page_url")
             pdf_url = p.get("pdf_url")
+
+            venue_name = p.get("venue_name")
+            venue_type = p.get("venue_type")
+            is_oa = p.get("is_oa")
+            oa_status = p.get("oa_status")
+            oa_url = p.get("oa_url")
 
             sim_score = _to_float(p.get("similarity_score"))
             fwci = _to_float(p.get("fwci"))
@@ -137,6 +145,11 @@ def insert_papers(papers_data_list):
                     cit_norm_pct,
                     cited_count,
                     counts_years,
+                    venue_name,
+                    venue_type,
+                    is_oa,
+                    oa_status,
+                    oa_url,
                 ),
             )
 
@@ -221,7 +234,29 @@ def get_paper_by_hash(paper_hash_to_find):
         return None
 
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    sql = "SELECT paper_hash, id, title, abstract, authors, publication_date, landing_page_url, pdf_url FROM papers_table WHERE paper_hash = %s;"
+    sql = """
+        SELECT
+            paper_hash,
+            id,
+            title,
+            abstract,
+            authors,
+            publication_date,
+            landing_page_url,
+            pdf_url,
+            similarity_score,
+            fwci,
+            citation_normalized_percentile,
+            cited_by_count,
+            counts_by_year,
+            venue_name,
+            venue_type,
+            is_oa,
+            oa_status,
+            oa_url
+        FROM papers_table
+        WHERE paper_hash = %s;
+    """
     try:
         cur.execute(sql, (paper_hash_to_find,))
         paper = cur.fetchone()
@@ -265,7 +300,12 @@ def get_papers_by_hash(paper_hashes_to_find):
             fwci,
             citation_normalized_percentile,
             cited_by_count,
-            counts_by_year
+            counts_by_year,
+            venue_name,
+            venue_type,
+            is_oa,
+            oa_status,
+            oa_url
         FROM papers_table
         WHERE paper_hash = ANY(%s);
     """

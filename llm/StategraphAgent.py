@@ -226,10 +226,15 @@ def quality_control_node(state):
 
         try:
             filter_response = LLM.invoke(filter_detection_prompt)
+            filter_response_content = (
+                filter_response.content
+                if hasattr(filter_response, "content")
+                else str(filter_response)
+            )
             filter_result = (
-                json.loads(filter_response.content)
-                if isinstance(filter_response.content, str)
-                else filter_response.content
+                json.loads(filter_response_content)
+                if isinstance(filter_response_content, str)
+                else filter_response_content
             )
 
             # Handle potential list response
@@ -271,10 +276,13 @@ def quality_control_node(state):
         }}
         """
         qc_response = LLM.invoke(qc_prompt)
+        qc_response_content = (
+            qc_response.content if hasattr(qc_response, "content") else str(qc_response)
+        )
         qc_result = (
-            json.loads(qc_response.content)
-            if isinstance(qc_response.content, str)
-            else qc_response.content
+            json.loads(qc_response_content)
+            if isinstance(qc_response_content, str)
+            else qc_response_content
         )
         # If qc_result is a list, use the first element if possible
         if isinstance(qc_result, list) and len(qc_result) > 0:

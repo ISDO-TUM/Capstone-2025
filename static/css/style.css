@@ -250,11 +250,14 @@ body {
 
 .recommendations-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: 1fr;
     gap: 24px;
 }
 
 .recommendation-card {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
     background-color: #fff;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
@@ -732,7 +735,7 @@ body {
         margin-bottom: 32px;
     }
     .recommendations-grid {
-        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        grid-template-columns: repeat(2, 1fr);
         gap: 32px;
     }
     .projects-list {
@@ -1435,6 +1438,49 @@ body {
 .notification-message {
     font-size: 1rem;
     opacity: 0.95;
+}
+
+/* Metric tooltips */
+.metric-with-tooltip {
+    position: relative;
+}
+
+.metric-tooltip {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    background: rgba(26, 35, 126, 0.95);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    z-index: 1000;
+    transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    text-align: center;
+    line-height: 1.4;
+}
+
+.metric-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: rgba(26, 35, 126, 0.95);
+}
+
+.metric-with-tooltip:hover .metric-tooltip {
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(-50%) translateY(-12px);
 }
 
 /* Load More Button Styles */

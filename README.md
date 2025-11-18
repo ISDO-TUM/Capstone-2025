@@ -184,6 +184,188 @@ docker compose up -d
 
 ---
 
+## Database Migrations
+
+This project uses [pgroll](https://github.com/xataio/pgroll) for zero-downtime PostgreSQL schema migrations.
+
+### Migration System Overview
+
+pgroll provides:
+- **Zero-downtime migrations**: Schema changes without service interruption
+- **Version control**: All schema changes tracked in JSON migration files
+- **Rollback support**: Easy migration reversal if needed
+- **Docker integration**: Seamless operation in containerized environments
+
+### Running Migrations
+
+**In Docker (Automatic):**
+Migrations run automatically when you start the container:
+```bash
+docker compose up -d
+```
+
+**Manually in Docker:**
+```bash
+# Run migrations in the web container
+docker compose exec web sh -c "cd /app && pgroll init && pgroll start migrations/*.json && pgroll complete"
+
+# Check migration status
+docker compose exec web pgroll status
+```
+
+**Local Development (requires pgroll binary):**
+
+If you have pgroll installed locally:
+```bash
+# Install pgroll (macOS)
+brew install xataio/tap/pgroll
+
+# Or download binary from: https://github.com/xataio/pgroll/releases
+
+# Run migrations
+./scripts/migrate.sh
+
+# Check migration status
+./scripts/migration_status.sh
+```
+
+### Creating New Migrations
+
+1. **Generate a new migration file:**
+```bash
+./scripts/new_migration.sh add_user_preferences
+```
+
+This creates a new migration file in `migrations/` with the next sequential number.
+
+2. **Edit the migration file** to add your schema changes:
+
+Example - Adding a column:
+```json
+{
+  "name": "02_add_user_preferences",
+  "operations": [
+    {
+      "alter_column": {
+        "table": "projects_table",
+        "column": "user_preferences",
+        "type": "jsonb",
+        "nullable": true,
+        "comment": "Store user-specific preferences"
+      }
+    }
+  ]
+}
+```
+
+Example - Creating an index:
+```json
+{
+  "name": "03_add_paper_index",
+  "operations": [
+    {
+      "sql": {
+        "up": "CREATE INDEX idx_papers_publication_date ON papers_table(publication_date);",
+        "down": "DROP INDEX IF EXISTS idx_papers_publication_date;"
+      }
+    }
+  ]
+}
+```
+
+3. **Run the migration:**
+```bash
+# In Docker
+docker compose restart web
+
+# Or manually
+./scripts/migrate.sh
+```
+
+### Available Migration Operations
+
+pgroll supports various operations:
+- `create_table`: Create new tables
+- `drop_table`: Remove tables
+- `alter_column`: Add/modify/remove columns
+- `create_index`: Add indexes
+- `sql`: Execute raw SQL (with optional rollback)
+
+For complete documentation, see [pgroll operations guide](https://github.com/xataio/pgroll#operations).
+
+### Migration Files Structure
+
+All migrations are stored in the `migrations/` directory:
+```
+migrations/
+├── 01_initial_schema.json       # Initial database schema
+├── 02_add_user_preferences.json # Example: Adding a column
+└── 03_add_paper_index.json      # Example: Adding an index
+```
+
+### Helper Scripts
+
+- `scripts/migrate.sh` - Run all pending migrations
+- `scripts/new_migration.sh` - Create a new migration file
+- `scripts/migration_status.sh` - Check current migration status
+
+### Configuration
+
+pgroll is configured via `pgroll.json`:
+```json
+{
+  "pg_url": "postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable",
+  "schema": "public",
+  "migrations_dir": "migrations"
+}
+```
+
+Environment variables are automatically injected from `.env` or Docker environment.
+
+### Troubleshooting
+
+**Migration fails to start:**
+```bash
+# Check pgroll status
+docker compose exec web pgroll status
+
+# View container logs
+docker compose logs web
+```
+
+**Reset migrations (⚠️ destructive):**
+```bash
+# This will drop all tables and re-run migrations from scratch
+docker compose down -v
+docker compose up -d
+```
+
+**Rollback a migration:**
+```bash
+docker compose exec web pgroll rollback
+```
+
+---
+
+### Testing
+
+The project includes comprehensive end-to-end (E2E) tests using Playwright and Pytest. Tests run automatically in CI/CD on pull requests and pushes to main.
+
+For local testing and debugging, see the complete testing guide:
+- **[E2E Testing Documentation](tests/README.md)**
+
+## Testing
+
+The project includes comprehensive end-to-end (E2E) tests using Playwright. For detailed testing documentation, see [tests/e2e/README.md](tests/e2e/README.md).
+
+### Quick Test Commands
+```bash
+# Run all E2E tests
+cd tests/e2e/
+./run_e2e_tests.sh .
+```
+---
+
 ### Contribution workflow
 * Before creating a PR, make sure that your local commits go through pre-commit hooks, which check
 for formatting, linting and security issues. They also update the needed modules in

@@ -40,5 +40,4 @@ llm_4o = ChatOpenAI(
     temperature=0.3,
 )
 
-# Default LLM used throughout the codebase
 LLM = llm_41

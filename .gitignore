@@ -6,3 +6,7 @@ __pycache__/
 *.idea
 chroma_storage/
 /evaluation_results/
+
+# E2E test artifacts
+tests/e2e/screenshots/
+tests/e2e/.llm_cache/

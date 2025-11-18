@@ -1,0 +1,15 @@
+{
+  "operations": [
+    {
+      "add_column": {
+        "table": "projects_table",
+        "column": {
+          "name": "user_id",
+          "type": "text",
+          "nullable": false,
+          "default": "'anonymous'"
+        }
+      }
+    }
+  ]
+}
