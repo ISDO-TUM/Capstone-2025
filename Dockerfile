@@ -1,11 +1,6 @@
 # Use an official Python runtime as a parent image
 FROM golang:1.24-bookworm AS pgroll-builder
 
-# C toolchain + git + certs for pg_query_go build
-RUN apt-get install -y \
-    git \
-    ca-certificates
-
 # Ensure cgo is enabled (needed by pg_query_go)
 ENV CGO_ENABLED=1
 

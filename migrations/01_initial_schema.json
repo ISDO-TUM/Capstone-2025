@@ -30,7 +30,6 @@
         "name": "projects_table",
         "columns": [
           {"name": "project_id", "type": "text", "pk": true},
-          {"name": "user_id", "type": "text", "nullable": false},
           {"name": "title", "type": "text", "nullable": false},
           {"name": "description", "type": "text", "nullable": false},
           {"name": "email", "type": "text", "nullable": true},
