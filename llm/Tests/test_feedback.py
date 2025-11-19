@@ -39,7 +39,9 @@ def run_update_user_vector_test(user_vector, papers):
         paper_vectors[title] = paper_vector
 
         assert isinstance(paper_vector, (list, np.ndarray))
-        assert np.all(np.isfinite(paper_vector)), "Paper embedding contains invalid values"
+        assert np.all(np.isfinite(paper_vector)), (
+            "Paper embedding contains invalid values"
+        )
 
         sim = cosine_similarity(user_vector, paper_vector)
         assert -1.0001 <= sim <= 1.0001, "Cosine similarity out of expected range"
@@ -67,13 +69,17 @@ def run_update_user_vector_test(user_vector, papers):
         )
         print(f"Applied rating {rating} to '{title}'")
 
-    assert not np.allclose(updated_vector, user_vector), "User vector should change after updates"
+    assert not np.allclose(updated_vector, user_vector), (
+        "User vector should change after updates"
+    )
 
     # Get new similarities
     print("\nUpdated similarities:")
     for title, paper_vector in paper_vectors.items():
         sim = cosine_similarity(updated_vector, paper_vector)
-        assert -1.0001 <= sim <= 1.0001, "Updated cosine similarity out of expected range"
+        assert -1.0001 <= sim <= 1.0001, (
+            "Updated cosine similarity out of expected range"
+        )
 
         # Ensure similarity changed at least slightly
         old_sim = dict(initial_sims)[title]
@@ -89,19 +95,19 @@ def test_update_user_vector_flow():
         {
             "title": "Deep Learning for Computer Vision",
             "abstract": "This paper presents novel deep learning approaches for computer vision tasks "
-                        "including image classification and object detection.",
+            "including image classification and object detection.",
             "rating": 1,
         },
         {
             "title": "Natural Language Processing with Transformers",
             "abstract": "This paper explores transformer architectures for natural language processing tasks "
-                        "including text generation and translation.",
+            "including text generation and translation.",
             "rating": 5,
         },
         {
             "title": "Reinforcement Learning in Robotics",
             "abstract": "This paper discusses reinforcement learning applications in robotics for autonomous "
-                        "navigation and manipulation.",
+            "navigation and manipulation.",
             "rating": 1,
         },
     ]
