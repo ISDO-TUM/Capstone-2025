@@ -4,24 +4,28 @@
       "create_table": {
         "name": "papers_table",
         "columns": [
-          {"name": "paper_hash", "type": "text", "pk": true},
-          {"name": "id", "type": "text", "nullable": false},
-          {"name": "title", "type": "text", "nullable": false},
-          {"name": "abstract", "type": "text", "nullable": true},
-          {"name": "authors", "type": "text", "nullable": true},
-          {"name": "publication_date", "type": "text", "nullable": true},
-          {"name": "landing_page_url", "type": "text", "nullable": true},
-          {"name": "pdf_url", "type": "text", "nullable": true},
-          {"name": "similarity_score", "type": "real", "nullable": true},
-          {"name": "fwci", "type": "real", "nullable": true},
-          {"name": "citation_normalized_percentile", "type": "real", "nullable": true},
-          {"name": "cited_by_count", "type": "integer", "nullable": true},
-          {"name": "counts_by_year", "type": "jsonb", "nullable": true},
-          {"name": "venue_name", "type": "text", "nullable": true},
-          {"name": "venue_type", "type": "text", "nullable": true},
-          {"name": "is_oa", "type": "boolean", "nullable": true},
-          {"name": "oa_status", "type": "text", "nullable": true},
-          {"name": "oa_url", "type": "text", "nullable": true}
+          { "name": "paper_hash", "type": "text", "pk": true },
+          { "name": "id", "type": "text", "nullable": false },
+          { "name": "title", "type": "text", "nullable": false },
+          { "name": "abstract", "type": "text", "nullable": true },
+          { "name": "authors", "type": "text", "nullable": true },
+          { "name": "publication_date", "type": "text", "nullable": true },
+          { "name": "landing_page_url", "type": "text", "nullable": true },
+          { "name": "pdf_url", "type": "text", "nullable": true },
+          { "name": "similarity_score", "type": "real", "nullable": true },
+          { "name": "fwci", "type": "real", "nullable": true },
+          {
+            "name": "citation_normalized_percentile",
+            "type": "real",
+            "nullable": true
+          },
+          { "name": "cited_by_count", "type": "integer", "nullable": true },
+          { "name": "counts_by_year", "type": "jsonb", "nullable": true },
+          { "name": "venue_name", "type": "text", "nullable": true },
+          { "name": "venue_type", "type": "text", "nullable": true },
+          { "name": "is_oa", "type": "boolean", "nullable": true },
+          { "name": "oa_status", "type": "text", "nullable": true },
+          { "name": "oa_url", "type": "text", "nullable": true }
         ]
       }
     },
@@ -29,14 +33,23 @@
       "create_table": {
         "name": "projects_table",
         "columns": [
-          {"name": "project_id", "type": "text", "pk": true},
-          {"name": "user_id", "type": "text", "nullable": false},
-          {"name": "title", "type": "text", "nullable": false},
-          {"name": "description", "type": "text", "nullable": false},
-          {"name": "email", "type": "text", "nullable": true},
-          {"name": "queries", "type": "text", "nullable": true},
-          {"name": "creation_date", "type": "timestamp", "nullable": true, "default": "CURRENT_TIMESTAMP"},
-          {"name": "user_profile_embedding", "type": "jsonb", "nullable": true}
+          { "name": "project_id", "type": "text", "pk": true },
+          { "name": "user_id", "type": "text", "nullable": false },
+          { "name": "title", "type": "text", "nullable": false },
+          { "name": "description", "type": "text", "nullable": false },
+          { "name": "email", "type": "text", "nullable": true },
+          { "name": "queries", "type": "text", "nullable": true },
+          {
+            "name": "creation_date",
+            "type": "timestamp",
+            "nullable": true,
+            "default": "CURRENT_TIMESTAMP"
+          },
+          {
+            "name": "user_profile_embedding",
+            "type": "jsonb",
+            "nullable": true
+          }
         ]
       }
     },
@@ -44,15 +57,50 @@
       "create_table": {
         "name": "paperprojects_table",
         "columns": [
-          {"name": "project_id", "type": "text", "pk": true, "references": {"name": "fk_project", "table": "projects_table", "column": "project_id", "on_delete": "CASCADE"}},
-          {"name": "paper_hash", "type": "text", "pk": true, "references": {"name": "fk_paper", "table": "papers_table", "column": "paper_hash", "on_delete": "CASCADE"}},
-          {"name": "summary", "type": "text", "nullable": false},
-          {"name": "newsletter", "type": "boolean", "nullable": true},
-          {"name": "seen", "type": "boolean", "nullable": true},
-          {"name": "creation_date", "type": "timestamp", "nullable": true, "default": "CURRENT_TIMESTAMP"},
-          {"name": "rating", "type": "integer", "nullable": true},
-          {"name": "is_replacement", "type": "boolean", "nullable": true, "default": "false"},
-          {"name": "excluded", "type": "boolean", "nullable": true, "default": "false"}
+          {
+            "name": "project_id",
+            "type": "text",
+            "pk": true,
+            "references": {
+              "name": "fk_project",
+              "table": "projects_table",
+              "column": "project_id",
+              "on_delete": "CASCADE"
+            }
+          },
+          {
+            "name": "paper_hash",
+            "type": "text",
+            "pk": true,
+            "references": {
+              "name": "fk_paper",
+              "table": "papers_table",
+              "column": "paper_hash",
+              "on_delete": "CASCADE"
+            }
+          },
+          { "name": "summary", "type": "text", "nullable": false },
+          { "name": "newsletter", "type": "boolean", "nullable": true },
+          { "name": "seen", "type": "boolean", "nullable": true },
+          {
+            "name": "creation_date",
+            "type": "timestamp",
+            "nullable": true,
+            "default": "CURRENT_TIMESTAMP"
+          },
+          { "name": "rating", "type": "integer", "nullable": true },
+          {
+            "name": "is_replacement",
+            "type": "boolean",
+            "nullable": true,
+            "default": "false"
+          },
+          {
+            "name": "excluded",
+            "type": "boolean",
+            "nullable": true,
+            "default": "false"
+          }
         ]
       }
     }

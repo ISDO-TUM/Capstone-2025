@@ -15,7 +15,6 @@ import json
 import asyncio
 import logging
 import logging.config
-import atexit
 import os
 import sys
 import io
@@ -74,7 +73,15 @@ from config import (
 )
 from clerk_backend_api import Clerk
 from clerk_backend_api.security.types import AuthenticateRequestOptions
-from custom_logging import APILogger
+from custom_logging import APILogger, user_id_ctx, project_id_ctx
+from config import (
+    TEST_MODE,
+    CLERK_SECRET_KEY,
+    CLERK_PUBLISHABLE_KEY,
+    CLERK_FRONTEND_API_URL,
+    HOSTNAME,
+    validate_required_env_vars,
+)
 
 # Only import Clerk if not in test mode
 if not TEST_MODE:
@@ -84,6 +91,8 @@ else:
     # Mock Clerk for testing
     Clerk = None
     AuthenticateRequestOptions = None
+
+from custom_logging import APILogger, user_id_ctx, project_id_ctx
 
 logger = logging.getLogger(__name__)
 test_logger = APILogger()
@@ -162,6 +171,10 @@ def authenticate_user():
 
     # In test mode, bypass Clerk and set a test user
     if TEST_MODE:
+        user_id_ctx.set("test_user_id")
+    if TEST_MODE:
+        user_id_ctx.set("test_user_id")
+
         request.auth = {
             "user_id": "test_user_id",
             "username": "test_user",
@@ -204,6 +217,7 @@ def authenticate_user():
     # Attach authentication information to the request object
     if request_state.is_signed_in:
         user_id = request_state.payload.get("sub")
+        user_id_ctx.set(user_id)
 
         request.auth = {
             "user_id": user_id,
@@ -230,17 +244,20 @@ def authenticate_user():
             f"Not signed in - status: {request_state.status}, reason: {request_state.reason}"
         )
         request.auth = None
+        user_id_ctx.set("unauthenticated user")
 
-def setup_logging():
-    config_file = pathlib.Path("custom_logging/config.json")
+
+def setup_logging(path: str = "custom_logging/config.json"):
+    """
+    Initialize and configure logging using a JSON configuration file.
+
+    Args:
+        path (str): Path to the JSON configuration file. Defaults to "custom_logging/config.json".
+    """
+    config_file = pathlib.Path(path)
     with open(config_file) as f_in:
         config = json.load(f_in)
     logging.config.dictConfig(config)
-
-    # queue_handler = logging.getHandlerByName("queue_handler")
-    # if queue_handler is not None:
-    #     queue_handler.listener.start()
-    #     atexit.register(queue_handler.listener.stop)
 
 
 @app.errorhandler(413)
@@ -269,6 +286,7 @@ def clerk_config():
             "publishableKey": CLERK_PUBLISHABLE_KEY,
             "frontendApiUrl": CLERK_FRONTEND_API_URL,
         }
+    )
 
 
 @app.route("/create-project")
@@ -284,8 +302,8 @@ def create_project_page():
     return render_template(
         "create_project.html",
         auth=request.auth,
-        CLERK_PUBLISHABLE_KEY=os.getenv("CLERK_PUBLISHABLE_KEY"),
-        CLERK_FRONTEND_API_URL=os.getenv("CLERK_FRONTEND_API_URL"),
+        CLERK_PUBLISHABLE_KEY=CLERK_PUBLISHABLE_KEY,
+        CLERK_FRONTEND_API_URL=CLERK_FRONTEND_API_URL,
     )
 
 
@@ -302,12 +320,19 @@ def project_overview_page(project_id):
         return render_template(
             "dashboard.html",
             auth=None,
-            CLERK_PUBLISHABLE_KEY=os.getenv("CLERK_PUBLISHABLE_KEY"),
-            CLERK_FRONTEND_API_URL=os.getenv("CLERK_FRONTEND_API_URL"),
+            CLERK_PUBLISHABLE_KEY=CLERK_PUBLISHABLE_KEY,
+            CLERK_FRONTEND_API_URL=CLERK_FRONTEND_API_URL,
         )
 
+    project_id_ctx.set(project_id)
     project = get_project_by_id(project_id)
     if project["user_id"] != request.auth["user_id"]:
+    user_id = request.auth["user_id"]
+    project_id_ctx.set(project_id)
+    project = get_project_by_id(user_id, project_id)
+    if not project:
+        return {"error": "Project not found"}, 404
+    if project["user_id"] != user_id:
         return {"error": "Forbidden"}, 403
 
     test_logger.request_start(method="GET", path=f"/project/{project_id}")
@@ -315,9 +340,8 @@ def project_overview_page(project_id):
         "project_overview.html",
         project_id=project_id,
         auth=request.auth,
-        CLERK_PUBLISHABLE_KEY=os.getenv("CLERK_PUBLISHABLE_KEY"),
-        CLERK_FRONTEND_API_URL=os.getenv("CLERK_FRONTEND_API_URL"),
->>>>>>> d6cf1a0 (feat: add structured logging with Grafana integration)
+        CLERK_PUBLISHABLE_KEY=CLERK_PUBLISHABLE_KEY,
+        CLERK_FRONTEND_API_URL=CLERK_FRONTEND_API_URL,
     )
 
 
@@ -335,9 +359,13 @@ def api_create_project():
     data = request.get_json() or {}
     title = data.get("title")
     desc = data.get("description")
-    if not title or not desc:
-        return jsonify({"error": "Missing title or description"}), 400
-    project_id = add_new_project_to_db(user_id, title, desc)
+    log_history_string = data.get("logHistory")
+    log_history = log_history_string.lower() == "true"
+    if not title or not desc or not log_history_string:
+        return jsonify({"error": "Missing title/description/consent-value"}), 400
+    project_id = add_new_project_to_db(user_id, title, desc, log_history)
+    project_id_ctx.set(project_id)
+
     return jsonify({"projectId": project_id}), 201
 
 
@@ -383,6 +411,7 @@ def get_recommendations():
         Response: Server-sent event stream with recommendations or agent thoughts.
     """
 
+    test_logger.request_start(method="POST", path="/api/recommendations")
     if not request.auth:
         return {"error": "Not authenticated"}, 401
 
@@ -394,6 +423,8 @@ def get_recommendations():
             print(f"Failed getting recs with data: {data}")
             return jsonify({"error": "Missing project_id"}), 400
 
+        # project_id validated above but currently unused in mock implementation
+        project_id_ctx.set(data["projectId"])
         update_recommendations = data.get("update_recommendations", False)
         project = get_project_by_id(user_id, data["projectId"])
         if not project:
@@ -403,6 +434,21 @@ def get_recommendations():
         # Check if there's an existing agent session for this project
         with agent_locks:
             existing_session = agent_sessions.get(project_id)
+        def generate():
+            try:
+                if update_recommendations:
+                    removed = delete_project_rows(
+                        project_id
+                    )  # In the future there might be a refresh papers button, so we would need to empty the database to reload a new set of recommendations
+                    print(f"Deleted {removed} row(s).")
+                    for response_part in trigger_stategraph_agent_show_thoughts(
+                        user_description, project_id
+                    ):
+                        logger.info(f"Getting agent response: {response_part}")
+                        if response_part["is_final"]:
+                            try:
+                                llm_response_content = response_part["final_content"]
+                                response_data = json.loads(llm_response_content)
 
         # If agent is already processing and we're not forcing update, connect to existing session
         if existing_session is not None and not update_recommendations:
@@ -742,6 +788,7 @@ def rate_paper():
 
     paper_hash = data.get("paper_hash")
     project_id = data.get("project_id")
+    project_id_ctx.set(project_id)
     rating = data.get("rating")
 
     print(
@@ -836,7 +883,9 @@ def api_get_project(project_id):
         return jsonify({"error": "Unauthorized"}), 401
 
     user_id = request.auth["user_id"]
+    project_id_ctx.set(project_id)
     proj = get_project_by_id(user_id, project_id)
+    project_id_ctx.set(project_id)
     if not proj:
         return jsonify({"error": "Project not found"}), 404
     return jsonify(
@@ -867,6 +916,7 @@ def api_update_project_prompt(project_id):
         return jsonify({"error": "Unauthorized"}), 401
 
     user_id = request.auth["user_id"]
+    project_id_ctx.set(project_id)
     data = request.get_json() or {}
     new_prompt = data.get("prompt")
     if not new_prompt:
@@ -916,6 +966,7 @@ def load_more_papers():
         user_id = request.auth["user_id"]
         data = request.get_json()
         project_id = data.get("project_id") if data else None
+        project_id_ctx.set(project_id if project_id else "")
         if not project_id:
             return jsonify({"error": "Missing project_id"}), 400
 
@@ -1024,5 +1075,9 @@ if __name__ == "__main__":
         raise ValueError(
             "HOSTNAME environment variable is required for authentication."
         )
+    # Validate required environment variables
+    validate_required_env_vars()
+
+    setup_logging()
 
     app.run(host="0.0.0.0", debug=True, port=80)  # nosec B201, B104
