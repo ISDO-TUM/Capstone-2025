@@ -49,7 +49,10 @@ logger = logging.getLogger(__name__)
 
 user_consent = True
 
-def calculate_openai_cost(input_tokens: int, output_tokens: int, model: str = "gpt-4.1") -> float:
+
+def calculate_openai_cost(
+    input_tokens: int, output_tokens: int, model: str = "gpt-4.1"
+) -> float:
     if model == "gpt-4.1":
         input_price_per_million = 2.00
         output_price_per_million = 8.00
@@ -408,7 +411,10 @@ def detect_out_of_scope_query(query_description: str) -> str:
         "input_tokens": response.usage_metadata["input_tokens"],
         "output_tokens": response.usage_metadata["output_tokens"],
         "total_tokens": response.usage_metadata["total_tokens"],
-        "total_cost_in_usd": calculate_openai_cost(response.usage_metadata["input_tokens"], response.usage_metadata["output_tokens"])
+        "total_cost_in_usd": calculate_openai_cost(
+            response.usage_metadata["input_tokens"],
+            response.usage_metadata["output_tokens"],
+        ),
     }
     if user_consent:
         metadata = {**metadata, "prompt": prompt}

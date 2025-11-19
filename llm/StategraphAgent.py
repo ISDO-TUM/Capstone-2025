@@ -27,7 +27,7 @@ from custom_logging import agent_logger
 from contextvars import ContextVar
 
 
-user_query_ctx: ContextVar[str] = ContextVar('user_query', default='')
+user_query_ctx: ContextVar[str] = ContextVar("user_query", default="")
 
 # --- State schema ---
 # The state is a dict with the following keys:
@@ -38,13 +38,15 @@ user_query_ctx: ContextVar[str] = ContextVar('user_query', default='')
 # - papers_filtered: list[dict] (optional)
 # - final_output: dict (optional)
 
+
 def truncate_middle(text: str, max_length: int = 50) -> str:
     if len(text) <= max_length:
         return text
-    
+
     keep = (max_length - 3) // 2  # -3 for the "..."
-    
+
     return text[:keep] + "..." + text[-keep:]
+
 
 # --- Error handling and logging decorator ---
 
@@ -122,8 +124,8 @@ def input_node(state):
     keywords = []
     if user_query and len(user_query.split()) == 1:
         keywords = [user_query]
-    
-        agent_logger.node_complete(node_name=node_name, metadata={"keywords": keywords}) 
+
+        agent_logger.node_complete(node_name=node_name, metadata={"keywords": keywords})
     # Add project_id to state
     return {
         "user_query": user_query,
@@ -169,7 +171,9 @@ def out_of_scope_check_node(state):
         {"query_description": state["user_query"]}
     )
     state["out_of_scope_result"] = result
-    agent_logger.node_complete(node_name=node_name, metadata={"out_of_scope_results": result})
+    agent_logger.node_complete(
+        node_name=node_name, metadata={"out_of_scope_results": result}
+    )
     return state
 
 
@@ -847,10 +851,7 @@ def trigger_stategraph_agent_show_thoughts(user_message: str, project_id: str):
     try:
         user_query_ctx.set(truncate_middle(user_message))
         # Initialize state
-        state = {
-            "user_query": user_message,
-            "project_id": project_id
-        }
+        state = {"user_query": user_message, "project_id": project_id}
 
         # Step 1: Input node
         yield {

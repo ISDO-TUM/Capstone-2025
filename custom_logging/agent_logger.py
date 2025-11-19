@@ -12,24 +12,18 @@ class AgentLogger(StructuredLogger):
             metadata={
                 "node_name": node_name,
                 "user_query": user_query,
-            }
+            },
         )
 
     def node_complete(self, node_name: str, metadata: dict):
         self.info(
             "Node completed",
-            metadata={
-                "node_name": node_name,
-                **self._pending_metadata,
-                **metadata
-            }
+            metadata={"node_name": node_name, **self._pending_metadata, **metadata},
         )
         self.clear_metadata()
-
 
     def add_metadata(self, metadata):
         self._pending_metadata.update(metadata)
 
-    
     def clear_metadata(self):
         self._pending_metadata.clear()

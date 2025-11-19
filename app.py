@@ -155,7 +155,7 @@ def setup_logging():
     with open(config_file) as f_in:
         config = json.load(f_in)
     logging.config.dictConfig(config)
-  
+
 
 @app.errorhandler(413)
 def request_entity_too_large(error):

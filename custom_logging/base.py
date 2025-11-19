@@ -4,8 +4,8 @@ from contextvars import ContextVar
 import logging
 
 
-project_id_ctx: ContextVar[str] = ContextVar('project_id', default='')
-user_id_ctx: ContextVar[str] = ContextVar('user_id', default='')
+project_id_ctx: ContextVar[str] = ContextVar("project_id", default="")
+user_id_ctx: ContextVar[str] = ContextVar("user_id", default="")
 
 
 class LogContext(BaseModel):
@@ -41,7 +41,7 @@ class StructuredLogger:
         return LogContext(
             project_id=project_id_ctx.get() or "unknown",
             user_id=user_id_ctx.get() or "unknown",
-            component=self.component
+            component=self.component,
         )
 
     def info(self, message: str, metadata: Optional[dict] = None):
