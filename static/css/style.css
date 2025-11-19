@@ -76,6 +76,49 @@ body {
     min-height: 120px;
 }
 
+/* Styling for select dropdown */
+.form-group select {
+    width: 100%;
+    padding: 15px 18px;
+    border: none;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.7);
+    box-shadow: 0 2px 12px 0 rgba(0,0,0,0.06);
+    font-size: 1.08rem;
+    color: #1a237e;
+    outline: none;
+    transition: box-shadow 0.2s, background 0.2s;
+    font-weight: 500;
+    margin-top: 4px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%231a237e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 18px center;
+    background-size: 16px;
+    padding-right: 48px;
+    box-sizing: border-box;
+}
+
+.form-group select:focus {
+    background: rgba(255,255,255,0.95);
+    box-shadow: 0 4px 24px 0 rgba(0,123,255,0.10);
+}
+
+.form-group select:hover {
+    background: rgba(255,255,255,0.85);
+    box-shadow: 0 4px 20px 0 rgba(0,123,255,0.08);
+}
+
+.form-group select option {
+    color: #1a237e;
+    background: white;
+    font-weight: 500;
+    padding: 12px;
+}
+
 /* Form layout for desktop */
 @media (min-width: 768px) {
     #createProjectForm {

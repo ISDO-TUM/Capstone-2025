@@ -22,7 +22,9 @@ from database.database_connection import connect_to_db
 logger = logging.getLogger(__name__)
 
 
-def add_new_project_to_db(user_id: str, title: str, description: str) -> str:
+def add_new_project_to_db(
+    user_id: str, title: str, description: str, log_history: bool
+) -> str:
     """
     Add a new project to the projects_table for the current user.
     Args:
@@ -43,11 +45,11 @@ def add_new_project_to_db(user_id: str, title: str, description: str) -> str:
         project_id = str(uuid.uuid4())
 
     sql_insert = """
-    INSERT INTO projects_table (project_id, user_id, title, description)
+    INSERT INTO projects_table (project_id, title, description, log_history)
         VALUES (%s, %s, %s, %s)
     """
 
-    cursor.execute(sql_insert, (project_id, user_id, title, description))
+    cursor.execute(sql_insert, (project_id, title, description, log_history))
     conn.commit()
     cursor.close()
     conn.close()
@@ -80,7 +82,7 @@ def add_user_profile_embedding(user_id: str, project_id: str, embedding: List[fl
         """
         UPDATE projects_table
         SET user_profile_embedding = %s
-        WHERE project_id = %s AND user_id = %s 
+        WHERE project_id = %s AND user_id = %s
     """,
         (embedding_json, project_id, user_id),
     )
@@ -186,9 +188,9 @@ def get_queries_for_project(user_id: str, project_id: str):
     cursor = conn.cursor()
 
     cursor.execute(
-        """ 
-    SELECT queries 
-    FROM projects_table 
+        """
+    SELECT queries
+    FROM projects_table
     WHERE project_id = %s AND user_id = %s""",
         (project_id, user_id),
     )

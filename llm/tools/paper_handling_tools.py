@@ -40,6 +40,8 @@ from paper_handling.paper_handler import (
     generate_paper_summary_sync,
     search_and_filter_papers,
 )
+from custom_logging import agent_logger
+from custom_logging.utils import calculate_openai_cost
 from utils.status import Status
 
 logger = logging.getLogger(__name__)
@@ -390,6 +392,19 @@ async def detect_out_of_scope_query(query_description: str) -> str:
     """
 
     response = await LLM(prompt)
+    metadata = {
+        "prompt": prompt,
+        "prompt_length": len(prompt),
+        # "model_name": response.response_metadata["model_name"],
+        # "input_tokens": response.usage_metadata["input_tokens"],
+        # "output_tokens": response.usage_metadata["output_tokens"],
+        # "total_tokens": response.usage_metadata["total_tokens"],
+        # "total_cost_in_usd": calculate_openai_cost(
+        #     response.usage_metadata["input_tokens"],
+        #     response.usage_metadata["output_tokens"],
+        # ),
+    }
+    agent_logger.add_metadata(metadata=metadata)
 
     try:
         logger.info("Checking if query is out of scope and extracting keywords.")
