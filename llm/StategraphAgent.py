@@ -23,6 +23,11 @@ import json
 from llm.LLMDefinition import LLM
 from llm.tools.Tools_aggregator import get_tools
 from llm.tools.paper_handling_tools import generate_relevance_summary
+from custom_logging import agent_logger
+from contextvars import ContextVar
+
+
+user_query_ctx: ContextVar[str] = ContextVar('user_query', default='')
 
 # --- State schema ---
 # The state is a dict with the following keys:
@@ -32,6 +37,14 @@ from llm.tools.paper_handling_tools import generate_relevance_summary
 # - papers_raw: list[dict] (optional)
 # - papers_filtered: list[dict] (optional)
 # - final_output: dict (optional)
+
+def truncate_middle(text: str, max_length: int = 50) -> str:
+    if len(text) <= max_length:
+        return text
+    
+    keep = (max_length - 3) // 2  # -3 for the "..."
+    
+    return text[:keep] + "..." + text[-keep:]
 
 # --- Error handling and logging decorator ---
 
@@ -96,7 +109,9 @@ def input_node(state):
         dict: Updated state with user_query, keywords, and project_id.
     """
     # Initialize the state with the user query
+    node_name = "input_node"
     user_query = state["user_query"]
+    agent_logger.node_start(node_name=node_name, user_query=user_query_ctx.get())
     # Extract project_id if appended to the user_query (e.g., '... project ID: <id>')
     project_id = None
     if "project ID:" in user_query:
@@ -107,6 +122,8 @@ def input_node(state):
     keywords = []
     if user_query and len(user_query.split()) == 1:
         keywords = [user_query]
+    
+        agent_logger.node_complete(node_name=node_name, metadata={"keywords": keywords}) 
     # Add project_id to state
     return {
         "user_query": user_query,
@@ -133,6 +150,9 @@ def out_of_scope_check_node(state):
     Returns:
         dict: Updated state with out_of_scope_result.
     """
+    node_name = "out_of_scope_check"
+    agent_logger.node_start(node_name=node_name, user_query=user_query_ctx.get())
+
     # Get the detect_out_of_scope_query tool
     tools = get_tools()
     detect_out_of_scope_query = None
@@ -149,6 +169,7 @@ def out_of_scope_check_node(state):
         {"query_description": state["user_query"]}
     )
     state["out_of_scope_result"] = result
+    agent_logger.node_complete(node_name=node_name, metadata={"out_of_scope_results": result})
     return state
 
 
@@ -815,7 +836,7 @@ def store_papers_for_project_node(state):
     return state
 
 
-def trigger_stategraph_agent_show_thoughts(user_message: str):
+def trigger_stategraph_agent_show_thoughts(user_message: str, project_id: str):
     """
     Generator that yields each step of the Stategraph agent's thought process for frontend streaming.
     Args:
@@ -824,8 +845,12 @@ def trigger_stategraph_agent_show_thoughts(user_message: str):
         dict: Thought and state at each step, including final output.
     """
     try:
+        user_query_ctx.set(truncate_middle(user_message))
         # Initialize state
-        state = {"user_query": user_message}
+        state = {
+            "user_query": user_message,
+            "project_id": project_id
+        }
 
         # Step 1: Input node
         yield {

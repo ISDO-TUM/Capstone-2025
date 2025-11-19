@@ -14,7 +14,6 @@ This is the main entrypoint for running the web application and serving the fron
 import json
 import logging
 import logging.config
-import atexit
 import os
 import sys
 import io
@@ -63,7 +62,7 @@ from pubsub.pubsub_params import DAYS_FOR_UPDATE
 from utils.status import Status
 from clerk_backend_api import Clerk
 from clerk_backend_api.security.types import AuthenticateRequestOptions
-from custom_logging import APILogger
+from custom_logging import APILogger, user_id_ctx, project_id_ctx
 
 # Only import Clerk if not in test mode
 if os.getenv("TEST_MODE") != "true":
@@ -94,6 +93,7 @@ def authenticate_user():
 
     # In test mode, bypass Clerk and set a test user
     if os.getenv("TEST_MODE") == "true":
+        user_id_ctx.set("test_user_id")
         request.auth = {
             "user_id": "test_user_id",
             "username": "test_user",
@@ -123,6 +123,7 @@ def authenticate_user():
     # Attach authentication information to the request object
     if request_state.is_signed_in:
         user_id = request_state.payload.get("sub")
+        user_id_ctx.set(user_id)
 
         request.auth = {
             "user_id": user_id,
@@ -146,18 +147,15 @@ def authenticate_user():
 
     else:
         request.auth = None
+        user_id_ctx.set("unauthenticated user")
+
 
 def setup_logging():
     config_file = pathlib.Path("custom_logging/config.json")
     with open(config_file) as f_in:
         config = json.load(f_in)
     logging.config.dictConfig(config)
-
-    # queue_handler = logging.getHandlerByName("queue_handler")
-    # if queue_handler is not None:
-    #     queue_handler.listener.start()
-    #     atexit.register(queue_handler.listener.stop)
-
+  
 
 @app.errorhandler(413)
 def request_entity_too_large(error):
@@ -227,6 +225,7 @@ def project_overview_page(project_id):
             CLERK_FRONTEND_API_URL=os.getenv("CLERK_FRONTEND_API_URL"),
         )
 
+    project_id_ctx.set(project_id)
     project = get_project_by_id(project_id)
     if project["user_id"] != request.auth["user_id"]:
         return {"error": "Forbidden"}, 403
@@ -257,6 +256,7 @@ def api_create_project():
     if not title or not desc:
         return jsonify({"error": "Missing title or description"}), 400
     project_id = add_new_project_to_db(title, desc)
+    project_id_ctx.set(project_id)
     return jsonify({"projectId": project_id}), 201
 
 
@@ -299,6 +299,7 @@ def get_recommendations():
         Response: Server-sent event stream with recommendations or agent thoughts.
     """
 
+    test_logger.request_start(method="POST", path="/api/recommendations")
     if not request.auth:
         return {"error": "Not authenticated"}, 401
 
@@ -311,6 +312,7 @@ def get_recommendations():
             return jsonify({"error": "Missing project_id"}), 400
 
         # project_id validated above but currently unused in mock implementation
+        project_id_ctx.set(data["projectId"])
         update_recommendations = data.get("update_recommendations", False)
         project = get_project_by_id(data["projectId"])
         user_description, project_id = project["description"], project["project_id"]
@@ -323,7 +325,7 @@ def get_recommendations():
                     )  # In the future there might be a refresh papers button, so we would need to empty the database to reload a new set of recommendations
                     print(f"Deleted {removed} row(s).")
                     for response_part in trigger_stategraph_agent_show_thoughts(
-                        user_description + "project ID: " + project_id
+                        user_description, project_id
                     ):
                         logger.info(f"Getting agent response: {response_part}")
                         if response_part["is_final"]:
@@ -540,6 +542,7 @@ def rate_paper():
 
     paper_hash = data.get("paper_hash")
     project_id = data.get("project_id")
+    project_id_ctx.set(project_id)
     rating = data.get("rating")
 
     print(
@@ -631,6 +634,7 @@ def api_get_project(project_id):
     if not request.auth:
         return jsonify({"error": "Unauthorized"}), 401
 
+    project_id_ctx.set(project_id)
     proj = get_project_by_id(project_id)
     if not proj:
         return jsonify({"error": "Project not found"}), 404
@@ -661,6 +665,7 @@ def api_update_project_prompt(project_id):
     if not request.auth:
         return jsonify({"error": "Unauthorized"}), 401
 
+    project_id_ctx.set(project_id)
     data = request.get_json() or {}
     new_prompt = data.get("prompt")
     if not new_prompt:
@@ -689,6 +694,7 @@ def load_more_papers():
     try:
         data = request.get_json()
         project_id = data.get("project_id") if data else None
+        project_id_ctx.set(project_id if project_id else "")
         if not project_id:
             return jsonify({"error": "Missing project_id"}), 400
 
