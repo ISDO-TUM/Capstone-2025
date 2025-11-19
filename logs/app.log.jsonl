@@ -534,3 +534,6 @@
 {"asctime": "2025-12-17T18:23:13+0000", "message": "API request info", "level": "INFO", "project_id": "unknown", "user_id": "user_35enyWlB5F2DSjawiQYn2VKsxZC", "component": "api", "method": "GET", "path": "/api/pubsub/get_newsletter_papers", "info_message": "Row (58e2afef-a25d-4a85-b48c-937837ff3a42, 953490ee3f1b448c1484e26b1fc90cb49856cc6d6fa49e4fca5e2ed91f40179d) marked as seen."}
 {"asctime": "2025-12-17T18:23:13+0000", "message": "API request successful", "level": "INFO", "project_id": "unknown", "user_id": "user_35enyWlB5F2DSjawiQYn2VKsxZC", "component": "api", "method": "GET", "path": "/api/pubsub/get_newsletter_papers", "status_code": 200}
 {"asctime": "2025-12-17T18:23:13+0000", "message": "172.18.0.1 - - [17/Dec/2025 18:23:13] \"GET /api/pubsub/get_newsletter_papers?projectId=58e2afef-a25d-4a85-b48c-937837ff3a42 HTTP/1.1\" 200 -"}
+{"asctime": "2025-12-17T20:29:19+0000", "message": "\u001b[31m\u001b[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.\u001b[0m\n * Running on all addresses (0.0.0.0)\n * Running on http://127.0.0.1:80\n * Running on http://172.18.0.6:80"}
+{"asctime": "2025-12-17T20:29:19+0000", "message": "\u001b[33mPress CTRL+C to quit\u001b[0m"}
+{"asctime": "2025-12-17T20:29:19+0000", "message": " * Restarting with stat"}

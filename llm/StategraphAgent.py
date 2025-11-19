@@ -15,7 +15,6 @@ This module implements the main agent workflow for academic paper recommendation
 The agent is designed to be modular, extensible, and easy to debug or extend for new research flows.
 """
 
-import logging
 import json
 
 # from langgraph.graph import StateGraph
@@ -23,6 +22,9 @@ import json
 from llm.LLMDefinition import LLM
 from llm.tools.Tools_aggregator import get_tools
 from llm.tools.paper_handling_tools import generate_relevance_summary
+from custom_logging import agent_logger
+from custom_logging.utils import calculate_openai_cost
+
 
 # --- State schema ---
 # The state is a dict with the following keys:
@@ -33,10 +35,8 @@ from llm.tools.paper_handling_tools import generate_relevance_summary
 # - papers_filtered: list[dict] (optional)
 # - final_output: dict (optional)
 
-# --- Error handling and logging decorator ---
 
-logger = logging.getLogger("StategraphAgent")
-logger.setLevel(logging.INFO)
+# --- Error handling and logging decorator ---
 
 
 def node_logger(node_name, input_keys=None, output_keys=None):
@@ -52,27 +52,24 @@ def node_logger(node_name, input_keys=None, output_keys=None):
 
     def decorator(func):
         def wrapper(state):
-            logger = logging.getLogger("StategraphAgent")
             # Log input state
             if input_keys:
-                logger.info(
-                    f"[{node_name}] Input: %s", {k: state.get(k) for k in input_keys}
+                input_metadata = (
+                    {k: state.get(k) for k in input_keys} if input_keys else state
                 )
-            else:
-                logger.info(f"[{node_name}] Input: %s", state)
+                agent_logger.node_start(node_name=node_name, **input_metadata)
             try:
                 result = func(state)
                 # Log output state
-                if output_keys:
-                    logger.info(
-                        f"[{node_name}] Output: %s",
-                        {k: result.get(k) for k in output_keys},
-                    )
-                else:
-                    logger.info(f"[{node_name}] Output: %s", result)
+                output_metadata = (
+                    {k: result.get(k) for k in output_keys} if output_keys else result
+                )
+                agent_logger.node_complete(
+                    node_name=node_name, metadata=output_metadata
+                )
                 return result
             except Exception as e:
-                logger.exception(f"[{node_name}] Exception occurred: %s", e)
+                agent_logger.node_error(e)
                 state["error"] = str(e)
                 return state
 
@@ -97,16 +94,11 @@ def input_node(state):
     """
     # Initialize the state with the user query
     user_query = state["user_query"]
-    # Extract project_id if appended to the user_query (e.g., '... project ID: <id>')
-    project_id = None
-    if "project ID:" in user_query:
-        parts = user_query.rsplit("project ID:", 1)
-        user_query = parts[0].strip()
-        project_id = parts[1].strip()
-    # If the query is a single word or phrase, use it as the initial keyword
+    project_id = state["project_id"]
     keywords = []
     if user_query and len(user_query.split()) == 1:
         keywords = [user_query]
+
     # Add project_id to state
     return {
         "user_query": user_query,
@@ -197,7 +189,12 @@ def quality_control_node(state):
                         keywords = parsed["keywords"]
                         state["keywords"] = keywords
             except Exception as e:
-                logger.error(f"Error parsing out_of_scope_result: {e}")
+                agent_logger.node_error(
+                    e,
+                    parsing_context="out_of_scope_result",
+                    raw_result=result,
+                    current_keywords=keywords,
+                )
 
         # Update keywords in state
         state["keywords"] = keywords
@@ -226,6 +223,19 @@ def quality_control_node(state):
 
         try:
             filter_response = LLM.invoke(filter_detection_prompt)
+            metadata = {
+                "filter_detection_prompt": filter_detection_prompt,
+                "filter_model_name": filter_response.response_metadata["model_name"],
+                "filter_input_tokens": filter_response.usage_metadata["input_tokens"],
+                "filter_output_tokens": filter_response.usage_metadata["output_tokens"],
+                "filter_total_tokens": filter_response.usage_metadata["total_tokens"],
+                "filter_total_cost_in_usd": calculate_openai_cost(
+                    filter_response.usage_metadata["input_tokens"],
+                    filter_response.usage_metadata["output_tokens"],
+                ),
+            }
+            agent_logger.add_metadata(metadata=metadata)
+
             filter_response_content = (
                 filter_response.content
                 if hasattr(filter_response, "content")
@@ -250,10 +260,15 @@ def quality_control_node(state):
                 reason = filter_result.get("reason", "No reason provided")
 
             state["has_filter_instructions"] = has_filter_instructions
-            logger.info(f"Filter detection: {has_filter_instructions} - {reason}")
+            agent_logger.add_metadata(
+                {
+                    "filter_detection_result": has_filter_instructions,
+                    "filter_detection_reason": reason,
+                }
+            )
 
         except Exception as e:
-            logger.error(f"Error in filter detection: {e}")
+            agent_logger.node_error(e, operation="filter_detection")
             state["has_filter_instructions"] = False
 
         # LLM-driven QC decision
@@ -276,6 +291,18 @@ def quality_control_node(state):
         }}
         """
         qc_response = LLM.invoke(qc_prompt)
+        metadata = {
+            "qc_prompt": qc_prompt,
+            "qc_model_name": qc_response.response_metadata["model_name"],
+            "qc_input_tokens": qc_response.usage_metadata["input_tokens"],
+            "qc_output_tokens": qc_response.usage_metadata["output_tokens"],
+            "qc_total_tokens": qc_response.usage_metadata["total_tokens"],
+            "qc_total_cost_in_usd": calculate_openai_cost(
+                qc_response.usage_metadata["input_tokens"],
+                qc_response.usage_metadata["output_tokens"],
+            ),
+        }
+        agent_logger.add_metadata(metadata=metadata)
         qc_response_content = (
             qc_response.content if hasattr(qc_response, "content") else str(qc_response)
         )
@@ -299,19 +326,16 @@ def quality_control_node(state):
                 qc_tool_result = tool.invoke(
                     {"query_description": user_query, "keywords": keywords}
                 )
-                try:
-                    tool_result = (
-                        json.loads(qc_tool_result)
-                        if isinstance(qc_tool_result, str)
-                        else qc_tool_result
-                    )
-                    if (
-                        "result" in tool_result
-                        and "refined_keywords" in tool_result["result"]
-                    ):
-                        state["keywords"] = tool_result["result"]["refined_keywords"]
-                except Exception as e:
-                    logger.error(f"Error in ...: {e}")
+                tool_result = (
+                    json.loads(qc_tool_result)
+                    if isinstance(qc_tool_result, str)
+                    else qc_tool_result
+                )
+                if (
+                    "result" in tool_result
+                    and "refined_keywords" in tool_result["result"]
+                ):
+                    state["keywords"] = tool_result["result"]["refined_keywords"]
         elif qc_decision == "split":
             tool = tool_map.get("multi_step_reasoning")
             if tool:
@@ -322,38 +346,33 @@ def quality_control_node(state):
                 qc_tool_result = tool.invoke(
                     {"query_description": user_query, "keywords": keywords}
                 )
-                try:
-                    tool_result = (
-                        json.loads(qc_tool_result)
-                        if isinstance(qc_tool_result, str)
-                        else qc_tool_result
-                    )
-                    if "broadened_keywords" in tool_result:
-                        state["keywords"] = tool_result["broadened_keywords"]
-                except Exception as e:
-                    logger.error(f"Error in ...: {e}")
+                tool_result = (
+                    json.loads(qc_tool_result)
+                    if isinstance(qc_tool_result, str)
+                    else qc_tool_result
+                )
+                if "broadened_keywords" in tool_result:
+                    state["keywords"] = tool_result["broadened_keywords"]
         elif qc_decision == "narrow":
             tool = tool_map.get("narrow_query")
             if tool:
                 qc_tool_result = tool.invoke(
                     {"query_description": user_query, "keywords": keywords}
                 )
-                try:
-                    tool_result = (
-                        json.loads(qc_tool_result)
-                        if isinstance(qc_tool_result, str)
-                        else qc_tool_result
-                    )
-                    if "narrowed_keywords" in tool_result:
-                        state["keywords"] = tool_result["narrowed_keywords"]
-                except Exception as e:
-                    logger.error(f"Error in ...: {e}")
+                tool_result = (
+                    json.loads(qc_tool_result)
+                    if isinstance(qc_tool_result, str)
+                    else qc_tool_result
+                )
+                if "narrowed_keywords" in tool_result:
+                    state["keywords"] = tool_result["narrowed_keywords"]
         elif qc_decision == "accept":
             tool = tool_map.get("accept")
             if tool:
                 qc_tool_result = tool.invoke({"confirmation": "yes"})
         state["qc_tool_result"] = qc_tool_result
     except Exception as e:
+        agent_logger.node_error(e, operation="qc_decision")
         state["error"] = f"QC node error: {e}"
         qc_decision = "error"
     return state
@@ -406,6 +425,18 @@ def out_of_scope_handler_node(state):
 
     try:
         explanation_response = LLM.invoke(explanation_prompt)
+        metadata = {
+            "prompt": explanation_prompt,
+            "model_name": explanation_response.response_metadata["model_name"],
+            "input_tokens": explanation_response.usage_metadata["input_tokens"],
+            "output_tokens": explanation_response.usage_metadata["output_tokens"],
+            "total_tokens": explanation_response.usage_metadata["total_tokens"],
+            "total_cost_in_usd": calculate_openai_cost(
+                explanation_response.usage_metadata["input_tokens"],
+                explanation_response.usage_metadata["output_tokens"],
+            ),
+        }
+        agent_logger.add_metadata(metadata=metadata)
         explanation = (
             explanation_response.content
             if hasattr(explanation_response, "content")
@@ -413,6 +444,26 @@ def out_of_scope_handler_node(state):
         )
 
         short_explanation_response = LLM.invoke(short_explanation_prompt)
+        metadata = {
+            "short_prompt": short_explanation_prompt,
+            "short_model_name": short_explanation_response.response_metadata[
+                "model_name"
+            ],
+            "short_input_tokens": short_explanation_response.usage_metadata[
+                "input_tokens"
+            ],
+            "short_output_tokens": short_explanation_response.usage_metadata[
+                "output_tokens"
+            ],
+            "short_total_tokens": short_explanation_response.usage_metadata[
+                "total_tokens"
+            ],
+            "short_total_cost_in_usd": calculate_openai_cost(
+                short_explanation_response.usage_metadata["input_tokens"],
+                short_explanation_response.usage_metadata["output_tokens"],
+            ),
+        }
+        agent_logger.add_metadata(metadata=metadata)
         short_explanation = (
             short_explanation_response.content
             if hasattr(short_explanation_response, "content")
@@ -431,10 +482,8 @@ def out_of_scope_handler_node(state):
         state["out_of_scope_message"] = out_of_scope_message
         state["requires_user_input"] = True
 
-        logger.info(f"Out-of-scope query handled. Original query: '{user_query}'")
-
     except Exception as e:
-        logger.error(f"Error in out_of_scope_handler_node: {e}")
+        agent_logger.node_error(e)
         state["error"] = f"Error handling out-of-scope query: {e}"
         state["out_of_scope_message"] = {
             "type": "out_of_scope",
@@ -474,9 +523,8 @@ def expand_subqueries_node(state):
                         }
                     )
         except Exception as e:
-            logger.error(f"Error parsing subqueries: {e}")
+            agent_logger.node_error(e)
     state["subqueries"] = subqueries
-    logger.info(f"Extracted {len(subqueries)} subqueries from split.")
     return state
 
 
@@ -499,10 +547,14 @@ def update_papers_by_project_node(state):
     tools = get_tools()
     tool_map = {getattr(tool, "name", None): tool for tool in tools}
     update_papers_for_project_tool = tool_map.get("update_papers_for_project")
-    logger.info(f"Available tool names: {list(tool_map.keys())}")
-    logger.info(
-        f"Looking for tool: update_papers_for_project, found: {update_papers_for_project_tool is not None}"
+
+    agent_logger.add_metadata(
+        {
+            "available_tool_names": list(tool_map.keys()),
+            "update_papers_tool_found": update_papers_for_project_tool is not None,
+        }
     )
+
     update_papers_by_project_result = None
     all_papers = []
     project_id = state.get("project_id")
@@ -519,6 +571,12 @@ def update_papers_by_project_node(state):
                     )
                     update_results.append(result)
             update_papers_by_project_result = update_results
+            agent_logger.add_metadata(
+                {
+                    "subqueries_processed": len(subqueries),
+                    "update_results_count": len(update_results),
+                }
+            )
         else:
             # Fallback: single query as before
             queries = []
@@ -546,18 +604,18 @@ def update_papers_by_project_node(state):
                 else:
                     queries = [state.get("user_query", "")]
             if update_papers_for_project_tool and project_id:
-                logger.info(
-                    f"Calling update_papers_for_project with queries: {queries} and project_id: {project_id}"
+                agent_logger.add_metadata(
+                    {
+                        "queries_used": queries,
+                    }
                 )
                 update_papers_by_project_result = update_papers_for_project_tool.invoke(
                     {"queries": queries, "project_id": project_id}
                 )
-                logger.info(
-                    f"update_papers_for_project result: {update_papers_by_project_result}"
-                )
         state["update_papers_by_project_result"] = update_papers_by_project_result
         state["all_papers"] = all_papers
     except Exception as e:
+        agent_logger.node_error(e)
         state["error"] = f"Update papers by project node error: {e}"
     return state
 
@@ -598,13 +656,16 @@ def get_best_papers_node(state):
             papers_raw = get_best_papers_tool.invoke(
                 {"project_id": project_id, "num_candidates": retrieval_count}
             )
-
-            logger.info(
-                f"Retrieved {len(papers_raw)} papers (filter instructions: {has_filter_instructions}, requested: {retrieval_count})"
+            agent_logger.add_metadata(
+                {
+                    "papers_retrieved_count": len(papers_raw),
+                    "has_filter_instructions": has_filter_instructions,
+                    "requested_retrieval_count": retrieval_count,
+                }
             )
-
         state["papers_raw"] = papers_raw
     except Exception as e:
+        agent_logger.node_error(e)
         state["error"] = f"Get best papers node error: {e}"
     return state
 
@@ -636,8 +697,16 @@ def filter_papers_node(state):
         if not has_filter_instructions or not papers_raw:
             # No filtering needed or no papers to filter
             papers_filtered = papers_raw
-            logger.info(f"No filtering applied. Papers count: {len(papers_filtered)}")
             state["applied_filter_criteria"] = {}
+            agent_logger.add_metadata(
+                {
+                    "filtering_applied": False,
+                    "papers_count": len(papers_filtered),
+                    "reason": "no_filter_instructions"
+                    if not has_filter_instructions
+                    else "no_papers_to_filter",
+                }
+            )
         else:
             # Use the filter_papers_by_nl_criteria tool to get both filtered papers and the filter spec
             filter_extraction_nl = user_query
@@ -649,37 +718,56 @@ def filter_papers_node(state):
                     filter_result_parsed = json.loads(filter_result)
                     if filter_result_parsed.get("status") == "success":
                         papers_filtered = filter_result_parsed.get("kept_papers", [])
-                        logger.info(
-                            f"Applied filter. Kept {len(papers_filtered)} out of {len(papers_raw)} papers"
-                        )
                         # Store the filter spec (filters) in the state for later use
                         state["applied_filter_criteria"] = filter_result_parsed.get(
                             "filters", {}
                         )
-                    else:
-                        logger.warning(
-                            f"Filter failed: {filter_result_parsed.get('message', 'Unknown error')}"
+                        agent_logger.add_metadata(
+                            {
+                                "filtering_applied": True,
+                                "original_papers_count": len(papers_raw),
+                                "filtered_papers_count": len(papers_filtered),
+                                "filter_criteria": state["applied_filter_criteria"],
+                                "filter_status": "success",
+                            }
                         )
+                    else:
                         papers_filtered = papers_raw
                         state["applied_filter_criteria"] = {}
+                        agent_logger.add_metadata(
+                            {
+                                "filtering_applied": False,
+                                "filter_status": "failed",
+                                "filter_message": filter_result_parsed.get(
+                                    "message", "Unknown error"
+                                ),
+                            }
+                        )
                 except Exception as e:
-                    logger.error(f"Error parsing filter result: {e}")
+                    agent_logger.node_error(e, operation="parse_filter_result")
                     papers_filtered = papers_raw
                     state["applied_filter_criteria"] = {}
             else:
-                logger.warning("Filter tool not found")
                 papers_filtered = papers_raw
                 state["applied_filter_criteria"] = {}
+                agent_logger.add_metadata(
+                    {"filtering_applied": False, "reason": "filter_tool_not_found"}
+                )
 
         # Limit filtered papers to top 10 to maintain consistency with other recommendation flows
         original_count = len(papers_filtered)
         papers_filtered = papers_filtered[:10]
         state["papers_filtered"] = papers_filtered
-        logger.info(
-            f"Limited filtered papers from {original_count} to {len(papers_filtered)} (top 10)"
+        agent_logger.add_metadata(
+            {
+                "final_papers_count": len(papers_filtered),
+                "original_filtered_count": original_count,
+                "limited_to_top": 10,
+            }
         )
 
     except Exception as e:
+        agent_logger.node_error(e)
         state["error"] = f"Filter papers node error: {e}"
         state["papers_filtered"] = state.get("papers_raw", [])
         state["applied_filter_criteria"] = {}
@@ -748,6 +836,18 @@ def no_results_handler_node(state):
     """
     try:
         llm_response = LLM.invoke(smart_explanation_prompt)
+        metadata = {
+            "prompt": smart_explanation_prompt,
+            "model_name": llm_response.response_metadata["model_name"],
+            "input_tokens": llm_response.usage_metadata["input_tokens"],
+            "output_tokens": llm_response.usage_metadata["output_tokens"],
+            "total_tokens": llm_response.usage_metadata["total_tokens"],
+            "total_cost_in_usd": calculate_openai_cost(
+                llm_response.usage_metadata["input_tokens"],
+                llm_response.usage_metadata["output_tokens"],
+            ),
+        }
+        agent_logger.add_metadata(metadata=metadata)
         explanation = (
             llm_response.content
             if hasattr(llm_response, "content")
@@ -759,7 +859,8 @@ def no_results_handler_node(state):
             "closest_values": closest_values,
             "filter_criteria": filter_criteria_json,
         }
-    except Exception:
+    except Exception as e:
+        agent_logger.node_error(e, operation="generate_explanation")
         state["no_results_message"] = {
             "type": "no_results",
             "explanation": "No papers matched your filter. Please try broadening your search.",
@@ -800,7 +901,8 @@ def store_papers_for_project_node(state):
             summary = generate_relevance_summary.invoke(
                 {"user_query": user_query, "title": title, "abstract": abstract}
             )
-        except Exception:
+        except Exception as e:
+            agent_logger.node_error(e, operation="generate_summary")
             summary = f"Relevant to project query: {user_query}"
         if paper_hash:
             papers_to_store.append({"paper_hash": paper_hash, "summary": summary})
@@ -809,13 +911,25 @@ def store_papers_for_project_node(state):
         result = store_papers_for_project_tool.invoke(
             {"project_id": project_id, "papers": papers_to_store}
         )
+        agent_logger.add_metadata(
+            {
+                "papers_stored_count": len(papers_to_store),
+                "storage_operation": "success",
+            }
+        )
     else:
         result = "No papers to store or missing project_id."
+        agent_logger.add_metadata(
+            {
+                "storage_operation": "skipped",
+                "reason": "no_papers" if not papers_to_store else "tool_not_found",
+            }
+        )
     state["store_papers_for_project_result"] = result
     return state
 
 
-def trigger_stategraph_agent_show_thoughts(user_message: str):
+def trigger_stategraph_agent_show_thoughts(user_message: str, project_id: str):
     """
     Generator that yields each step of the Stategraph agent's thought process for frontend streaming.
     Args:
@@ -824,8 +938,9 @@ def trigger_stategraph_agent_show_thoughts(user_message: str):
         dict: Thought and state at each step, including final output.
     """
     try:
+        agent_logger.node_start("stategraph_agent_workflow")
         # Initialize state
-        state = {"user_query": user_message}
+        state = {"user_query": user_message, "project_id": project_id}
 
         # Step 1: Input node
         yield {
@@ -856,7 +971,7 @@ def trigger_stategraph_agent_show_thoughts(user_message: str):
                         "final_content": None,
                     }
             except Exception as e:
-                logger.error(f"Error parsing out_of_scope_result: {e}")
+                agent_logger.node_error(e, operation="parse_out_of_scope_keywords")
 
         # Step 3: Quality control
         yield {
@@ -961,7 +1076,7 @@ def trigger_stategraph_agent_show_thoughts(user_message: str):
             "final_content": json.dumps({"status": store_result}),
         }
     except Exception as e:
-        logger.error(f"Error in Stategraph agent: {e}")
+        agent_logger.node_error(e)
         yield {
             "thought": f"An error occurred: {str(e)}",
             "is_final": True,

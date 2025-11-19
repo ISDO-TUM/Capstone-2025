@@ -11,7 +11,7 @@ class APILogger(StructuredLogger):
             metadata={
                 "method": method,
                 "path": path,
-            }
+            },
         )
 
     # ========== TODO ==========
