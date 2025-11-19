@@ -10,3 +10,8 @@ chroma_storage/
 # E2E test artifacts
 tests/e2e/screenshots/
 tests/e2e/.llm_cache/
+
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/.env.production
