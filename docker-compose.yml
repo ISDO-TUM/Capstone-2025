@@ -42,7 +42,7 @@ services:
         echo 'Database ready. Running migrations with pgroll...' &&
         export PGROLL_PG_URL='postgres://${DB_USER:-user}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-papers}?sslmode=disable' &&
         pgroll init || true &&
-        pgroll migrate --complete &&
+        pgroll migrate migrations/ --complete &&
         echo 'Migrations complete. Starting application...' &&
         uv run app.py --no-dev
       "
