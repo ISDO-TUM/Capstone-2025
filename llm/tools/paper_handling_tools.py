@@ -885,19 +885,45 @@ def generate_relevance_summary(user_query: str, title: str, abstract: str) -> st
         f'Paper title: "{title}"\n'
         f'Abstract: "{abstract}"\n'
         "\nWrite a 1-2 sentence explanation for the user, following these rules:\n"
-        "• Explain succinctly why the paper fits the user’s interests.\n"
+        "• DO NOT start with 'This paper', 'The paper', 'This study', or similar phrases - jump straight to the content.\n"
+        "• Explain succinctly why the paper fits the user's interests.\n"
         "• Summarise key contributions/findings from the abstract.\n"
-        "• Remain precise, relevant, and engaging."
+        "• Use active, direct language.\n"
+        "• Remain precise, relevant, and engaging.\n"
+        "\nExample: 'Explores novel Bayesian optimization techniques for algorithmic pricing in competitive markets, directly addressing your interest in pricing strategies.'"
     )
     try:
         llm_response = LLM.invoke(prompt)
         content = llm_response.content
         if isinstance(content, str):
-            return content.strip()
+            summary = content.strip()
         else:
-            return str(content)
+            summary = str(content).strip()
+        
+        # Remove redundant starting phrases as a safety net
+        redundant_starts = [
+            "This paper ",
+            "The paper ",
+            "This study ",
+            "The study ",
+            "This research ",
+            "The research ",
+            "This article ",
+            "The article "
+        ]
+        
+        for phrase in redundant_starts:
+            if summary.startswith(phrase):
+                # Remove phrase and capitalize first letter
+                summary = summary[len(phrase):].strip()
+                if summary:
+                    summary = summary[0].upper() + summary[1:]
+                break
+        
+        return summary
     except Exception:
         return f"Relevant to project query: {user_query}"
+
 
 
 @tool
