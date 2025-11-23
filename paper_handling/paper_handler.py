@@ -279,6 +279,8 @@ def generate_paper_summary(paper, project_description):
     Paper abstract: {paper.get("abstract", "No abstract available")}
 
     Write a brief summary (2 short sentences).
+    DO NOT start with "This paper", "The paper", "This study", or similar phrases - use direct, active language.
+    Example: "Explores machine learning applications in healthcare diagnostics, addressing your interest in medical AI systems."
     """
     try:
         summary_response = LLM.invoke(summary_prompt)
@@ -291,6 +293,24 @@ def generate_paper_summary(paper, project_description):
             summary = str(summary_response).strip()
         if not summary:
             summary = "Relevant based on user interests."
+        
+        # Apply cleanup to remove redundant starting phrases as a safety net
+        redundant_starts = [
+            "This paper ",
+            "The paper ",
+            "This study ",
+            "The study ",
+            "This research ",
+            "The research ",
+            "This article ",
+            "The article "
+        ]
+        for phrase in redundant_starts:
+            if summary.startswith(phrase):
+                summary = summary[len(phrase):].strip()
+                if summary:
+                    summary = summary[0].upper() + summary[1:]
+                break
     except Exception:
         summary = "Relevant based on user interests."
     return summary

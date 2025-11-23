@@ -467,17 +467,6 @@ function createPaperCard(paper) {
 
     let metricsHTML = '';
 
-    // Citations
-    if (paper.cited_by_count !== undefined && paper.cited_by_count !== null) {
-        metricsHTML += `
-            <div style="text-align: center; position: relative; cursor: help;" class="metric-with-tooltip">
-                <div style="color: #6c757d; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Citations</div>
-                <div style="color: #212529; font-size: 18px; font-weight: 700;">${paper.cited_by_count}</div>
-                <span class="metric-tooltip">Source: OpenAlex API</span>
-            </div>
-        `;
-    }
-
     // FWCI with tooltip and smart formatting
     if (paper.fwci !== undefined && paper.fwci !== null) {
         // Smart formatting: show decimals for values < 10, round for larger values
@@ -488,6 +477,17 @@ function createPaperCard(paper) {
                 <div style="color: #6c757d; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">FWCI</div>
                 <div style="color: ${fwciColor}; font-size: 18px; font-weight: 700;">${fwciValue}</div>
                 <span class="metric-tooltip">Source: OpenAlex API<br>Field-Weighted Citation Impact</span>
+            </div>
+        `;
+    }
+
+    // Citations
+    if (paper.cited_by_count !== undefined && paper.cited_by_count !== null) {
+        metricsHTML += `
+            <div style="text-align: center; position: relative; cursor: help;" class="metric-with-tooltip">
+                <div style="color: #6c757d; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Citations</div>
+                <div style="color: #212529; font-size: 18px; font-weight: 700;">${paper.cited_by_count}</div>
+                <span class="metric-tooltip">Source: OpenAlex API</span>
             </div>
         `;
     }
@@ -597,6 +597,12 @@ function createPaperCard(paper) {
     card.dataset.paperHash = paper.hash;
     card.dataset.title = paper.title.toLowerCase();
     card.dataset.rating = paper.rating || 0;
+    card.dataset.year = paper.publication_date ? new Date(paper.publication_date).getFullYear() : 0;
+    card.dataset.citations = paper.cited_by_count || 0;
+    card.dataset.fwci = paper.fwci || 0;
+    card.dataset.percentile = (paper.citation_normalized_percentile && typeof paper.citation_normalized_percentile === 'object') ? (paper.citation_normalized_percentile.value || 0) : (paper.citation_normalized_percentile || 0);
+    card.dataset.venue = paper.venue_name ? paper.venue_name.toLowerCase() : '';
+    card.dataset.isOa = paper.is_oa ? '1' : '0';
 
     card.appendChild(titleRow);
     card.appendChild(descriptionEl);
@@ -1492,9 +1498,10 @@ function filterAndSortPapers() {
             }
         }
 
-        // Filter by rating status (rated or unrated)
+        // Filter by rating status or OA status
         if (shouldShow && filterBy && filterBy !== '') {
             const rating = parseInt(card.dataset.rating) || 0;
+            const isOa = parseInt(card.dataset.isOa) || 0;
 
             switch (filterBy) {
                 case 'rated':
@@ -1502,6 +1509,12 @@ function filterAndSortPapers() {
                     break;
                 case 'unrated':
                     if (rating > 0) shouldShow = false;
+                    break;
+                case 'open-access':
+                    if (isOa === 0) shouldShow = false;
+                    break;
+                case 'closed-access':
+                    if (isOa === 1) shouldShow = false;
                     break;
             }
         }
@@ -1534,7 +1547,7 @@ function filterAndSortPapers() {
                 });
             }
         } else {
-            // Sort visible cards by title or rating
+            // Sort visible cards by selected criterion
             visibleCardsArray.sort((a, b) => {
                 switch (sortBy) {
                     case 'title':
@@ -1547,8 +1560,30 @@ function filterAndSortPapers() {
                         const ratingB = parseInt(b.dataset.rating) || 0;
                         return ratingB - ratingA;
 
-                    case 'date':
-                        return 0;
+                    case 'year':
+                        const yearA = parseInt(a.dataset.year) || 0;
+                        const yearB = parseInt(b.dataset.year) || 0;
+                        return yearB - yearA; // Newest first
+
+                    case 'citations':
+                        const citationsA = parseInt(a.dataset.citations) || 0;
+                        const citationsB = parseInt(b.dataset.citations) || 0;
+                        return citationsB - citationsA; // Most first
+
+                    case 'fwci':
+                        const fwciA = parseFloat(a.dataset.fwci) || 0;
+                        const fwciB = parseFloat(b.dataset.fwci) || 0;
+                        return fwciB - fwciA; // Highest first
+
+                    case 'percentile':
+                        const percentileA = parseFloat(a.dataset.percentile) || 0;
+                        const percentileB = parseFloat(b.dataset.percentile) || 0;
+                        return percentileB - percentileA; // Highest first
+
+                    case 'oa':
+                        const oaA = parseInt(a.dataset.isOa) || 0;
+                        const oaB = parseInt(b.dataset.isOa) || 0;
+                        return oaB - oaA; // OA first (1 before 0)
 
                     default:
                         return 0;
