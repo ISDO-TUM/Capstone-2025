@@ -61,7 +61,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: postgres:16
         env:
           POSTGRES_DB: papers
           POSTGRES_USER: user
@@ -101,11 +101,19 @@ jobs:
       - name: Install Playwright browsers
         run: uv run playwright install chromium --with-deps
 
+      - name: Install pgroll
+        run: |
+          wget -O pgroll https://github.com/xataio/pgroll/releases/download/v0.14.3/pgroll.linux.amd64
+          chmod +x pgroll
+          mv pgroll /usr/local/bin/
+
       - name: Initialize database
         env:
           PGPASSWORD: password
+          PGROLL_PG_URL: postgres://user:password@localhost:5432/papers?sslmode=disable
         run: |
-          psql -h localhost -U user -d papers -f init.sql
+          pgroll init || true
+          pgroll migrate migrations/ --complete
 
       - name: Run E2E tests
         env:
