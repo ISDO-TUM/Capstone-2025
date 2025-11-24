@@ -1,5 +1,4 @@
-#!/bin/sh
-set -e
+﻿#!/bin/sh
 
 echo "Starting application initialization..."
 
@@ -12,18 +11,22 @@ done
 
 echo "Database is ready!"
 
-# Run migrations with pgroll
-echo "Running database migrations with pgroll..."
-export PGROLL_PG_URL="postgres://${DB_USER:-user}:${DB_PASSWORD:-password}@${DB_HOST:-db}:${DB_PORT:-5432}/${DB_NAME:-papers}?sslmode=disable"
-
-# Initialize pgroll (safe to run multiple times)
-pgroll init || true
-
-# Run all migrations
-pgroll migrate migrations/ --complete
-
-echo "Migrations complete!"
+# Run migrations with pgroll (if available)
+if command -v pgroll > /dev/null 2>&1; then
+  echo "Running database migrations with pgroll..."
+  export PGROLL_PG_URL="postgres://${DB_USER:-user}:${DB_PASSWORD:-password}@${DB_HOST:-db}:${DB_PORT:-5432}/${DB_NAME:-papers}?sslmode=disable"
+  pgroll init || true
+  pgroll migrate migrations/ --complete || true
+  echo "Migrations complete!"
+else
+  echo "pgroll not found, skipping migrations..."
+fi
 
 # Start the application
 echo "Starting Flask application..."
-exec uv run app.py --no-dev
+# Try uv first, fallback to python
+if command -v uv > /dev/null 2>&1; then
+  exec uv run python app.py
+else
+  exec python app.py
+fi

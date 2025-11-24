@@ -98,6 +98,11 @@ def authenticate_user():
     In TEST_MODE, automatically authenticates with a test user.
     """
 
+    # Skip authentication for public endpoints
+    if request.path == "/api/clerk-config":
+        request.auth = None
+        return
+
     # In test mode, bypass Clerk and set a test user
     if TEST_MODE:
         request.auth = {
@@ -114,6 +119,9 @@ def authenticate_user():
         # Authenticate the request using Clerk
         hostname = HOSTNAME
         if hostname:
+            hostname = (
+                hostname.replace("http://", "").replace("https://", "").split(":")[0]
+            )
             auth_options = AuthenticateRequestOptions(authorized_parties=[hostname])
         else:
             auth_options = AuthenticateRequestOptions()
@@ -123,6 +131,8 @@ def authenticate_user():
     except Exception as e:
         # Log the error and set default values for unauthenticated requests
         logger.error(f"Authentication error for {request.path}: {e}")
+        logger.error(f"Request headers: {dict(request.headers)}")
+        logger.error(f"Request cookies: {dict(request.cookies)}")
         request.auth = None
         return
 
@@ -183,6 +193,20 @@ def home():
         showCreateProjectButton=True,
         CLERK_PUBLISHABLE_KEY=CLERK_PUBLISHABLE_KEY,
         CLERK_FRONTEND_API_URL=CLERK_FRONTEND_API_URL,
+    )
+
+
+@app.route("/api/clerk-config")
+def clerk_config():
+    """
+    Get Clerk configuration for the frontend.
+    Returns publishable key and frontend API URL.
+    """
+    return jsonify(
+        {
+            "publishableKey": os.getenv("CLERK_PUBLISHABLE_KEY"),
+            "frontendApiUrl": os.getenv("CLERK_FRONTEND_API_URL"),
+        }
     )
 
 
