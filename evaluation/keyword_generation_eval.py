@@ -26,6 +26,10 @@ RESULTS_FILENAME = "keyword_generation_results.txt"
 def get_papers_from_csv(num_papers):
     """
     Reads the paper_pairs.csv file and returns a list of unique papers.
+    Args:
+        num_papers (int): The number of papers to retrieve.
+    Returns:
+        list: A list of unique papers.
     """
     df = pd.read_csv("evaluation/data/paper_pairs.csv")
 
@@ -55,6 +59,10 @@ def get_papers_from_csv(num_papers):
 def run_single_evaluation_run(paper, model_name, search_results_count) -> tuple:
     """
     Performs a single round-trip evaluation run.
+    Args:
+        paper (dict): The paper to evaluate.
+        model_name (str): The name of the model to use.
+        search_results_count (int): The number of search results to return.
     Returns a tuple: (status, found).
     - ("SUCCESS", True) if the run was valid and paper was found.
     - ("SUCCESS", False) if the run was valid and paper was not found.
