@@ -43,9 +43,6 @@ _models = {
     ),
 }
 
-<<<<<<< HEAD
-LLM = llm_41
-=======
 # Default LLM used throughout the codebase
 LLM = _models["gpt-5.1"]
 
@@ -80,4 +77,3 @@ def get_available_models():
     Returns a list of available model names.
     """
     return list(_models.keys())
->>>>>>> e7642dd (Keyword Evaluation - Dataset Generation)
