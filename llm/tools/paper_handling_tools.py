@@ -899,7 +899,7 @@ def generate_relevance_summary(user_query: str, title: str, abstract: str) -> st
             summary = content.strip()
         else:
             summary = str(content).strip()
-        
+
         # Remove redundant starting phrases as a safety net
         redundant_starts = [
             "This paper ",
@@ -909,21 +909,20 @@ def generate_relevance_summary(user_query: str, title: str, abstract: str) -> st
             "This research ",
             "The research ",
             "This article ",
-            "The article "
+            "The article ",
         ]
-        
+
         for phrase in redundant_starts:
             if summary.startswith(phrase):
                 # Remove phrase and capitalize first letter
-                summary = summary[len(phrase):].strip()
+                summary = summary[len(phrase) :].strip()
                 if summary:
                     summary = summary[0].upper() + summary[1:]
                 break
-        
+
         return summary
     except Exception:
         return f"Relevant to project query: {user_query}"
-
 
 
 @tool

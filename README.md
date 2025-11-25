@@ -226,7 +226,7 @@ For more details, examples, and troubleshooting, see [migrations/README.md](migr
 The project includes comprehensive end-to-end (E2E) tests using Playwright and Pytest. Tests run automatically in CI/CD on pull requests and pushes to main.
 
 For local testing and debugging, see the complete testing guide:
-- **[E2E Testing Documentation](tests/README.md)**
+- **[E2E Testing Documentation](tests/e2e/README.md)**
 
 ## Testing
 

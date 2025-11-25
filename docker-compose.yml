@@ -33,19 +33,7 @@ services:
     build: .
     container_name: capstone_web
     restart: always
-    command: >
-      sh -c "
-        until pg_isready -h db -p 5432 > /dev/null 2>&1; do
-          echo 'Waiting for database to be ready...'
-          sleep 2
-        done &&
-        echo 'Database ready. Running migrations with pgroll...' &&
-        export PGROLL_PG_URL='postgres://${DB_USER:-user}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-papers}?sslmode=disable' &&
-        pgroll init || true &&
-        pgroll migrate migrations/ --complete &&
-        echo 'Migrations complete. Starting application...' &&
-        uv run app.py --no-dev
-      "
+    command: sh /app/scripts/startup.sh
     ports:
       - "80:80"
     volumes:
