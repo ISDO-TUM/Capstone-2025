@@ -6,7 +6,6 @@ import json
 @patch("requests.post")
 @patch("requests.get")
 def test_user_profile_embeddings(mock_get, mock_post):
-
     def post_side_effect(url, *args, **kwargs):
         if url.endswith("/api/createProject"):
             return make_response({"project_id": 999})
@@ -15,23 +14,27 @@ def test_user_profile_embeddings(mock_get, mock_post):
             return make_response({"embedding_length": 1536})
 
         if url.endswith("/api/user-profile/find-similar"):
-            return make_response({
-                "similar_projects": [
-                    {"project_id": 1001, "similarity_score": 0.91},
-                    {"project_id": 1002, "similarity_score": 0.87},
-                ]
-            })
+            return make_response(
+                {
+                    "similar_projects": [
+                        {"project_id": 1001, "similarity_score": 0.91},
+                        {"project_id": 1002, "similarity_score": 0.87},
+                    ]
+                }
+            )
 
         raise RuntimeError(f"Unexpected POST URL: {url}")
 
     def get_side_effect(url, *args, **kwargs):
         if url.endswith("/api/user-profile/similarity-matrix"):
-            return make_response({
-                "projects": [
-                    {"project_id": 999, "title": "AI Research Project"},
-                    {"project_id": 1001, "title": "Healthcare AI Project"},
-                ]
-            })
+            return make_response(
+                {
+                    "projects": [
+                        {"project_id": 999, "title": "AI Research Project"},
+                        {"project_id": 1001, "title": "Healthcare AI Project"},
+                    ]
+                }
+            )
 
         raise RuntimeError(f"Unexpected GET URL: {url}")
 
@@ -116,7 +119,9 @@ def test_user_profile_embeddings(mock_get, mock_post):
     similar_data = {"project_id": project_id, "limit": 3}
 
     response = requests.post(
-        "http://localhost:7500/api/user-profile/find-similar", json=similar_data, timeout=10
+        "http://localhost:7500/api/user-profile/find-similar",
+        json=similar_data,
+        timeout=10,
     )
     assert response.status_code == 200, (
         f"Failed to find similar profiles: {response.text}"
