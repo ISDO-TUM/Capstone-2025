@@ -293,7 +293,7 @@ def generate_paper_summary(paper, project_description):
             summary = str(summary_response).strip()
         if not summary:
             summary = "Relevant based on user interests."
-        
+
         # Apply cleanup to remove redundant starting phrases as a safety net
         redundant_starts = [
             "This paper ",
@@ -303,11 +303,11 @@ def generate_paper_summary(paper, project_description):
             "This research ",
             "The research ",
             "This article ",
-            "The article "
+            "The article ",
         ]
         for phrase in redundant_starts:
             if summary.startswith(phrase):
-                summary = summary[len(phrase):].strip()
+                summary = summary[len(phrase) :].strip()
                 if summary:
                     summary = summary[0].upper() + summary[1:]
                 break
