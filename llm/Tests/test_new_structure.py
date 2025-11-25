@@ -1,10 +1,49 @@
+from unittest.mock import patch
 import requests
-
-# Base URL for the Flask app
-BASE_URL = "http://localhost:7500"
+import json
 
 
-def test_user_profile_embeddings():
+@patch("requests.post")
+@patch("requests.get")
+def test_user_profile_embeddings(mock_get, mock_post):
+
+    def post_side_effect(url, *args, **kwargs):
+        if url.endswith("/api/createProject"):
+            return make_response({"project_id": 999})
+
+        if url.endswith("/api/user-profile/create-embedding"):
+            return make_response({"embedding_length": 1536})
+
+        if url.endswith("/api/user-profile/find-similar"):
+            return make_response({
+                "similar_projects": [
+                    {"project_id": 1001, "similarity_score": 0.91},
+                    {"project_id": 1002, "similarity_score": 0.87},
+                ]
+            })
+
+        raise RuntimeError(f"Unexpected POST URL: {url}")
+
+    def get_side_effect(url, *args, **kwargs):
+        if url.endswith("/api/user-profile/similarity-matrix"):
+            return make_response({
+                "projects": [
+                    {"project_id": 999, "title": "AI Research Project"},
+                    {"project_id": 1001, "title": "Healthcare AI Project"},
+                ]
+            })
+
+        raise RuntimeError(f"Unexpected GET URL: {url}")
+
+    def make_response(data: dict):
+        r = requests.Response()
+        r.status_code = 200
+        r._content = json.dumps(data).encode("utf-8")
+        return r
+
+    mock_post.side_effect = post_side_effect
+    mock_get.side_effect = get_side_effect
+
     print("Testing User Profile Embedding Functionality:")
 
     # create a project
@@ -14,7 +53,8 @@ def test_user_profile_embeddings():
     }
 
     response = requests.post(
-        f"{BASE_URL}/api/createProject", json=project_data, timeout=10
+        "http://localhost:7500/api/createProject",
+        json=project_data,
     )
     assert response.status_code == 200, f"Failed to create project: {response.text}"
     project_id = response.json()["project_id"]
@@ -29,7 +69,7 @@ def test_user_profile_embeddings():
     }
 
     response = requests.post(
-        f"{BASE_URL}/api/user-profile/create-embedding",
+        "http://localhost:7500/api/user-profile/create-embedding",
         json=user_profile_data,
         timeout=10,
     )
@@ -44,7 +84,7 @@ def test_user_profile_embeddings():
     }
 
     response = requests.post(
-        f"{BASE_URL}/api/createProject", json=project_data2, timeout=10
+        "http://localhost:7500/api/createProject", json=project_data2, timeout=10
     )
     assert response.status_code == 200, (
         f"Failed to create second project: {response.text}"
@@ -60,7 +100,7 @@ def test_user_profile_embeddings():
     }
 
     response = requests.post(
-        f"{BASE_URL}/api/user-profile/create-embedding",
+        "http://localhost:7500/api/user-profile/create-embedding",
         json=user_profile_data2,
         timeout=10,
     )
@@ -76,7 +116,7 @@ def test_user_profile_embeddings():
     similar_data = {"project_id": project_id, "limit": 3}
 
     response = requests.post(
-        f"{BASE_URL}/api/user-profile/find-similar", json=similar_data, timeout=10
+        "http://localhost:7500/api/user-profile/find-similar", json=similar_data, timeout=10
     )
     assert response.status_code == 200, (
         f"Failed to find similar profiles: {response.text}"
@@ -92,7 +132,7 @@ def test_user_profile_embeddings():
 
     # Get similarity matrix
     response = requests.get(
-        f"{BASE_URL}/api/user-profile/similarity-matrix", timeout=10
+        "http://localhost:7500/api/user-profile/similarity-matrix", timeout=10
     )
     assert response.status_code == 200, (
         f"Failed to get similarity matrix: {response.text}"

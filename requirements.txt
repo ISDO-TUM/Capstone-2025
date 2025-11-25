@@ -14,4 +14,3 @@ pyalex==0.18
 python-dotenv==1.1.0
 requests==2.32.4
 clerk-backend-api==3.3.1
-pytest==8.2.2
