@@ -10,6 +10,8 @@ from database.projects_database_handler import (
 import sys
 import os
 import numpy as np
+import pytest
+from unittest.mock import patch
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -25,6 +27,31 @@ def cosine_similarity(vec1, vec2):
         return 0
 
     return np.dot(vec1_np, vec2_np) / (norm1 * norm2)
+
+
+@pytest.fixture(autouse=True)
+def mock_request_and_db():
+    # Patch request.auth and DB functions
+    with (
+        patch("database.projects_database_handler.request") as mock_request,
+        patch(
+            "database.projects_database_handler.add_new_project_to_db", return_value=1
+        ) as mock_add_project,
+        patch(
+            "database.projects_database_handler.add_user_profile_embedding",
+            return_value=True,
+        ) as mock_add_embedding,
+        patch(
+            "database.projects_database_handler.get_user_profile_embedding",
+            side_effect=lambda pid: [0.5] * 10,
+        ) as mock_get_embedding,
+        patch(
+            "database.projectpaper_database_handler.assign_paper_to_project",
+            return_value=True,
+        ) as mock_assign,
+    ):
+        mock_request.auth = True
+        yield
 
 
 def test_embedding_learning():

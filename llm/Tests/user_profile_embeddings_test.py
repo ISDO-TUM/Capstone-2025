@@ -9,8 +9,39 @@ from database.projects_database_handler import (
 import sys
 import os
 import json
+import pytest
+from unittest.mock import patch
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+
+@pytest.fixture(autouse=True)
+def mock_request_and_db():
+    with (
+        patch("database.projects_database_handler.request") as mock_request,
+        patch(
+            "database.projects_database_handler.add_new_project_to_db", return_value=1
+        ),
+        patch(
+            "database.projects_database_handler.add_user_profile_embedding",
+            return_value=True,
+        ),
+        patch(
+            "database.projects_database_handler.get_user_profile_embedding",
+            return_value=[0.5] * 10,
+        ),
+    ):
+        mock_request.auth = True
+        yield
+
+
+@pytest.fixture(autouse=True)
+def mock_get_best_papers(monkeypatch):
+    # Return dummy papers for testing
+    monkeypatch.setattr(
+        "llm.user_profile_embeddings.get_best_papers",
+        lambda text, project_id=None: [{"title": "Dummy Paper", "score": 0.9}],
+    )
 
 
 def test_embedding_storage_and_retrieval():
