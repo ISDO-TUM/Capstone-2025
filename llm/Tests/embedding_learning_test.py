@@ -36,19 +36,19 @@ def mock_request_and_db():
         patch("database.projects_database_handler.request") as mock_request,
         patch(
             "database.projects_database_handler.add_new_project_to_db", return_value=1
-        ) as mock_add_project,
+        ),
         patch(
             "database.projects_database_handler.add_user_profile_embedding",
             return_value=True,
-        ) as mock_add_embedding,
+        ),
         patch(
             "database.projects_database_handler.get_user_profile_embedding",
             side_effect=lambda pid: [0.5] * 10,
-        ) as mock_get_embedding,
+        ),
         patch(
             "database.projectpaper_database_handler.assign_paper_to_project",
             return_value=True,
-        ) as mock_assign,
+        ),
     ):
         mock_request.auth = True
         yield
