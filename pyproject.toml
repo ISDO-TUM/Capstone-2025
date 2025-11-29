@@ -23,6 +23,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "pytest>=9.0.1",
     "fuzzywuzzy>=0.18.0",
     "pandas>=2.3.3",
     "python-levenshtein>=0.27.3",
