@@ -212,8 +212,11 @@ def project_overview_page(project_id):
             CLERK_FRONTEND_API_URL=os.getenv("CLERK_FRONTEND_API_URL"),
         )
 
-    project = get_project_by_id(project_id)
-    if project["user_id"] != request.auth["user_id"]:
+    user_id = request.auth["user_id"]
+    project = get_project_by_id(user_id, project_id)
+    if not project:
+        return {"error": "Project not found"}, 404
+    if project["user_id"] != user_id:
         return {"error": "Forbidden"}, 403
 
     return render_template(
@@ -235,12 +238,13 @@ def api_create_project():
     if not request.auth:
         return {"error": "Not authenticated"}, 401
 
+    user_id = request.auth["user_id"]
     data = request.get_json() or {}
     title = data.get("title")
     desc = data.get("description")
     if not title or not desc:
         return jsonify({"error": "Missing title or description"}), 400
-    project_id = add_new_project_to_db(title, desc)
+    project_id = add_new_project_to_db(user_id, title, desc)
     return jsonify({"projectId": project_id}), 201
 
 
@@ -256,7 +260,8 @@ def get_projects():
     if not request.auth:
         return {"error": "Not authenticated"}, 401
 
-    projects = get_all_projects()
+    user_id = request.auth["user_id"]
+    projects = get_all_projects(user_id)
     complete_projects = []
     for project in projects:
         if project is None:
@@ -289,6 +294,7 @@ def get_recommendations():
     print("Attempting to get recommendations")
     """Get recommendations for a project. Updated to use project_id and update_recommendations flag."""
     try:
+        user_id = request.auth["user_id"]
         data = request.get_json()
         if not data or "projectId" not in data:
             print(f"Failed getting recs with data: {data}")
@@ -296,7 +302,9 @@ def get_recommendations():
 
         # project_id validated above but currently unused in mock implementation
         update_recommendations = data.get("update_recommendations", False)
-        project = get_project_by_id(data["projectId"])
+        project = get_project_by_id(user_id, data["projectId"])
+        if not project:
+            return jsonify({"error": "Project not found"}), 404
         user_description, project_id = project["description"], project["project_id"]
 
         def generate():
@@ -440,7 +448,8 @@ def api_update_newsletter():
         return jsonify({"status": "Project not updated"}), 200
 
     # first read queries
-    queries = get_queries_for_project(project_id)
+    user_id = request.auth["user_id"]
+    queries = get_queries_for_project(user_id, project_id)
     if not queries:
         # no queries: return ok but without doing anything
         return jsonify({"status": "no-queries"}), 200
@@ -518,6 +527,7 @@ def rate_paper():
     if not request.auth:
         return jsonify({"error": "Unauthorized"}), 401
 
+    user_id = request.auth["user_id"]
     data = request.get_json()
     if not data:
         return jsonify({"status": "error", "message": "No data provided"}), 400
@@ -563,7 +573,9 @@ def rate_paper():
             return jsonify({"status": "error", "message": "Paper not found"}), 404
 
         # Update user profile embedding based on the rating
-        update_user_profile_embedding_from_rating(project_id, paper_hash, rating)
+        update_user_profile_embedding_from_rating(
+            user_id, project_id, paper_hash, rating
+        )
 
         # If rating is low (1-2 stars), automatically replace the paper
         replacement_result = None
@@ -615,7 +627,8 @@ def api_get_project(project_id):
     if not request.auth:
         return jsonify({"error": "Unauthorized"}), 401
 
-    proj = get_project_by_id(project_id)
+    user_id = request.auth["user_id"]
+    proj = get_project_by_id(user_id, project_id)
     if not proj:
         return jsonify({"error": "Project not found"}), 404
     return jsonify(
@@ -645,14 +658,15 @@ def api_update_project_prompt(project_id):
     if not request.auth:
         return jsonify({"error": "Unauthorized"}), 401
 
+    user_id = request.auth["user_id"]
     data = request.get_json() or {}
     new_prompt = data.get("prompt")
     if not new_prompt:
         return jsonify({"error": "Missing prompt"}), 400
-    status = update_project_description(project_id, new_prompt)
+    status = update_project_description(user_id, project_id, new_prompt)
     if status == Status.SUCCESS:
         # Fetch updated project to return new description
-        project = get_project_by_id(project_id)
+        project = get_project_by_id(user_id, project_id)
         return jsonify(
             {"success": True, "description": project.get("description", new_prompt)}
         )
@@ -671,19 +685,20 @@ def load_more_papers():
         return jsonify({"error": "Unauthorized"}), 401
 
     try:
+        user_id = request.auth["user_id"]
         data = request.get_json()
         project_id = data.get("project_id") if data else None
         if not project_id:
             return jsonify({"error": "Missing project_id"}), 400
 
-        project = get_project_data(project_id)
+        project = get_project_data(user_id, project_id)
         if not project:
             return jsonify({"error": "Project not found"}), 404
 
         def generate():
             try:
                 # Retrieve the latest user profile embedding
-                user_embedding = get_user_profile_embedding(project_id)
+                user_embedding = get_user_profile_embedding(user_id, project_id)
                 if not user_embedding:
                     yield f"data: {json.dumps({'error': 'No user profile embedding found'})}\n\n"
                     return
@@ -713,7 +728,7 @@ def load_more_papers():
                     return
 
                 # Next try fetching more papers with OpenAlex
-                queries = get_queries_for_project(project_id)
+                queries = get_queries_for_project(user_id, project_id)
                 if not queries:
                     yield f"data: {json.dumps({'error': 'No search queries found for this project'})}\n\n"
                     return

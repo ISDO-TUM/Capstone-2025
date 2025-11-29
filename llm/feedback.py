@@ -44,12 +44,13 @@ def update_user_vector(
 
 
 def update_user_profile_embedding_from_rating(
-    project_id: str, paper_hash: str, rating: int
+    user_id: str, project_id: str, paper_hash: str, rating: int
 ) -> bool:
     """
     Update the user profile embedding based on a paper rating.
 
     Args:
+        user_id (str): The owner of the project
         project_id (str): The project ID
         paper_hash (str): The paper hash
         rating (int): The rating (1-5)
@@ -59,7 +60,7 @@ def update_user_profile_embedding_from_rating(
     """
     try:
         # Get current user profile embedding
-        current_embedding = get_user_profile_embedding(project_id)
+        current_embedding = get_user_profile_embedding(user_id, project_id)
         if current_embedding is None:
             logger.warning(
                 f"No user profile embedding found for project {project_id}, skipping update"
@@ -80,7 +81,7 @@ def update_user_profile_embedding_from_rating(
         )
 
         # Save updated embedding to database
-        add_user_profile_embedding(project_id, updated_embedding)
+        add_user_profile_embedding(user_id, project_id, updated_embedding)
 
         logger.info(
             f"Updated user profile embedding for project {project_id} based on rating {rating}"

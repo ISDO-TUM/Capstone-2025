@@ -18,6 +18,7 @@ from database.projects_database_handler import (
     get_user_profile_embedding,
     add_user_profile_embedding,
     get_project_data,
+    get_project_owner_id,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,14 +39,19 @@ def get_best_papers(project_id: str, num_candidates: int = 10) -> list[dict]:
     Side effects:
         May create and store a new user profile embedding if not present.
     """
+    owner_id = get_project_owner_id(project_id)
+    if not owner_id:
+        logger.error(f"Unable to determine owner for project {project_id}")
+        return []
+
     try:
-        embedded_profile = get_user_profile_embedding(project_id)
+        embedded_profile = get_user_profile_embedding(owner_id, project_id)
 
         if embedded_profile:
             logger.info(f"Using stored embedding for project {project_id}")
         else:
             logger.info(f"No embedding found for project {project_id}, creating one...")
-            project_data = get_project_data(project_id)
+            project_data = get_project_data(owner_id, project_id)
             description = project_data.get("description") if project_data else None
 
             if not description:
@@ -57,7 +63,7 @@ def get_best_papers(project_id: str, num_candidates: int = 10) -> list[dict]:
                 logger.error(f"Failed to create embedding for project {project_id}")
                 return []
 
-            add_user_profile_embedding(project_id, embedded_profile)
+            add_user_profile_embedding(owner_id, project_id, embedded_profile)
             logger.info(f"Created and saved embedding for project {project_id}")
 
     except Exception as e:

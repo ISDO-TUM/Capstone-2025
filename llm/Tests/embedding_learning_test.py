@@ -15,6 +15,8 @@ from unittest.mock import patch
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+TEST_USER_ID = "test_user_id"
+
 
 def cosine_similarity(vec1, vec2):
     vec1_np = np.array(vec1)
@@ -57,6 +59,7 @@ def mock_request_and_db():
 def test_embedding_learning():
     # Create a test project
     project_id = add_new_project_to_db(
+        TEST_USER_ID,
         "Test Learning Project",
         "Research on machine learning and artificial intelligence",
     )
@@ -65,7 +68,7 @@ def test_embedding_learning():
     initial_embedding = embed_user_profile(
         "Research on machine learning and artificial intelligence"
     )
-    add_user_profile_embedding(project_id, initial_embedding)
+    add_user_profile_embedding(TEST_USER_ID, project_id, initial_embedding)
 
     # Create test papers
     test_papers = [
@@ -122,7 +125,7 @@ def test_embedding_learning():
 
         # Update current embedding and save to database
         current_embedding = updated_embedding
-        add_user_profile_embedding(project_id, updated_embedding)
+        add_user_profile_embedding(TEST_USER_ID, project_id, updated_embedding)
         embedding_history.append(current_embedding.copy())
 
     # Test replacement mechanism with updated embeddings
@@ -157,22 +160,22 @@ def test_embedding_persistence():
 
     # Create a test project
     project_id = add_new_project_to_db(
-        "Test Persistence Project", "Testing embedding persistence"
+        TEST_USER_ID, "Test Persistence Project", "Testing embedding persistence"
     )
 
     # Create initial embedding
     initial_embedding = embed_user_profile("Testing embedding persistence")
-    add_user_profile_embedding(project_id, initial_embedding)
+    add_user_profile_embedding(TEST_USER_ID, project_id, initial_embedding)
 
     # Verify it's stored
-    stored_embedding = get_user_profile_embedding(project_id)
+    stored_embedding = get_user_profile_embedding(TEST_USER_ID, project_id)
     assert cosine_similarity(initial_embedding, stored_embedding) > 0.999
 
     # Test multiple updates
     test_embedding = [0.1] * len(initial_embedding)
     updated_embedding = update_user_vector(initial_embedding, test_embedding, 5)
-    add_user_profile_embedding(project_id, updated_embedding)
+    add_user_profile_embedding(TEST_USER_ID, project_id, updated_embedding)
 
     # Verify update is stored
-    final_embedding = get_user_profile_embedding(project_id)
+    final_embedding = get_user_profile_embedding(TEST_USER_ID, project_id)
     assert cosine_similarity(updated_embedding, final_embedding) > 0.999
