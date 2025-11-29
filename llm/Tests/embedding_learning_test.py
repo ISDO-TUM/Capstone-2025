@@ -1,7 +1,3 @@
-"""
-Tests that the system learns from user ratings and uses updated embeddings for replacements.
-"""
-
 from database.database_connection import connect_to_db
 from llm.feedback import update_user_vector
 from llm.Embeddings import embed_user_profile, embed_papers
@@ -14,6 +10,8 @@ from database.projects_database_handler import (
 import sys
 import os
 import numpy as np
+import pytest
+from unittest.mock import patch
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -29,6 +27,31 @@ def cosine_similarity(vec1, vec2):
         return 0
 
     return np.dot(vec1_np, vec2_np) / (norm1 * norm2)
+
+
+@pytest.fixture(autouse=True)
+def mock_request_and_db():
+    # Patch request.auth and DB functions
+    with (
+        patch("database.projects_database_handler.request") as mock_request,
+        patch(
+            "database.projects_database_handler.add_new_project_to_db", return_value=1
+        ),
+        patch(
+            "database.projects_database_handler.add_user_profile_embedding",
+            return_value=True,
+        ),
+        patch(
+            "database.projects_database_handler.get_user_profile_embedding",
+            side_effect=lambda pid: [0.5] * 10,
+        ),
+        patch(
+            "database.projectpaper_database_handler.assign_paper_to_project",
+            return_value=True,
+        ),
+    ):
+        mock_request.auth = True
+        yield
 
 
 def test_embedding_learning():
@@ -93,13 +116,9 @@ def test_embedding_learning():
 
         # Verify the learning direction
         if rating >= 4:
-            # High rating should increase similarity
-            if similarity_after > similarity_before:
-                pass  # Similarity increased for high rating
+            assert similarity_after >= similarity_before
         elif rating <= 2:
-            # Low rating should decrease similarity
-            if similarity_after < similarity_before:
-                pass  # Similarity decreased for low rating
+            assert similarity_after <= similarity_before
 
         # Update current embedding and save to database
         current_embedding = updated_embedding
@@ -130,10 +149,7 @@ def test_embedding_learning():
     # Verify embedding evolution
     for i in range(1, len(embedding_history)):
         similarity = cosine_similarity(embedding_history[i - 1], embedding_history[i])
-        if similarity < 0.999:  # Allow for small numerical differences
-            pass  # Embedding changed between steps
-
-    return True
+        assert similarity <= 1.0
 
 
 def test_embedding_persistence():
@@ -150,10 +166,7 @@ def test_embedding_persistence():
 
     # Verify it's stored
     stored_embedding = get_user_profile_embedding(project_id)
-    if stored_embedding:
-        similarity = cosine_similarity(initial_embedding, stored_embedding)
-        if similarity > 0.999:
-            pass  # Embedding properly stored and retrieved
+    assert cosine_similarity(initial_embedding, stored_embedding) > 0.999
 
     # Test multiple updates
     test_embedding = [0.1] * len(initial_embedding)
@@ -162,24 +175,4 @@ def test_embedding_persistence():
 
     # Verify update is stored
     final_embedding = get_user_profile_embedding(project_id)
-    if final_embedding:
-        similarity = cosine_similarity(updated_embedding, final_embedding)
-        if similarity > 0.999:
-            pass  # Updated embedding properly stored and retrieved
-
-    return True
-
-
-if __name__ == "__main__":
-    persistence_success = test_embedding_persistence()
-
-    if persistence_success:
-        learning_success = test_embedding_learning()
-
-        if learning_success:
-            pass
-            print("All tests passed!")
-        else:
-            pass
-    else:
-        pass
+    assert cosine_similarity(updated_embedding, final_embedding) > 0.999
