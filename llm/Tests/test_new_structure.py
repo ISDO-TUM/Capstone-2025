@@ -2,6 +2,9 @@ from unittest.mock import patch
 import requests
 import json
 
+# Base URL for the Flask app
+BASE_URL = "http://localhost:7500"
+
 
 @patch("requests.post")
 @patch("requests.get")
@@ -56,7 +59,7 @@ def test_user_profile_embeddings(mock_get, mock_post):
     }
 
     response = requests.post(
-        "http://localhost:7500/api/createProject",
+        f"{BASE_URL}/api/createProject",
         json=project_data,
     )
     assert response.status_code == 200, f"Failed to create project: {response.text}"
@@ -72,7 +75,7 @@ def test_user_profile_embeddings(mock_get, mock_post):
     }
 
     response = requests.post(
-        "http://localhost:7500/api/user-profile/create-embedding",
+        f"{BASE_URL}/api/user-profile/create-embedding",
         json=user_profile_data,
         timeout=10,
     )
@@ -87,7 +90,7 @@ def test_user_profile_embeddings(mock_get, mock_post):
     }
 
     response = requests.post(
-        "http://localhost:7500/api/createProject", json=project_data2, timeout=10
+        f"{BASE_URL}/api/createProject", json=project_data2, timeout=10
     )
     assert response.status_code == 200, (
         f"Failed to create second project: {response.text}"
@@ -103,7 +106,7 @@ def test_user_profile_embeddings(mock_get, mock_post):
     }
 
     response = requests.post(
-        "http://localhost:7500/api/user-profile/create-embedding",
+        f"{BASE_URL}/api/user-profile/create-embedding",
         json=user_profile_data2,
         timeout=10,
     )
@@ -119,7 +122,7 @@ def test_user_profile_embeddings(mock_get, mock_post):
     similar_data = {"project_id": project_id, "limit": 3}
 
     response = requests.post(
-        "http://localhost:7500/api/user-profile/find-similar",
+        f"{BASE_URL}/api/user-profile/find-similar",
         json=similar_data,
         timeout=10,
     )
@@ -137,7 +140,7 @@ def test_user_profile_embeddings(mock_get, mock_post):
 
     # Get similarity matrix
     response = requests.get(
-        "http://localhost:7500/api/user-profile/similarity-matrix", timeout=10
+        f"{BASE_URL}/api/user-profile/similarity-matrix", timeout=10
     )
     assert response.status_code == 200, (
         f"Failed to get similarity matrix: {response.text}"
