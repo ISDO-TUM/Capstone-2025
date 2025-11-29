@@ -45,7 +45,7 @@ def add_new_project_to_db(
         project_id = str(uuid.uuid4())
 
     sql_insert = """
-    INSERT INTO projects_table (project_id, title, description,log_history)
+    INSERT INTO projects_table (project_id, title, description, log_history)
         VALUES (%s, %s, %s, %s)
     """
 
