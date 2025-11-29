@@ -32,6 +32,7 @@ from database.projects_database_handler import (
     add_queries_to_project_db,
     get_project_data,
     get_user_profile_embedding,
+    get_project_owner_id,
 )
 from llm.Embeddings import embed_papers
 from llm.LLMDefinition import LLM
@@ -160,7 +161,14 @@ def update_papers_for_project(queries: list[str], project_id: str) -> str:
 
         logger.info(f"Adding queries for project {project_id}")
 
-        status_queries = add_queries_to_project_db(queries, project_id)
+        owner_id = get_project_owner_id(project_id)
+        if not owner_id:
+            logger.error(
+                f"Unable to determine owner for project {project_id} while updating queries"
+            )
+            return "Paper database updated partially: failed to store queries because the project owner could not be resolved."
+
+        status_queries = add_queries_to_project_db(owner_id, project_id, queries)
 
         logger.info(f"Updated queries for project {project_id}")
 
@@ -925,8 +933,17 @@ def replace_low_rated_paper(project_id: str, low_rated_paper_hash: str) -> str:
     Returns:
         str: JSON string with status and details about the replacement operation
     """
+    owner_id = get_project_owner_id(project_id)
+    if not owner_id:
+        return json.dumps(
+            {
+                "status": "error",
+                "message": f"Unable to determine owner for project {project_id}",
+            }
+        )
+
     # Get the user profile embedding
-    user_profile_embedding = get_user_profile_embedding(project_id)
+    user_profile_embedding = get_user_profile_embedding(owner_id, project_id)
     if not user_profile_embedding:
         return json.dumps(
             {
@@ -998,7 +1015,7 @@ def replace_low_rated_paper(project_id: str, low_rated_paper_hash: str) -> str:
     replacement_paper = filtered_papers[0]
 
     # Get data for the replacement paper
-    project_data = get_project_data(project_id)
+    project_data = get_project_data(owner_id, project_id)
     project_description = project_data.get("description", "") if project_data else ""
     replacement_summary = generate_paper_summary(replacement_paper, project_description)
 

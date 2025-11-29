@@ -21,6 +21,7 @@ from database.projects_database_handler import (
     get_queries_for_project,
     get_project_prompt,
     get_user_profile_embedding,
+    get_project_owner_id,
 )
 import ast
 from llm.Embeddings import embed_papers
@@ -43,9 +44,16 @@ def update_newsletter_papers(project_id: str):
     k = 3
     logger.info(f"[update_newsletter_papers] START for project {project_id}")
 
+    owner_id = get_project_owner_id(project_id)
+    if not owner_id:
+        logger.error(
+            f"[update_newsletter_papers] Unable to determine owner for project {project_id}"
+        )
+        return
+
     # 1. Get queries for project
     logger.info("  ↳ fetching queries for project…")
-    qs = get_queries_for_project(project_id)
+    qs = get_queries_for_project(owner_id, project_id)
     if not qs:
         logger.error(f"  ✖ no queries found for project {project_id}")
         return
@@ -55,7 +63,7 @@ def update_newsletter_papers(project_id: str):
 
     # Get prompt + embedded prompt
     logger.info("  ↳ fetching project prompt…")
-    pp = get_project_prompt(project_id)
+    pp = get_project_prompt(owner_id, project_id)
     if not pp:
         logger.error(f"    ✖ no prompt found for project {project_id}")
         return
@@ -64,7 +72,7 @@ def update_newsletter_papers(project_id: str):
 
     logger.info("  ↳ querying embedded project prompt…")
     embedded_prompt = get_user_profile_embedding(
-        project_id
+        owner_id, project_id
     )  # todo handle cases where this is null
     logger.info("    ✓ prompt embedding acquired")
 
