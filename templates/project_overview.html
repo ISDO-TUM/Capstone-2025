@@ -36,10 +36,6 @@
 
             <!-- Search Panel - Initially Hidden -->
             <div id="searchPanel" class="search-panel" style="display: none;">
-                <div class="search-info-note">
-                    <span class="info-icon">ℹ️</span>
-                    <span>Papers are ranked by relevance to your project description using AI similarity matching</span>
-                </div>
                 <div class="search-controls-container">
                     <!-- Search Input -->
                     <div class="search-input-wrapper">
@@ -49,17 +45,20 @@
 
                     <!-- Sort Dropdown -->
                     <div class="sort-dropdown">
-                        <select id="sortSelect" class="sort-select">
-                            <option value="" disabled selected>Sort papers</option>
-                            <option value="title">Sort by Title</option>
-                            <option value="rating">Sort by Rating</option>
-                            <option value="relevance">Sort by Relevance</option>
-                            <option value="year">Sort by Year (Newest First)</option>
-                            <option value="citations">Sort by Citations (Most First)</option>
-                            <option value="fwci">Sort by FWCI (Highest First)</option>
-                            <option value="percentile">Sort by Percentile (Highest First)</option>
-                            <option value="oa">Open Access First</option>
-                        </select>
+                        <div class="dropdown-with-tooltip">
+                            <select id="sortSelect" class="sort-select">
+                                <option value="" disabled selected>Sort papers</option>
+                                <option value="title">Sort by Title</option>
+                                <option value="rating">Sort by Rating</option>
+                                <option value="relevance">Sort by Relevance</option>
+                                <option value="year">Sort by Year (Newest First)</option>
+                                <option value="citations">Sort by Citations (Most First)</option>
+                                <option value="fwci">Sort by FWCI (Highest First)</option>
+                                <option value="percentile">Sort by Percentile (Highest First)</option>
+                                <option value="oa">Open Access First</option>
+                            </select>
+                            <span class="sort-info-icon" title="" id="sortInfoIcon">ℹ️</span>
+                        </div>
                         <button id="clearSortBtn" class="clear-dropdown-btn">×</button>
                     </div>
 

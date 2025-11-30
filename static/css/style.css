@@ -1563,25 +1563,6 @@ body {
     width: 100%;
 }
 
-.search-info-note {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 16px;
-    background: rgba(0, 123, 255, 0.08);
-    border-left: 3px solid #007bff;
-    border-radius: 8px;
-    margin-bottom: 16px;
-    font-size: 14px;
-    color: #495057;
-    line-height: 1.5;
-}
-
-.search-info-note .info-icon {
-    font-size: 16px;
-    flex-shrink: 0;
-}
-
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -1684,6 +1665,13 @@ body {
     min-width: 0;
 }
 
+/* Wrapper for dropdown with tooltip icon */
+.dropdown-with-tooltip {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
 .sort-select,
 .filter-select {
     width: 100%;
@@ -1705,6 +1693,69 @@ body {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     box-sizing: border-box;
+}
+
+/* Sort info icon (tooltip trigger) */
+.sort-info-icon {
+    position: absolute;
+    right: 50px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    color: #007bff;
+    cursor: help;
+    z-index: 5;
+    transition: all 0.2s ease;
+    opacity: 0.8;
+    user-select: none;
+}
+
+.sort-info-icon:hover {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.2);
+}
+
+/* Tooltip popup */
+.sort-tooltip-popup {
+    position: absolute;
+    bottom: calc(100% + 12px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.25s ease;
+    pointer-events: none;
+    z-index: 1000;
+    min-width: 280px;
+    max-width: 350px;
+    white-space: normal;
+    text-align: center;
+}
+
+/* Tooltip arrow */
+.sort-tooltip-popup::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1a237e;
+}
+
+.sort-info-icon:hover .sort-tooltip-popup {
+    opacity: 1;
+    visibility: visible;
+    bottom: calc(100% + 16px);
 }
 
 .sort-select option,
