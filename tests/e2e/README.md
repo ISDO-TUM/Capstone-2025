@@ -59,7 +59,7 @@ cd ../..
 
 ```bash
 # Install dependencies (from project root)
-pip install pytest pytest-playwright pytest-asyncio
+uv pip install -r requirements-dev.txt
 playwright install chromium
 
 # Set environment variables
@@ -73,7 +73,7 @@ export DB_PORT=5432
 
 # Navigate to e2e tests and run
 cd tests/e2e/
-pytest . -v
+uv run pytest . -v
 cd ../..
 ```
 

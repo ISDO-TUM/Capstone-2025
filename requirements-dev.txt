@@ -1,2 +1,5 @@
 pre-commit
 pigar
+pytest
+pytest-playwright
+pytest-asyncio
