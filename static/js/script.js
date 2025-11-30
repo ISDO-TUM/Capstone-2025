@@ -1391,10 +1391,47 @@ function setupSearchPanel() {
     const clearSortBtn = document.getElementById('clearSortBtn');
     const clearFilterBtn = document.getElementById('clearFilterBtn');
     const resultsCount = document.getElementById('resultsCount');
+    const sortInfoIcon = document.getElementById('sortInfoIcon');
 
     if (!titleSearchInput || !clearSearchBtn || !sortSelect || !filterSelect || !clearSortBtn || !clearFilterBtn || !resultsCount) {
         return;
     }
+
+    // Tooltip messages for each sort option
+    const sortTooltips = {
+        '': '🎯 Default Sorting: Papers are ranked by relevance to your project using AI similarity matching',
+        'relevance': '🎯 Default Sorting: Papers are ranked by relevance to your project using AI similarity matching',
+        'title': 'Papers are sorted alphabetically by title',
+        'rating': 'Papers are sorted by your ratings, highest first',
+        'year': 'Papers are sorted by publication year, newest first',
+        'citations': 'Papers are sorted by citation count, most cited first',
+        'fwci': 'Papers are sorted by Field-Weighted Citation Impact, highest first',
+        'percentile': 'Papers are sorted by citation percentile, highest first',
+        'oa': 'Open Access papers are shown first'
+    };
+
+    // Function to update tooltip based on current sort selection
+    function updateSortTooltip() {
+        if (sortInfoIcon) {
+            const currentSort = sortSelect.value || '';
+            const tooltipText = sortTooltips[currentSort] || sortTooltips[''];
+            
+            // Remove any existing tooltip
+            const existingTooltip = sortInfoIcon.querySelector('.sort-tooltip-popup');
+            if (existingTooltip) {
+                existingTooltip.remove();
+            }
+            
+            // Create new tooltip popup
+            const tooltip = document.createElement('div');
+            tooltip.className = 'sort-tooltip-popup';
+            tooltip.textContent = tooltipText;
+            sortInfoIcon.appendChild(tooltip);
+        }
+    }
+
+    // Initialize tooltip
+    updateSortTooltip();
 
     titleSearchInput.addEventListener('input', debounce(() => {
         filterAndSortPapers();
@@ -1411,6 +1448,7 @@ function setupSearchPanel() {
         sortSelect.value = '';
         filterAndSortPapers();
         updateDropdownButtons();
+        updateSortTooltip();
     });
 
     clearFilterBtn.addEventListener('click', () => {
@@ -1457,6 +1495,7 @@ function setupSearchPanel() {
     sortSelect.addEventListener('change', () => {
         filterAndSortPapers();
         updateDropdownButtons();
+        updateSortTooltip();
     });
 
     filterSelect.addEventListener('change', () => {
