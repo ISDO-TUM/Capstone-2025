@@ -12,6 +12,8 @@ dependencies = [
     "openai==1.79.0",
     "psycopg2-binary==2.9.10",
     "pyalex==0.18",
+    "pydantic-ai>=0.0.18",
+    "pydantic-graph>=1.25.1",
     "pypdf==3.17.0",
     "python-dotenv==1.1.0",
     "requests==2.32.4",
