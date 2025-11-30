@@ -22,6 +22,7 @@ from database.projects_database_handler import (
 )
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 
 @tool
@@ -102,7 +103,7 @@ def get_best_papers(project_id: str, num_candidates: int = 10) -> list[dict]:
         logger.info(f"Looking for hashes: {paper_hashes[:3]}...")  # Show first 3
 
         paper_metadata = get_papers_by_hash(paper_hashes)
-        logger.info(f"Paper metadata: {paper_metadata}")
+        #logger.info(f"Paper metadata: {paper_metadata}")
         logger.info(
             f"Number of papers found: {len(paper_metadata) if paper_metadata else 0}"
         )

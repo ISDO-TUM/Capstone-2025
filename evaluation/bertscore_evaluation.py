@@ -197,6 +197,7 @@ def evaluate_bertscore_relevance(
     import logging
 
     logger = logging.getLogger(__name__)
+    logger.setLevel(logging.WARNING)
     try:
         # Get BERTScore evaluation results
         results, bertscore_scores = _evaluate_bertscore_relevance_core(

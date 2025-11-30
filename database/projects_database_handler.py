@@ -20,6 +20,7 @@ from utils.status import Status
 from database.database_connection import connect_to_db
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 
 def add_new_project_to_db(user_id: str, title: str, description: str) -> str:

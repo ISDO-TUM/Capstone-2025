@@ -8,6 +8,7 @@ from database.projects_database_handler import (
 from chroma_db.chroma_vector_db import chroma_db
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 
 def update_user_vector(

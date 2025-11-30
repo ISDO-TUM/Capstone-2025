@@ -93,9 +93,9 @@ def get_papers_for_project(project_id: str):
         paper_dict["is_replacement"] = paper["is_replacement"]
         if summary_row:
             paper_dict["summary"] = summary_row[0]
-        print(paper_dict)
+        # print(paper_dict)
         results.append(paper_dict)
-    print("Successfully converted papers to dict")
+    # print("Successfully converted papers to dict")
     return results
 
 

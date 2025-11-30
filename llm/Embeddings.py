@@ -15,6 +15,7 @@ from langchain_core.messages import HumanMessage
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 
 def embed_string(text, model="text-embedding-3-small"):

@@ -19,6 +19,7 @@ from utils.status import Status
 import logging
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 
 def _fetch_works_single_query(query, from_publication_date=None, per_page=10):

@@ -45,6 +45,7 @@ from paper_handling.paper_handler import (
 from utils.status import Status
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 
 @tool

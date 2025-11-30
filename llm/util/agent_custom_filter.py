@@ -13,6 +13,7 @@ import operator
 import re
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 
 _OPERATORS = {
