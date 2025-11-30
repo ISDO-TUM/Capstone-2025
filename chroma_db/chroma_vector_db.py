@@ -13,6 +13,7 @@ from typing import List, Optional, TypedDict, Union
 
 import chromadb
 from chromadb.api.models.Collection import Collection
+from chromadb.config import Settings
 from utils.status import Status
 import traceback
 import sys
@@ -23,6 +24,27 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+# Ensure telemetry is disabled for all Chroma clients (HTTP or in-memory).
+try:
+    chromadb.configure(anonymized_telemetry=False)
+except Exception as exc:  # best-effort; fall back silently if configure fails
+    logger.warning("Failed to configure Chroma telemetry settings: %s", exc)
+
+# Some versions of Chroma still instantiate the Posthog client even when
+# anonymized telemetry is disabled. Force-disable capture so no network
+# calls are attempted and the noisy log errors stop.
+try:
+    import posthog
+
+    posthog.disabled = True
+
+    def _noop_capture(*_args, **_kwargs):
+        return None
+
+    posthog.capture = _noop_capture  # type: ignore[assignment]
+except Exception as exc:
+    logger.warning("Failed to override Posthog telemetry capture: %s", exc)
 
 
 class PaperData(TypedDict):
