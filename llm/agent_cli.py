@@ -80,7 +80,7 @@ def main() -> None:
     run_agent_stream(final_query)
 
     project_papers = get_papers_for_project(project_id)
-    
+
     print(f"\nRetrieved {len(project_papers)} papers for project {project_id}")
     for idx, entry in enumerate(project_papers, start=1):
         paper = get_paper_by_hash(entry.get("paper_hash"))

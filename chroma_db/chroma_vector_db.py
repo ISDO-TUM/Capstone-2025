@@ -63,6 +63,8 @@ CHROMA_PORT = int(os.getenv("CHROMA_PORT", 8000))
 
 
 USE_IN_MEMORY_DB = os.getenv("USE_IN_MEMORY_DB", "").lower() == "true"
+
+
 def _build_in_memory_client(settings: Settings):
     """Create an in-memory Chroma client honoring telemetry settings."""
     ephemeral_cls = getattr(chromadb, "EphemeralClient", None)
@@ -96,7 +98,9 @@ class ChromaVectorDB:
             use_in_memory (Optional[bool]): Force in-memory Chroma client if True. When
                 None, defaults to USE_IN_MEMORY_DB environment variable.
         """
-        self.use_in_memory = USE_IN_MEMORY_DB if use_in_memory is None else use_in_memory
+        self.use_in_memory = (
+            USE_IN_MEMORY_DB if use_in_memory is None else use_in_memory
+        )
         settings = Settings(anonymized_telemetry=False)
 
         if self.use_in_memory:
