@@ -19,7 +19,7 @@ import json
 import logging
 from typing import Any, Dict, List
 
-from langchain_core.tools import tool
+from llm.tools.plain_tool import tool
 
 from chroma_db.chroma_vector_db import chroma_db
 from database.database_connection import connect_to_db
@@ -1058,111 +1058,7 @@ def replace_low_rated_paper(project_id: str, low_rated_paper_hash: str) -> str:
 
 
 def main():
-    from langgraph.prebuilt import create_react_agent
-    from langchain_core.messages import HumanMessage
-    from llm.tools.Tools_aggregator import get_tools
-    from llm.LLMDefinition import LLM
-    from llm.util.agent_log_formatter import format_log_message
-
-    print("\n========== PHASE 1: DIRECT TOOL TESTING ==========\n")
-
-    tool_inputs = {
-        "retry_broaden": [
-            {
-                "query_description": "My research is about yeast metabolism under moonlight.",
-                "keywords": ["yeast", "metabolism", "moonlight"],
-            },
-            {
-                "query_description": "Low citation results on a very specific variant of quantum Hall effects.",
-                "keywords": ["quantum hall", "edge states", "low temperature"],
-            },
-            {
-                "query_description": "I only got one result for 'subtypes of algae in Norwegian fjords' — can you expand that?",
-                "keywords": ["algae", "Norwegian fjords", "taxonomy"],
-            },
-        ],
-        "reformulate_query": [
-            {
-                "query_description": "biotech bio something cancer cell therapy general stuff",
-                "keywords": ["biotech", "cancer", "cell therapy"],
-            },
-            {
-                "query_description": "fuzzy logic relevance matching NLP graphs paper recommendation system vague idea",
-                "keywords": ["fuzzy logic", "NLP", "recommendation"],
-            },
-        ],
-        "accept": [{"confirmation": "yes"}, {"confirmation": "yes"}],
-        "detect_out_of_scope_query": [
-            {"query_description": "How are you doing today?"}
-        ],
-    }
-
-    for tool_name, input_list in tool_inputs.items():
-        print(f"\n🛠️ Tool: {tool_name.upper()}")
-        for inputs in input_list:
-            print(f"Input: {inputs}")
-            if tool_name == "retry_broaden":
-                output = retry_broaden.invoke(inputs)
-            elif tool_name == "reformulate_query":
-                output = reformulate_query.invoke(inputs)
-            elif tool_name == "detect_out_of_scope_query":
-                output = detect_out_of_scope_query.invoke(inputs)
-            else:
-                output = "❌ Unknown tool"
-            print("Output:", output)
-            print("-" * 60)
-
-    print("\n========== PHASE 2: AGENT STREAMING TESTING ==========\n")
-
-    tools = get_tools()
-    agent = create_react_agent(model=LLM, tools=tools)
-
-    system_prompt = HumanMessage(
-        content="""
-    You are a helpful academic research assistant.
-    You have access to tools like `retry_broaden`, `reformulate_query`, `accept`, and `detect_out_of_scope_query`.
-
-    Based on the user query, you must decide whether to:
-    - Broaden overly specific queries
-    - Reformulate vague or poorly phrased ones
-    - Accept a valid query if it needs no changes
-    - Detect and reject queries that are not related to scientific research
-
-    Your final output must always return the tool result only. Think carefully and choose the right action.
-    """
-    )
-
-    # Combine all textual query inputs for testing the agent
-    agent_test_queries = [
-        "My research is about yeast metabolism under moonlight.",
-        "Low citation results on a very specific variant of quantum Hall effects.",
-        "I only got one result for 'subtypes of algae in Norwegian fjords' — can you expand that?",
-        "biotech bio something cancer cell therapy general stuff",
-        "fuzzy logic relevance matching NLP graphs paper recommendation system vague idea",
-        "Applications of transformers in biomedical entity recognition",
-        "Recent developments in reinforcement learning for robotics control",
-        "How are you doing today?",
-    ]
-
-    def stream_agent_reasoning(agent, query: str):
-        print(f"\n🔍 Query: {query}\n")
-        last_step = None
-        for step in agent.stream(
-            {"messages": [system_prompt, HumanMessage(content=query)]},
-            {"recursion_limit": 6},
-            stream_mode="values",
-        ):
-            log = step["messages"][-1].pretty_repr()
-            print(format_log_message(log))
-            last_step = step
-
-        if last_step:
-            print("\n✅ Final Agent Output:\n", last_step["messages"][-1].content)
-        else:
-            print("\n⚠️ Agent produced no output.\n")
-
-    for query in agent_test_queries:
-        stream_agent_reasoning(agent, query)
+    raise NotImplementedError("The LangChain-based test harness has been removed.")
 
 
 # NOTE: This block is for local testing only. Uncomment to run local tests.

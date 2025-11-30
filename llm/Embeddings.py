@@ -11,7 +11,6 @@ Responsibilities:
 import logging
 from openai import OpenAI
 from llm.LLMDefinition import OPENAI_API_KEY, LLM
-from langchain_core.messages import HumanMessage
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 logger = logging.getLogger(__name__)
@@ -86,7 +85,7 @@ def embed_paper_text(paper_text: str) -> list[float]:
     Summary:
     """
 
-    response = LLM.invoke([HumanMessage(content=prompt)])
+    response = LLM.invoke(prompt)
     summary = str(response.content).strip()
     logger.info("Generated summary: " + summary)
 

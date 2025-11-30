@@ -10,7 +10,7 @@ from database.projectpaper_database_handler import (
 )
 from pubsub import pubsub_params
 
-from pubsub.temporary_llm_that_will_be_replaced_soon import calL_temp_agent
+from pubsub.temporary_llm_that_will_be_replaced_soon import call_temp_agent
 from typing import List, TypedDict
 from database.papers_database_handler import (
     insert_papers,
@@ -129,7 +129,7 @@ def update_newsletter_papers(project_id: str):
 
     # 8. Call agent
     logger.info("  ↳ calling LLM agent to pick+summarize…")
-    agent_out = calL_temp_agent(str(potential), project_prompt, str(k)).content
+    agent_out = call_temp_agent(str(potential), project_prompt, str(k)).content
     logger.info(f"    ✓ raw agent output: {agent_out}")
     agent_response = ast.literal_eval(agent_out)
 
