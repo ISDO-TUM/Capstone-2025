@@ -59,7 +59,7 @@ cd ../..
 
 ```bash
 # Install dependencies (from project root)
-uv pip install -r requirements-dev.txt
+uv add --dev -r requirements-dev.txt
 playwright install chromium
 
 # Set environment variables

@@ -884,13 +884,17 @@ def generate_relevance_summary(user_query: str, title: str, abstract: str) -> st
         f'User query: "{user_query}"\n'
         f'Paper title: "{title}"\n'
         f'Abstract: "{abstract}"\n'
-        "\nWrite a 1-2 sentence explanation for the user, following these rules:\n"
-        "• DO NOT start with 'This paper', 'The paper', 'This study', or similar phrases - jump straight to the content.\n"
-        "• Explain succinctly why the paper fits the user's interests.\n"
-        "• Summarise key contributions/findings from the abstract.\n"
+        "\nWrite a 1-2 sentence explanation for the user. Start directly with the key insight or contribution.\n"
+        "\nGuidelines:\n"
+        "• Begin with an action verb or the main concept (e.g., 'Proposes', 'Introduces', 'Demonstrates', 'Analyzes', 'Develops', or the subject itself).\n"
+        "• Do NOT use sentence starters like 'This paper', 'The paper', 'This study', 'This article', 'It', or 'The authors'.\n"
+        "• Explain succinctly why the paper directly addresses the user's interests.\n"
+        "• Summarize the key contributions or findings from the abstract.\n"
         "• Use active, direct language.\n"
-        "• Remain precise, relevant, and engaging.\n"
-        "\nExample: 'Explores novel Bayesian optimization techniques for algorithmic pricing in competitive markets, directly addressing your interest in pricing strategies.'"
+        "\nGood examples:\n"
+        "- 'Proposes a Bayesian optimization framework for dynamic pricing that directly addresses your interest in algorithmic pricing strategies.'\n"
+        "- 'Develops novel attention mechanisms for transformer-based biomedical NER systems, advancing your research in entity recognition.'\n"
+        "- 'Quantum Hall effects in topological insulators show how edge states emerge under magnetic confinement—key to your study of quantum phenomena.'\n"
     )
     try:
         llm_response = LLM.invoke(prompt)
@@ -899,26 +903,6 @@ def generate_relevance_summary(user_query: str, title: str, abstract: str) -> st
             summary = content.strip()
         else:
             summary = str(content).strip()
-
-        # Remove redundant starting phrases as a safety net
-        redundant_starts = [
-            "This paper ",
-            "The paper ",
-            "This study ",
-            "The study ",
-            "This research ",
-            "The research ",
-            "This article ",
-            "The article ",
-        ]
-
-        for phrase in redundant_starts:
-            if summary.startswith(phrase):
-                # Remove phrase and capitalize first letter
-                summary = summary[len(phrase) :].strip()
-                if summary:
-                    summary = summary[0].upper() + summary[1:]
-                break
 
         return summary
     except Exception:
