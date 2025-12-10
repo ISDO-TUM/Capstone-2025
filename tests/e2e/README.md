@@ -22,8 +22,9 @@ View test results in the GitHub Actions tab. This is the recommended approach as
 
 #### Using the Test Script (Recommended)
 
-**Always use `./run_tests.sh` instead of `uv run pytest`** to avoid environment corruption:
+**Always use the test script instead of `uv run pytest`** to avoid environment corruption:
 
+**Mac/Linux:**
 ```bash
 # From project root, run all E2E tests
 ./run_tests.sh tests/e2e -v
@@ -38,16 +39,31 @@ View test results in the GitHub Actions tab. This is the recommended approach as
 ./run_tests.sh llm/Tests chroma_db/Tests paper_handling -v
 ```
 
-**Why use `./run_tests.sh` instead of `uv run pytest`?**
+**Windows:**
+```batch
+# From project root, run all E2E tests
+run_tests.bat tests/e2e -v
+
+# Run specific test file
+run_tests.bat tests/e2e/test_basic.py -v
+
+# Run specific test
+run_tests.bat tests/e2e/test_basic.py::test_homepage_loads -v
+
+# Run unit tests separately
+run_tests.bat llm/Tests chroma_db/Tests paper_handling -v
+```
+
+**Why use the test scripts instead of `uv run pytest`?**
 
 `uv run pytest` has a known bug where it constantly recreates the virtual environment due to symlink validation issues, causing:
 - Tests to fail unpredictably on subsequent runs
 - Environment corruption with wrong platform binaries
 - Wasted time recreating `.venv` on every execution
 
-The `./run_tests.sh` script uses direct venv activation (`source .venv/bin/activate`) which bypasses this bug and provides stable test execution.
+The test scripts use direct venv activation (`source .venv/bin/activate` on Mac/Linux, `.venv\Scripts\activate.bat` on Windows) which bypasses this bug and provides stable test execution.
 
-**Important:** Do not run unit tests and E2E tests together (e.g., `./run_tests.sh .`). They have conflicting fixture requirements:
+**Important:** Do not run unit tests and E2E tests together (e.g., `./run_tests.sh .` or `run_tests.bat .`). They have conflicting fixture requirements:
 - Unit tests mock ChromaDB globally
 - E2E tests require real ChromaDB connections
 
@@ -55,6 +71,7 @@ Always run them separately as shown above.
 
 #### Setup Environment
 
+**Mac/Linux:**
 ```bash
 # Install dependencies (from project root)
 uv sync
@@ -65,6 +82,19 @@ docker compose up -d db chromadb
 
 # Wait for services to start
 sleep 5
+```
+
+**Windows (PowerShell):**
+```powershell
+# Install dependencies (from project root)
+uv sync
+playwright install chromium
+
+# Start required services
+docker compose up -d db chromadb
+
+# Wait for services to start
+Start-Sleep -Seconds 5
 ```
 
 ## Test Coverage
@@ -119,58 +149,66 @@ tests/
 
 ## Running Specific Tests
 
-All commands should be run from the project root using `./run_tests.sh`:
+All commands should be run from the project root using the test script:
 
 ### Run All E2E Tests
-```bash
-./run_tests.sh tests/e2e
-```
+**Mac/Linux:** `./run_tests.sh tests/e2e`
+
+**Windows:** `run_tests.bat tests/e2e`
 
 ### Run Specific Test File
-```bash
-./run_tests.sh tests/e2e/test_basic.py -v
-```
+**Mac/Linux:** `./run_tests.sh tests/e2e/test_basic.py -v`
+
+**Windows:** `run_tests.bat tests/e2e/test_basic.py -v`
 
 ### Run Specific Test Class
-```bash
-./run_tests.sh tests/e2e/test_recommendations.py::TestRecommendationsFlow -v
-```
+**Mac/Linux:** `./run_tests.sh tests/e2e/test_recommendations.py::TestRecommendationsFlow -v`
+
+**Windows:** `run_tests.bat tests/e2e/test_recommendations.py::TestRecommendationsFlow -v`
 
 ### Run Single Test
-```bash
-./run_tests.sh tests/e2e/test_basic.py::test_homepage_loads -v
-```
+**Mac/Linux:** `./run_tests.sh tests/e2e/test_basic.py::test_homepage_loads -v`
+
+**Windows:** `run_tests.bat tests/e2e/test_basic.py::test_homepage_loads -v`
 
 ### Run with Verbose Output
-```bash
-./run_tests.sh tests/e2e -vv
-```
+**Mac/Linux:** `./run_tests.sh tests/e2e -vv`
+
+**Windows:** `run_tests.bat tests/e2e -vv`
 
 ## Debugging
 
 ### View Browser During Tests
-```bash
-./run_tests.sh tests/e2e --headed
-```
+**Mac/Linux:** `./run_tests.sh tests/e2e --headed`
+
+**Windows:** `run_tests.bat tests/e2e --headed`
 
 ### Slow Down Execution
-```bash
-./run_tests.sh tests/e2e --headed --slowmo=1000
-```
+**Mac/Linux:** `./run_tests.sh tests/e2e --headed --slowmo=1000`
+
+**Windows:** `run_tests.bat tests/e2e --headed --slowmo=1000`
 
 ### Run Single Test with Debugging
-```bash
-./run_tests.sh tests/e2e/test_load_more.py::TestLoadMorePapers::test_load_more_button_exists_and_increases_count -v
-```
+**Mac/Linux:** `./run_tests.sh tests/e2e/test_load_more.py::TestLoadMorePapers::test_load_more_button_exists_and_increases_count -v`
+
+**Windows:** `run_tests.bat tests/e2e/test_load_more.py::TestLoadMorePapers::test_load_more_button_exists_and_increases_count -v`
 
 ### View Screenshots
 Failed tests automatically save screenshots to `tests/e2e/screenshots/`.
 
 ### Pytest Debugging Options
+**Mac/Linux:**
 ```bash
 ./run_tests.sh tests/e2e -v -s          # Show print statements
 ./run_tests.sh tests/e2e -v --pdb       # Drop into debugger on failure
 ./run_tests.sh tests/e2e -v --maxfail=1 # Stop after first failure
+```
+
+**Windows:**
+```batch
+run_tests.bat tests/e2e -v -s          # Show print statements
+run_tests.bat tests/e2e -v --pdb       # Drop into debugger on failure
+run_tests.bat tests/e2e -v --maxfail=1 # Stop after first failure
 ```
 
 ## Mock LLM
@@ -223,7 +261,7 @@ Automatically enables TEST_MODE and Mock LLM:
 ```
 ValueError: Could not connect to a Chroma server
 ```
-**Solution**:
+**Solution (Mac/Linux)**:
 ```bash
 # Start ChromaDB
 docker compose up -d chromadb
@@ -231,20 +269,46 @@ docker compose up -d chromadb
 export CHROMA_HOST=localhost
 ```
 
+**Solution (Windows - PowerShell)**:
+```powershell
+# Start ChromaDB
+docker compose up -d chromadb
+# OR set environment variable
+$env:CHROMA_HOST="localhost"
+```
+
 ### PostgreSQL Connection Error
 ```
 connection to server failed: fe_sendauth: no password supplied
+# OR
+psycopg2.OperationalError: password authentication failed for user "user"
 ```
-**Solution**:
+**Solution (Mac/Linux)**:
 ```bash
-# Start PostgreSQL
+# Reset database volume and start fresh
+docker compose down -v
 docker compose up -d db
+
 # OR set environment variables
 export DB_HOST=127.0.0.1
 export DB_NAME=papers
 export DB_USER=user
 export DB_PASSWORD=password
 export DB_PORT=5432
+```
+
+**Solution (Windows - PowerShell)**:
+```powershell
+# Reset database volume and start fresh
+docker compose down -v
+docker compose up -d db
+
+# OR set environment variables
+$env:DB_HOST="127.0.0.1"
+$env:DB_NAME="papers"
+$env:DB_USER="user"
+$env:DB_PASSWORD="password"
+$env:DB_PORT="5432"
 ```
 
 ### Playwright Not Found
@@ -278,8 +342,10 @@ View workflow configuration in `.github/workflows/e2e-tests.yml`.
 
 ## Best Practices
 
-- **Use `./run_tests.sh`**: Always use the test script instead of `uv run pytest` to avoid environment corruption
+- **Use Test Scripts**: Always use `./run_tests.sh` (Mac/Linux) or `run_tests.bat` (Windows) instead of `uv run pytest` to avoid environment corruption
 - **Separate Test Suites**: Never run unit tests and E2E tests together - they have conflicting fixture requirements
+- **Docker First**: Always start Docker services before running tests (`docker compose up -d`)
+- **Reset Database**: If authentication fails, reset the database with `docker compose down -v` then `docker compose up -d`
 - **Run in CI**: Let GitHub Actions handle full test runs automatically
 - **Debug Locally**: Run specific tests with `--headed` flag for visual debugging
 - **Check Screenshots**: Review failure screenshots in `tests/e2e/screenshots/` for debugging
