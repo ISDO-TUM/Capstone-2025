@@ -234,8 +234,9 @@ The project includes both unit tests and end-to-end (E2E) tests. For detailed te
 
 ### Quick Test Commands
 
-**Important:** Always use `./run_tests.sh` instead of `uv run pytest` to avoid environment corruption issues.
+**Important:** Always use the test scripts instead of `uv run pytest` to avoid environment corruption issues.
 
+**Mac/Linux:**
 ```bash
 # Run all E2E tests
 ./run_tests.sh tests/e2e -v
@@ -247,7 +248,19 @@ The project includes both unit tests and end-to-end (E2E) tests. For detailed te
 ./run_tests.sh tests/e2e/test_basic.py -v
 ```
 
-**Note:** Do not run all tests together (e.g., `./run_tests.sh .`) as unit tests and E2E tests have conflicting fixture requirements. Always run them separately.
+**Windows:**
+```batch
+# Run all E2E tests
+run_tests.bat tests/e2e -v
+
+# Run all unit tests
+run_tests.bat llm/Tests chroma_db/Tests paper_handling -v
+
+# Run specific test file
+run_tests.bat tests/e2e/test_basic.py -v
+```
+
+**Note:** Do not run all tests together (e.g., `./run_tests.sh .` or `run_tests.bat .`) as unit tests and E2E tests have conflicting fixture requirements. Always run them separately.
 ---
 
 ### Contribution workflow
