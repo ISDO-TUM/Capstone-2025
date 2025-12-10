@@ -230,14 +230,24 @@ For local testing and debugging, see the complete testing guide:
 
 ## Testing
 
-The project includes comprehensive end-to-end (E2E) tests using Playwright. For detailed testing documentation, see [tests/e2e/README.md](tests/e2e/README.md).
+The project includes both unit tests and end-to-end (E2E) tests. For detailed testing documentation, see [tests/e2e/README.md](tests/e2e/README.md).
 
 ### Quick Test Commands
+
+**Important:** Always use `./run_tests.sh` instead of `uv run pytest` to avoid environment corruption issues.
+
 ```bash
 # Run all E2E tests
-cd tests/e2e/
-./run_e2e_tests.sh .
+./run_tests.sh tests/e2e -v
+
+# Run all unit tests
+./run_tests.sh llm/Tests chroma_db/Tests paper_handling -v
+
+# Run specific test file
+./run_tests.sh tests/e2e/test_basic.py -v
 ```
+
+**Note:** Do not run all tests together (e.g., `./run_tests.sh .`) as unit tests and E2E tests have conflicting fixture requirements. Always run them separately.
 ---
 
 ### Contribution workflow

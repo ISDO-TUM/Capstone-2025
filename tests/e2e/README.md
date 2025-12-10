@@ -12,69 +12,59 @@ This directory contains end-to-end tests for the Capstone-2025 application using
 
 View test results in the GitHub Actions tab. This is the recommended approach as all services are properly configured.
 
-### Running Tests Locally (Optional)
-
-If you want to run tests locally for development/debugging:
+### Running Tests Locally
 
 #### Prerequisites
 - **PostgreSQL** (port 5432)
 - **ChromaDB** (port 8000)
 - **Playwright** and **Pytest** installed
+- **uv** and virtual environment set up
 
-#### Option 1: Using the Helper Script (Easiest)
+#### Using the Test Script (Recommended)
+
+**Always use `./run_tests.sh` instead of `uv run pytest`** to avoid environment corruption:
 
 ```bash
-# Navigate to the e2e tests directory
-cd tests/e2e/
-
-# Run all tests
-./run_e2e_tests.sh .
+# From project root, run all E2E tests
+./run_tests.sh tests/e2e -v
 
 # Run specific test file
-./run_e2e_tests.sh test_basic.py -v
+./run_tests.sh tests/e2e/test_basic.py -v
 
 # Run specific test
-./run_e2e_tests.sh test_basic.py::TestBasic::test_homepage_loads -v
+./run_tests.sh tests/e2e/test_basic.py::test_homepage_loads -v
 
-# Return to project root
-cd ../..
+# Run unit tests separately
+./run_tests.sh llm/Tests chroma_db/Tests paper_handling -v
 ```
 
-#### Option 2: Using Docker Compose
+**Why use `./run_tests.sh` instead of `uv run pytest`?**
+
+`uv run pytest` has a known bug where it constantly recreates the virtual environment due to symlink validation issues, causing:
+- Tests to fail unpredictably on subsequent runs
+- Environment corruption with wrong platform binaries
+- Wasted time recreating `.venv` on every execution
+
+The `./run_tests.sh` script uses direct venv activation (`source .venv/bin/activate`) which bypasses this bug and provides stable test execution.
+
+**Important:** Do not run unit tests and E2E tests together (e.g., `./run_tests.sh .`). They have conflicting fixture requirements:
+- Unit tests mock ChromaDB globally
+- E2E tests require real ChromaDB connections
+
+Always run them separately as shown above.
+
+#### Setup Environment
 
 ```bash
-# From project root, start required services
+# Install dependencies (from project root)
+uv sync
+playwright install chromium
+
+# Start required services
 docker compose up -d db chromadb
 
 # Wait for services to start
 sleep 5
-
-# Navigate to e2e tests directory and run tests
-cd tests/e2e/
-./run_e2e_tests.sh . -v
-cd ../..
-```
-
-#### Option 3: Manual Setup
-
-```bash
-# Install dependencies (from project root)
-uv add --dev -r requirements-dev.txt
-playwright install chromium
-
-# Set environment variables
-export TEST_MODE=true
-export CHROMA_HOST=localhost
-export DB_HOST=127.0.0.1
-export DB_NAME=papers
-export DB_USER=user
-export DB_PASSWORD=password
-export DB_PORT=5432
-
-# Navigate to e2e tests and run
-cd tests/e2e/
-uv run pytest . -v
-cd ../..
 ```
 
 ## Test Coverage
@@ -129,70 +119,48 @@ tests/
 
 ## Running Specific Tests
 
+All commands should be run from the project root using `./run_tests.sh`:
+
+### Run All E2E Tests
 ```bash
-# Navigate to e2e tests directory
-cd tests/e2e/
-
-# Run all tests
-./run_e2e_tests.sh .
-
-# Run specific test file
-./run_e2e_tests.sh test_basic.py -v
-
-## Running Specific Tests
-
-### Run All Tests in a File
-```bash
-cd tests/e2e/
-./run_e2e_tests.sh test_basic.py
-cd ../..
+./run_tests.sh tests/e2e
 ```
 
-### Run a Specific Test Class
+### Run Specific Test File
 ```bash
-cd tests/e2e/
-./run_e2e_tests.sh test_recommendations.py::TestRecommendationFlow
-cd ../..
+./run_tests.sh tests/e2e/test_basic.py -v
 ```
 
-### Run a Single Test
+### Run Specific Test Class
 ```bash
-cd tests/e2e/
-./run_e2e_tests.sh test_basic.py::TestBasicFunctionality::test_can_visit_home
-cd ../..
+./run_tests.sh tests/e2e/test_recommendations.py::TestRecommendationsFlow -v
 ```
 
-# Run with verbose output
-./run_e2e_tests.sh . -v
+### Run Single Test
+```bash
+./run_tests.sh tests/e2e/test_basic.py::test_homepage_loads -v
+```
 
-# Run with extra verbose output
-./run_e2e_tests.sh . -vv
-
-# Return to project root
-cd ../..
+### Run with Verbose Output
+```bash
+./run_tests.sh tests/e2e -vv
 ```
 
 ## Debugging
 
 ### View Browser During Tests
 ```bash
-cd tests/e2e/
-pytest . --headed
-cd ../..
+./run_tests.sh tests/e2e --headed
 ```
 
 ### Slow Down Execution
 ```bash
-cd tests/e2e/
-pytest . --headed --slowmo=1000
-cd ../..
+./run_tests.sh tests/e2e --headed --slowmo=1000
 ```
 
-### Run Single Test
+### Run Single Test with Debugging
 ```bash
-cd tests/e2e/
-./run_e2e_tests.sh test_load_more.py::TestLoadMorePapers::test_load_more_button_works -v
-cd ../..
+./run_tests.sh tests/e2e/test_load_more.py::TestLoadMorePapers::test_load_more_button_exists_and_increases_count -v
 ```
 
 ### View Screenshots
@@ -200,11 +168,9 @@ Failed tests automatically save screenshots to `tests/e2e/screenshots/`.
 
 ### Pytest Debugging Options
 ```bash
-cd tests/e2e/
-pytest . -v -s          # Show print statements
-pytest . -v --pdb       # Drop into debugger on failure
-pytest . -v --maxfail=1 # Stop after first failure
-cd ../..
+./run_tests.sh tests/e2e -v -s          # Show print statements
+./run_tests.sh tests/e2e -v --pdb       # Drop into debugger on failure
+./run_tests.sh tests/e2e -v --maxfail=1 # Stop after first failure
 ```
 
 ## Mock LLM
@@ -312,8 +278,9 @@ View workflow configuration in `.github/workflows/e2e-tests.yml`.
 
 ## Best Practices
 
-- **Run in CI**: Let GitHub Actions handle full test runs
+- **Use `./run_tests.sh`**: Always use the test script instead of `uv run pytest` to avoid environment corruption
+- **Separate Test Suites**: Never run unit tests and E2E tests together - they have conflicting fixture requirements
+- **Run in CI**: Let GitHub Actions handle full test runs automatically
 - **Debug Locally**: Run specific tests with `--headed` flag for visual debugging
-- **Check Screenshots**: Review failure screenshots for debugging
-- **Use Helper Script**: `run_e2e_tests.sh` handles environment setup automatically
+- **Check Screenshots**: Review failure screenshots in `tests/e2e/screenshots/` for debugging
 - **Serial Execution**: Tests run one at a time by default (no parallel execution)

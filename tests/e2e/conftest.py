@@ -109,36 +109,107 @@ def flask_server(enable_test_mode):
     """
     from app import app
     import socket
+    import subprocess
 
     test_port = 5556
 
-    # Check if port is available
-    def is_port_in_use(port):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            return s.connect_ex(("127.0.0.1", port)) == 0
+    # Kill any existing process using the port
+    try:
+        result = subprocess.run(
+            f"lsof -ti :{test_port}",
+            shell=True,
+            capture_output=True,
+            text=True,
+        )
+        if result.stdout.strip():
+            pids = result.stdout.strip().split("\n")
+            for pid in pids:
+                subprocess.run(f"kill -9 {pid}", shell=True)
+            time.sleep(1)  # Wait for port to be released
+    except Exception:
+        pass  # Port was already free
 
-    # Wait for port to be free if needed
-    max_retries = 5
+    # Verify port is free
+    def is_port_free(port):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("127.0.0.1", port))
+                return True
+            except OSError:
+                return False
+
+    # Wait for port to be free
+    max_retries = 10
     for i in range(max_retries):
-        if not is_port_in_use(test_port):
+        if is_port_free(test_port):
             break
-        time.sleep(1)
+        time.sleep(0.5)
+    else:
+        raise RuntimeError(f"Port {test_port} is still in use after waiting")
+
+    # Flag to track server status
+    server_started = threading.Event()
+    server_error = []
 
     def run_app():
-        app.config["TESTING"] = True
-        app.run(host="127.0.0.1", port=test_port, debug=False, use_reloader=False)
+        try:
+            app.config["TESTING"] = True
+            # Signal that we're about to start
+            server_started.set()
+            app.run(
+                host="127.0.0.1", port=test_port, debug=False, use_reloader=False
+            )
+        except Exception as e:
+            server_error.append(e)
+            server_started.set()
 
     thread = threading.Thread(target=run_app, daemon=True)
     thread.start()
 
-    # Wait for server to be ready
-    time.sleep(3)
+    # Wait for server to start
+    server_started.wait(timeout=5)
+    if server_error:
+        raise RuntimeError(f"Failed to start server: {server_error[0]}")
+
+    # Give Flask a moment to fully initialize
+    time.sleep(2)
+
+    # Verify server is responding
+    max_retries = 10
+    for i in range(max_retries):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                if s.connect_ex(("127.0.0.1", test_port)) == 0:
+                    break
+        except Exception:
+            pass
+        time.sleep(0.5)
+    else:
+        raise RuntimeError(f"Server did not start successfully on port {test_port}")
 
     base_url = f"http://127.0.0.1:{test_port}"
 
     yield base_url
 
-    # Cleanup happens automatically with daemon thread
+    # Cleanup: kill the server process silently
+    try:
+        result = subprocess.run(
+            f"lsof -ti :{test_port}",
+            shell=True,
+            capture_output=True,
+            text=True,
+        )
+        if result.stdout.strip():
+            pids = result.stdout.strip().split("\n")
+            for pid in pids:
+                subprocess.run(
+                    f"kill -9 {pid}",
+                    shell=True,
+                    capture_output=True,
+                    stderr=subprocess.DEVNULL,
+                )
+    except Exception:
+        pass
 
 
 @pytest.fixture(scope="function")
