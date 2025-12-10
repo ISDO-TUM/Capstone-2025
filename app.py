@@ -45,6 +45,7 @@ from database.projects_database_handler import (
     get_queries_for_project,
     get_user_profile_embedding,
     update_project_description,
+    delete_project,
 )
 from llm.Embeddings import embed_papers
 from llm.feedback import update_user_profile_embedding_from_rating
@@ -658,6 +659,25 @@ def api_update_project_prompt(project_id):
         )
     else:
         return jsonify({"error": "Failed to update project prompt"}), 500
+
+
+@app.route("/api/project/<project_id>", methods=["DELETE"])
+def api_delete_project(project_id):
+    """
+    Delete a project and all its associated data.
+    Args:
+        project_id (str): The project ID to delete.
+    Returns:
+        Response: JSON with success status or error message.
+    """
+    if not request.auth:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    status = delete_project(project_id)
+    if status == Status.SUCCESS:
+        return jsonify({"success": True, "message": "Project deleted successfully"})
+    else:
+        return jsonify({"error": "Failed to delete project"}), 500
 
 
 @app.route("/api/load_more_papers", methods=["POST"])
