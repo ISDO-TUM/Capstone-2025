@@ -94,9 +94,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
 
       - name: Install dependencies
-        run: |
-          uv sync --locked
-          uv pip install pytest pytest-playwright pytest-asyncio
+        run: uv sync --locked
 
       - name: Install Playwright browsers
         run: uv run playwright install chromium --with-deps
@@ -125,8 +123,9 @@ jobs:
           DB_PASSWORD: password
           CHROMA_HOST: localhost
         run: |
+          source .venv/bin/activate
           cd tests/e2e
-          uv run pytest . -v
+          pytest . -v
 
       - name: Upload test screenshots on failure
         if: failure()
