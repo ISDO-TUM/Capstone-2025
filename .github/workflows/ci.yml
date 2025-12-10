@@ -96,7 +96,7 @@ jobs:
       - name: Install dependencies
         run: |
           uv sync --locked
-          uv pip install pytest pytest-playwright pytest-asyncio
+          playwright install chromium
 
       - name: Install Playwright browsers
         run: uv run playwright install chromium --with-deps
