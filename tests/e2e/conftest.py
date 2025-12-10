@@ -156,9 +156,7 @@ def flask_server(enable_test_mode):
             app.config["TESTING"] = True
             # Signal that we're about to start
             server_started.set()
-            app.run(
-                host="127.0.0.1", port=test_port, debug=False, use_reloader=False
-            )
+            app.run(host="127.0.0.1", port=test_port, debug=False, use_reloader=False)
         except Exception as e:
             server_error.append(e)
             server_started.set()
