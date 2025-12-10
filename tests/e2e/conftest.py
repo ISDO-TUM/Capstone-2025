@@ -48,13 +48,6 @@ def enable_test_mode():
 
     Also sets all database connection parameters for PostgreSQL.
     """
-    # Set additional environment variables
-    os.environ["CHROMA_HOST"] = "localhost"
-    os.environ["DB_HOST"] = "127.0.0.1"
-    os.environ["DB_NAME"] = "papers"
-    os.environ["DB_USER"] = "user"
-    os.environ["DB_PASSWORD"] = "password"
-    os.environ["DB_PORT"] = "5432"
 
     # Mock the LLM to avoid API calls and ensure deterministic responses
     import llm.LLMDefinition as llm_def
@@ -87,13 +80,6 @@ def enable_test_mode():
 
     # Cleanup environment variables
     os.environ.pop("TEST_MODE", None)
-    os.environ.pop("OPENAI_API_KEY", None)
-    os.environ.pop("CHROMA_HOST", None)
-    os.environ.pop("DB_HOST", None)
-    os.environ.pop("DB_NAME", None)
-    os.environ.pop("DB_USER", None)
-    os.environ.pop("DB_PASSWORD", None)
-    os.environ.pop("DB_PORT", None)
 
 
 @pytest.fixture(scope="session")
