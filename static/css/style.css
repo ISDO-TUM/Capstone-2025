@@ -630,6 +630,51 @@ body {
     letter-spacing: 0.2px;
     text-shadow: 0 2px 8px rgba(0,0,0,0.03);
 }
+
+.project-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 2px;
+}
+
+.delete-project-btn {
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    opacity: 0;
+    transform: translateX(4px);
+}
+
+.project-card:hover .delete-project-btn {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.delete-project-btn:hover {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+    transform: scale(1.1);
+}
+
+.delete-project-btn:active {
+    transform: scale(0.95);
+}
+
+.delete-project-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2.5;
+}
 .project-description {
     font-size: 1.09rem;
     color: #222b;

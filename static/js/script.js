@@ -1110,14 +1110,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             card.innerHTML = `
-                <div class="project-title">${project.title}</div>
+                <div class="project-card-header">
+                    <div class="project-title">${project.title}</div>
+                    <button class="delete-project-btn" data-project-id="${project.project_id}" title="Delete project" aria-label="Delete project">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18"></path>
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
+                    </button>
+                </div>
                 <div class="project-description">${truncatedDescription}</div>
                 <div class="project-tags">
                     ${project.tags.map(tag => `<span class="project-tag">${tag}</span>`).join(' ')}
                 </div>
                 <div class="project-date">Created: ${formattedDate}</div>
             `;
-            // Navigate to project page on click
+            
+            // Add delete button handler
+            const deleteBtn = card.querySelector('.delete-project-btn');
+            deleteBtn.addEventListener('click', async (e) => {
+                e.stopPropagation(); // Prevent card click navigation
+                
+                if (confirm(`Are you sure you want to delete "${project.title}"? This action cannot be undone.`)) {
+                    try {
+                        const response = await fetch(`/api/project/${project.project_id}`, {
+                            method: 'DELETE',
+                            credentials: 'include'
+                        });
+                        
+                        if (response.ok) {
+                            // Remove card with animation
+                            card.style.opacity = '0';
+                            card.style.transform = 'scale(0.8)';
+                            setTimeout(() => {
+                                card.remove();
+                                // Reload projects to update the list
+                                loadProjectsFromAPI();
+                            }, 300);
+                        } else {
+                            const data = await response.json();
+                            alert(`Failed to delete project: ${data.error || 'Unknown error'}`);
+                        }
+                    } catch (error) {
+                        console.error('Error deleting project:', error);
+                        alert('Failed to delete project. Please try again.');
+                    }
+                }
+            });
+            
+            // Navigate to project page on card click
             card.addEventListener('click', () => {
                 if (project.project_id) {
                     window.location.href = `/project/${project.project_id}`;

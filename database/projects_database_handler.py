@@ -424,3 +424,82 @@ def update_project_description(project_id: str, new_description: str):
     cursor.close()
     conn.close()
     return status
+
+
+def delete_project(project_id: str) -> Status:
+    """
+    Delete a project and all its associated data from the database.
+    
+    This function deletes:
+    - All paper-project associations (project_papers_table)
+    - The project itself (projects_table)
+    
+    Args:
+        project_id (str): The project ID to delete.
+    
+    Returns:
+        Status: SUCCESS if deletion was successful, FAILURE otherwise.
+    
+    Side effects:
+        Deletes rows from projects_table and project_papers_table.
+        Only deletes projects owned by the currently logged-in user.
+    
+    Raises:
+        Exception: If user is not authenticated or database operation fails.
+    """
+    conn = connect_to_db()
+    cursor = conn.cursor()
+
+    if not request.auth:
+        raise Exception("Not authenticated")
+
+    user_id = request.auth["user_id"]
+
+    try:
+        # First verify the project exists and belongs to the user
+        cursor.execute(
+            """
+            SELECT project_id FROM projects_table
+            WHERE project_id = %s AND user_id = %s
+        """,
+            (project_id, user_id),
+        )
+        
+        if cursor.fetchone() is None:
+            logger.warning(f"Project {project_id} not found or not owned by user {user_id}")
+            cursor.close()
+            conn.close()
+            return Status.FAILURE
+
+        # Delete associated paper-project links
+        cursor.execute(
+            """
+            DELETE FROM paperprojects_table
+            WHERE project_id = %s
+        """,
+            (project_id,),
+        )
+        logger.info(f"Deleted {cursor.rowcount} paper associations for project {project_id}")
+
+        # Delete the project itself
+        cursor.execute(
+            """
+            DELETE FROM projects_table
+            WHERE project_id = %s AND user_id = %s
+        """,
+            (project_id, user_id),
+        )
+        
+        conn.commit()
+        logger.info(f"Successfully deleted project {project_id}")
+        status = Status.SUCCESS
+        
+    except Exception as e:
+        logger.error(f"Error deleting project {project_id}: {e}")
+        conn.rollback()
+        status = Status.FAILURE
+    finally:
+        cursor.close()
+        conn.close()
+    
+    return status
