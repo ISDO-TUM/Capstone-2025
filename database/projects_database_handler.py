@@ -429,21 +429,21 @@ def update_project_description(project_id: str, new_description: str):
 def delete_project(project_id: str) -> Status:
     """
     Delete a project and all its associated data from the database.
-    
+
     This function deletes:
     - All paper-project associations (project_papers_table)
     - The project itself (projects_table)
-    
+
     Args:
         project_id (str): The project ID to delete.
-    
+
     Returns:
         Status: SUCCESS if deletion was successful, FAILURE otherwise.
-    
+
     Side effects:
         Deletes rows from projects_table and project_papers_table.
         Only deletes projects owned by the currently logged-in user.
-    
+
     Raises:
         Exception: If user is not authenticated or database operation fails.
     """
@@ -464,9 +464,11 @@ def delete_project(project_id: str) -> Status:
         """,
             (project_id, user_id),
         )
-        
+
         if cursor.fetchone() is None:
-            logger.warning(f"Project {project_id} not found or not owned by user {user_id}")
+            logger.warning(
+                f"Project {project_id} not found or not owned by user {user_id}"
+            )
             cursor.close()
             conn.close()
             return Status.FAILURE
@@ -479,7 +481,9 @@ def delete_project(project_id: str) -> Status:
         """,
             (project_id,),
         )
-        logger.info(f"Deleted {cursor.rowcount} paper associations for project {project_id}")
+        logger.info(
+            f"Deleted {cursor.rowcount} paper associations for project {project_id}"
+        )
 
         # Delete the project itself
         cursor.execute(
@@ -489,11 +493,11 @@ def delete_project(project_id: str) -> Status:
         """,
             (project_id, user_id),
         )
-        
+
         conn.commit()
         logger.info(f"Successfully deleted project {project_id}")
         status = Status.SUCCESS
-        
+
     except Exception as e:
         logger.error(f"Error deleting project {project_id}: {e}")
         conn.rollback()
@@ -501,5 +505,5 @@ def delete_project(project_id: str) -> Status:
     finally:
         cursor.close()
         conn.close()
-    
+
     return status

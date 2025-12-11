@@ -103,7 +103,7 @@ class TestDeleteProject:
         # Verify project count unchanged
         current_count = page.locator(".project-card").count()
         assert current_count == initial_count, (
-            f"Project should not be deleted when confirmation is canceled"
+            "Project should not be deleted when confirmation is canceled"
         )
 
     def test_delete_multiple_projects(self, page, test_project_data):
