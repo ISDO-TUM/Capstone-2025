@@ -1,13 +1,10 @@
 from typing import List, Dict
 from llama_index.core.schema import TextNode
 from llama_index.retrievers.bm25 import BM25Retriever
-from dotenv import load_dotenv
 import Stemmer
 import json
 import os
 from datetime import datetime
-
-load_dotenv()
 
 
 def evaluate_bm25_lexical_matching(

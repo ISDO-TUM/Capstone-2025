@@ -3,7 +3,6 @@ import requests
 from pypdf import PdfReader
 import io
 import os
-from dotenv import load_dotenv
 import openai
 import csv
 import random
@@ -474,8 +473,9 @@ def generate_pairs_csv(citing_paper, papers_list, label, filename="paper_pairs.c
 
 if __name__ == "__main__":
     # To use the OpenAI implementation, change the line below to:
-    load_dotenv()
-    openai.api_key = os.getenv("OPENAI_API_KEY")
+    from config import OPENAI_API_KEY
+
+    openai.api_key = OPENAI_API_KEY
     finder = OpenAIPapersFinder()
 
     # finder = MockPapersFinder()

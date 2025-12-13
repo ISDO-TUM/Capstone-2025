@@ -1,17 +1,17 @@
 import psycopg2
-import os
+from config import DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, DB_PORT
 
 
 def connect_to_db():  # outside_chroma=False)
     """
     Establishes a connection to the PostgreSQL database.
-    Reads connection parameters from environment variables.
+    Reads connection parameters from centralized config module.
     """
-    db_host = os.getenv("DB_HOST", "127.0.0.1")
-    db_name = os.getenv("DB_NAME", "papers")
-    db_user = os.getenv("DB_USER", "user")
-    db_password = os.getenv("DB_PASSWORD")
-    db_port = os.getenv("DB_PORT", "5432")
+    db_host = DB_HOST
+    db_name = DB_NAME
+    db_user = DB_USER
+    db_password = DB_PASSWORD
+    db_port = DB_PORT
 
     try:
         return psycopg2.connect(

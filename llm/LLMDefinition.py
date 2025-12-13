@@ -7,12 +7,8 @@ Responsibilities:
 - Exposes the default LLM instance for use throughout the codebase
 """
 
-import os
 from langchain_openai import ChatOpenAI
-from dotenv import load_dotenv
-
-load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+from config import OPENAI_API_KEY
 
 if not OPENAI_API_KEY:
     raise ValueError(
