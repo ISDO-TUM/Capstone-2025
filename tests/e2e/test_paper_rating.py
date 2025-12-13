@@ -8,7 +8,7 @@ class TestPaperRating:
 
     def test_rating_persists_and_updates_ui(self, page, test_project_data):
         """Test that ratings persist after reload and update UI immediately."""
-        page.goto("http://localhost:5556/create-project")
+        page.goto("/create-project")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -35,7 +35,7 @@ class TestPaperRating:
 
     def test_multiple_paper_ratings(self, page, test_project_data):
         """Test rating multiple papers with different ratings."""
-        page.goto("http://localhost:5556/create-project")
+        page.goto("/create-project")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -58,7 +58,7 @@ class TestPaperRating:
 
     def test_cannot_rate_replaced_paper(self, page, test_project_data):
         """Test that replaced papers cannot be rated again."""
-        page.goto("http://localhost:5556/create-project")
+        page.goto("/create-project")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")

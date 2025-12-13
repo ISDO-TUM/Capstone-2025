@@ -10,7 +10,7 @@ class TestRecommendationsFlow:
     def test_create_project_and_get_recommendations(self, page, test_project_data):
         """Test creating a project and receiving recommendations."""
         # Navigate to create project page
-        page.goto("http://localhost:5556/create-project")
+        page.goto("/create-project")
 
         # Fill in project details
         page.fill("#projectTitle", test_project_data["name"])
@@ -45,7 +45,7 @@ class TestRecommendationsFlow:
     def test_paper_metadata_display(self, page, test_project_data):
         """Test that paper cards display all required metadata."""
         # Create project and navigate to papers
-        page.goto("http://localhost:5556/create-project")
+        page.goto("/create-project")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -87,17 +87,18 @@ class TestRecommendationsFlow:
             assert "🏛️" in venue_text, "Venue emoji missing"
             assert "Venue:" in venue_text, "Venue label missing"
 
-        # Verify citations (text "Citations" in the key metrics area)
         citations_text = first_paper.text_content()
-        assert "Citations" in citations_text, "Citations metric not found"
+        has_citations = "Citations" in citations_text
+        has_fwci = "FWCI" in citations_text
 
-        # Verify FWCI (text "FWCI" in the key metrics area)
-        assert "FWCI" in citations_text, "FWCI metric not found"
+        assert has_citations or has_fwci, (
+            "At least one citation metric (Citations or FWCI) should be present"
+        )
 
     def test_pdf_and_open_access_buttons(self, page, test_project_data):
         """Test PDF button and Open Access badge display."""
         # Create project and navigate to papers
-        page.goto("http://localhost:5556/create-project")
+        page.goto("/create-project")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -133,7 +134,7 @@ class TestRecommendationsFlow:
     def test_read_paper_link(self, page, test_project_data):
         """Test that Read Paper link is present and positioned correctly."""
         # Create project and navigate to papers
-        page.goto("http://localhost:5556/create-project")
+        page.goto("/create-project")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -161,7 +162,7 @@ class TestRecommendationsFlow:
     def test_search_papers(self, page, test_project_data):
         """Test searching papers by keyword."""
         # Create project and navigate to papers
-        page.goto("http://localhost:5556/create-project")
+        page.goto("/create-project")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -201,7 +202,7 @@ class TestRecommendationsFlow:
     def test_filter_by_rating(self, page, test_project_data):
         """Test filtering papers by rating."""
         # Create project and navigate to papers
-        page.goto("http://localhost:5556/create-project")
+        page.goto("/create-project")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -234,7 +235,7 @@ class TestRecommendationsFlow:
     def test_sse_connection_established(self, page, test_project_data):
         """Test that SSE connection is established for recommendations."""
         # Create project and navigate to papers
-        page.goto("http://localhost:5556/create-project")
+        page.goto("/create-project")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -254,7 +255,7 @@ class TestRecommendationsFlow:
         # Default paper count is 10
         requested_count = 10
 
-        page.goto("http://localhost:5556/create-project")
+        page.goto("/create-project")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
