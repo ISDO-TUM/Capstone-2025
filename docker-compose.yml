@@ -35,7 +35,7 @@ services:
     restart: always
     command: sh /app/scripts/startup.sh
     ports:
-      - "80:80"
+      - "8080:80"
     volumes:
       - .:/app
     working_dir: /app
@@ -58,6 +58,17 @@ services:
       - FLASK_ENV=development
       - FLASK_DEBUG=1
       - CHROMA_HOST=chromadb
+    networks:
+      - capstone_network
+
+  frontend:
+    build: ./frontend
+    container_name: capstone_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - web
     networks:
       - capstone_network
 
