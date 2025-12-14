@@ -17,6 +17,7 @@ from utils.status import Status
 import traceback
 import sys
 import os
+from config import CHROMA_HOST, CHROMA_PORT
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -27,17 +28,6 @@ logging.basicConfig(level=logging.INFO)
 class PaperData(TypedDict):
     embedding: List[float]
     hash: str
-
-
-# When locally testing application and files this will allow us to set a localhost connection
-# since otherwise the application will try to connect to the Docker container, which the file
-# is running outside of and hence does not have access to.
-# In production, the Docker container will set these env-vars to the correct values.
-# For testing run like this:
-# docker compose up -d chromadb
-# CHROMA_HOST=localhost python -m llm.tools.paper_handling_tools
-CHROMA_HOST = os.getenv("CHROMA_HOST", "chromadb")  # default for Docker
-CHROMA_PORT = int(os.getenv("CHROMA_PORT", 8000))
 
 
 class ChromaVectorDB:

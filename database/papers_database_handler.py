@@ -12,13 +12,10 @@ All database operations are designed to be robust, transactional, and reusable b
 
 import psycopg2
 from psycopg2 import extras
-from dotenv import load_dotenv
 import hashlib
 from utils.status import Status
 import json
 from database.database_connection import connect_to_db
-
-load_dotenv()
 
 
 def _generate_paper_hash(paper_data_dict):
