@@ -95,43 +95,25 @@ def flask_server(enable_test_mode):
     """
     from app import app
     import socket
-    import subprocess
 
-    test_port = 5556
+    # Use a dynamic port if preferred port is taken
+    preferred_port = 5556
+    test_port = preferred_port
 
-    # Kill any existing process using the port
-    try:
-        result = subprocess.run(
-            f"lsof -ti :{test_port}",
-            shell=True,
-            capture_output=True,
-            text=True,
+    def find_free_port(start_port, max_attempts=10):
+        """Find an available port starting from start_port."""
+        for port in range(start_port, start_port + max_attempts):
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                try:
+                    s.bind(("127.0.0.1", port))
+                    return port
+                except OSError:
+                    continue
+        raise RuntimeError(
+            f"Could not find free port in range {start_port}-{start_port + max_attempts}"
         )
-        if result.stdout.strip():
-            pids = result.stdout.strip().split("\n")
-            for pid in pids:
-                subprocess.run(f"kill -9 {pid}", shell=True)
-            time.sleep(1)  # Wait for port to be released
-    except Exception:
-        pass  # Port was already free
 
-    # Verify port is free
-    def is_port_free(port):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            try:
-                s.bind(("127.0.0.1", port))
-                return True
-            except OSError:
-                return False
-
-    # Wait for port to be free
-    max_retries = 10
-    for i in range(max_retries):
-        if is_port_free(test_port):
-            break
-        time.sleep(0.5)
-    else:
-        raise RuntimeError(f"Port {test_port} is still in use after waiting")
+    test_port = find_free_port(preferred_port)
 
     # Flag to track server status
     server_started = threading.Event()
@@ -174,26 +156,6 @@ def flask_server(enable_test_mode):
     base_url = f"http://127.0.0.1:{test_port}"
 
     yield base_url
-
-    # Cleanup: kill the server process silently
-    try:
-        result = subprocess.run(
-            f"lsof -ti :{test_port}",
-            shell=True,
-            capture_output=True,
-            text=True,
-        )
-        if result.stdout.strip():
-            pids = result.stdout.strip().split("\n")
-            for pid in pids:
-                subprocess.run(
-                    f"kill -9 {pid}",
-                    shell=True,
-                    capture_output=True,
-                    stderr=subprocess.DEVNULL,
-                )
-    except Exception:
-        pass
 
 
 @pytest.fixture(scope="function")

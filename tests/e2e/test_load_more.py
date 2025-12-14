@@ -10,7 +10,7 @@ class TestLoadMorePapers:
     def test_load_more_button_exists_and_increases_count(self, page, test_project_data):
         """Test that Load More button exists and clicking it increases paper count."""
         # Create project and navigate to papers
-        page.goto("http://localhost:5556/create-project")
+        page.goto("/create-project")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -46,7 +46,7 @@ class TestLoadMorePapers:
         authors, year, venue, and citation metrics.
         """
         # Create project and navigate to papers
-        page.goto("http://localhost:5556/create-project")
+        page.goto("/create-project")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -104,7 +104,7 @@ class TestLoadMorePapers:
 
     def test_load_more_metadata_consistency(self, page, test_project_data):
         """Test that loaded papers have same metadata structure as initial papers."""
-        page.goto("http://localhost:5556/create-project")
+        page.goto("/create-project")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -145,7 +145,7 @@ class TestLoadMorePapers:
 
     def test_load_more_button_disabled_when_exhausted(self, page, test_project_data):
         """Test that Load More button is disabled when no more papers available."""
-        page.goto("http://localhost:5556/create-project")
+        page.goto("/create-project")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
