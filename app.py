@@ -80,6 +80,17 @@ if os.getenv("TEST_MODE") == "true":
 else:
     clerk_sdk = Clerk(bearer_auth=os.getenv("CLERK_SECRET_KEY"))
 
+def setup_logging(path: str = "custom_logging/config.json"):
+    """
+    Initialize and configure logging using a JSON configuration file.
+
+    Args:
+        path (str): Path to the JSON configuration file. Defaults to "custom_logging/config.json".
+    """
+    config_file = pathlib.Path(path)
+    with open(config_file) as f_in:
+        config = json.load(f_in)
+    logging.config.dictConfig(config)
 
 @app.before_request
 def authenticate_user():
@@ -1234,6 +1245,7 @@ def load_more_papers():
 
 
 if __name__ == "__main__":
+    setup_logging()
     if not os.getenv("CLERK_SECRET_KEY"):
         raise ValueError(
             "CLERK_SECRET_KEY environment variable is required for authentication."
