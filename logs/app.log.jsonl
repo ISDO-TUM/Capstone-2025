@@ -537,3 +537,7 @@
 {"asctime": "2025-12-17T20:29:19+0000", "message": "\u001b[31m\u001b[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.\u001b[0m\n * Running on all addresses (0.0.0.0)\n * Running on http://127.0.0.1:80\n * Running on http://172.18.0.6:80"}
 {"asctime": "2025-12-17T20:29:19+0000", "message": "\u001b[33mPress CTRL+C to quit\u001b[0m"}
 {"asctime": "2025-12-17T20:29:19+0000", "message": " * Restarting with stat"}
+{"asctime": "2025-12-17T20:29:23+0000", "message": " * Debugger is active!"}
+{"asctime": "2025-12-17T20:29:23+0000", "message": " * Debugger PIN: 119-895-207"}
+{"asctime": "2025-12-17T20:29:24+0000", "message": " * Detected change in '/app/app.py', reloading"}
+{"asctime": "2025-12-17T20:29:24+0000", "message": " * Restarting with stat"}
