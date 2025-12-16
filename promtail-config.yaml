@@ -1,0 +1,41 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: warn
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: ${GRAFANA_LOKI_URL}
+    basic_auth:
+      username: ${GRAFANA_USER_ID}
+      password: ${GRAFANA_API_KEY}
+
+scrape_configs:
+- job_name: capstone2025
+  static_configs:
+  - targets:
+      - localhost
+    labels:
+      job: capstone2025
+      __path__: /app/logs/*.jsonl
+  pipeline_stages:
+    - json:
+        expressions:
+          timestamp: asctime
+          level: level
+          message: message
+          user_id: user_id
+          project_id: project_id
+          component: component
+    - labels:
+        level: ""
+        project_id: ""
+        user_id: ""
+        component: ""
+    - labeldrop:
+        - filename
+    - timestamp:
+        source: timestamp
+        format: RFC3339

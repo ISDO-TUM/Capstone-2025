@@ -12,10 +12,12 @@ This is the main entrypoint for running the web application and serving the fron
 """
 
 import json
-import logging
 import os
+import logging
+import logging.config
 import sys
 import io
+import pathlib
 
 from flask import (
     Flask,
@@ -60,13 +62,14 @@ from pubsub.pubsub_params import DAYS_FOR_UPDATE
 from utils.status import Status
 from clerk_backend_api import Clerk
 from clerk_backend_api.security.types import AuthenticateRequestOptions
+from custom_logging import APILogger, user_id_ctx, project_id_ctx
 
 # Only import Clerk if not in test mode
 if os.getenv("TEST_MODE") != "true":
     from clerk_backend_api import Clerk
     from clerk_backend_api.security.types import AuthenticateRequestOptions
 
-logger = logging.getLogger(__name__)
+test_logger = APILogger()
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 app = Flask(__name__)
@@ -80,15 +83,29 @@ else:
     clerk_sdk = Clerk(bearer_auth=os.getenv("CLERK_SECRET_KEY"))
 
 
+def setup_logging(path: str = "custom_logging/config.json"):
+    """
+    Initialize and configure logging using a JSON configuration file.
+
+    Args:
+        path (str): Path to the JSON configuration file. Defaults to "custom_logging/config.json".
+    """
+    config_file = pathlib.Path(path)
+    with open(config_file) as f_in:
+        config = json.load(f_in)
+    logging.config.dictConfig(config)
+
+
 @app.before_request
 def authenticate_user():
     """
     Middleware to authenticate the user with Clerk and inject auth information into the request object.
     In TEST_MODE, automatically authenticates with a test user.
     """
-
+    test_logger.request_start(method="GET", path=request.path)
     # In test mode, bypass Clerk and set a test user
     if os.getenv("TEST_MODE") == "true":
+        user_id_ctx.set("test_user_id")
         request.auth = {
             "user_id": "test_user_id",
             "username": "test_user",
@@ -97,6 +114,11 @@ def authenticate_user():
             "email": "test@example.com",
             "profile_image_url": None,
         }
+        test_logger.request_success(
+            method="GET",
+            path=request.path,
+            status_code=200,
+        )
         return
 
     try:
@@ -111,13 +133,19 @@ def authenticate_user():
 
     except Exception as e:
         # Log the error and set default values for unauthenticated requests
-        logger.error(f"Authentication error for {request.path}: {e}")
+        test_logger.request_error(
+            method="GET",
+            path=request.path,
+            error_message=f"Authentication error: {e}",
+            status_code=401,
+        )
         request.auth = None
         return
 
     # Attach authentication information to the request object
     if request_state.is_signed_in:
         user_id = request_state.payload.get("sub")
+        user_id_ctx.set(user_id)
 
         request.auth = {
             "user_id": user_id,
@@ -136,26 +164,30 @@ def authenticate_user():
                 )
 
             request.auth["profile_image_url"] = user_info.profile_image_url
+            test_logger.request_success(
+                method="GET", path=request.path, status_code=200
+            )
         except Exception as e:
-            logging.error(f"Error fetching user info from Clerk:\n{e}")
+            status_code = 500  # default
+            if hasattr(e, "status_code"):
+                status_code = e.status_code
+            if hasattr(e, "response"):
+                status_code = e.response.status_code
+            test_logger.request_error(
+                method="GET",
+                path=request.path,
+                error_message=f"ERROR can not fetch user information from Clerk:\n{e}",
+                status_code=status_code,
+            )
 
     else:
         request.auth = None
-
-
-@app.errorhandler(413)
-def request_entity_too_large(error):
-    """
-    Handle HTTP 413 error for requests exceeding the 50MB file size limit.
-    Args:
-        error: The error object from Flask.
-    Returns:
-        Response: JSON error message and HTTP 413 status code.
-    """
-    logger.error(
-        f"HTTP Error 413 - Request rejected. Request content length exceeds 50MB limit. Request Content Length: {request.content_length}"
-    )
-    return jsonify({"error": "File size exceeds maximum allowed size (50MB)"}), 413
+        user_id_ctx.set("unauthenticated user")
+        test_logger.request_warning(
+            method="GET",
+            path=request.path,
+            warning_message="Unauthenticated user access",
+        )
 
 
 @app.route("/")
@@ -165,6 +197,8 @@ def home():
     Returns:
         Response: Rendered dashboard.html template or login view.
     """
+    test_logger.request_start(method="GET", path="/")
+    test_logger.request_success(method="GET", path="/", status_code=200)
 
     return render_template(
         "dashboard.html",
@@ -182,9 +216,18 @@ def create_project_page():
     Returns:
         Response: Rendered create_project.html template.
     """
+    test_logger.request_start(method="GET", path="/create_project")
+
     if not request.auth:
+        test_logger.request_error(
+            method="GET",
+            path="/create-project",
+            error_message="ERROR user not authenticated!",
+            status_code=401,
+        )
         return {"error": "Not authenticated"}, 401
 
+    test_logger.request_success(method="GET", path="/create-project", status_code=200)
     return render_template(
         "create_project.html",
         auth=request.auth,
@@ -202,6 +245,8 @@ def project_overview_page(project_id):
     Returns:
         Response: Rendered project_overview.html template.
     """
+    test_logger.request_start(method="GET", path=f"/project/{project_id}")
+
     if not request.auth:
         return render_template(
             "dashboard.html",
@@ -210,9 +255,20 @@ def project_overview_page(project_id):
             CLERK_FRONTEND_API_URL=os.getenv("CLERK_FRONTEND_API_URL"),
         )
 
+    project_id_ctx.set(project_id)
     project = get_project_by_id(project_id)
     if project["user_id"] != request.auth["user_id"]:
+        test_logger.request_error(
+            method="GET",
+            path=f"/project/{project_id}",
+            error_message="ERROR Unauthorised Access",
+            status_code=403,
+        )
         return {"error": "Forbidden"}, 403
+
+    test_logger.request_success(
+        method="GET", path=f"/project/{project_id}", status_code=200
+    )
 
     return render_template(
         "project_overview.html",
@@ -230,15 +286,34 @@ def api_create_project():
     Returns:
         Response: JSON with new projectId or error message.
     """
+    test_logger.request_start(method="POST", path="/api/projects")
+
     if not request.auth:
+        test_logger.request_error(
+            method="POST",
+            path="/api/projects",
+            error_message="ERROR not authenticated",
+            status_code=401,
+        )
+
         return {"error": "Not authenticated"}, 401
 
     data = request.get_json() or {}
     title = data.get("title")
     desc = data.get("description")
     if not title or not desc:
+        test_logger.request_error(
+            method="POST",
+            path="/api/projects",
+            error_message="Missing title or description",
+            status_code=400,
+        )
+
         return jsonify({"error": "Missing title or description"}), 400
     project_id = add_new_project_to_db(title, desc)
+    project_id_ctx.set(project_id)
+
+    test_logger.request_success(method="POST", path="/api/projects", status_code=201)
     return jsonify({"projectId": project_id}), 201
 
 
@@ -250,8 +325,15 @@ def get_projects():
         Response: JSON with all projects and their metadata.
     """
     """Get all projects with project_id and metadata."""
+    test_logger.request_start(method="GET", path="/api/getProjects")
 
     if not request.auth:
+        test_logger.request_error(
+            method="GET",
+            path="/api/getProjects",
+            error_message="ERROR user not authenticated",
+            status_code=401,
+        )
         return {"error": "Not authenticated"}, 401
 
     projects = get_all_projects()
@@ -267,9 +349,17 @@ def get_projects():
             project["date"] = "Unknown"
         complete_projects.append(project)
     try:
+        test_logger.request_success(
+            method="GET", path="/api/getProjects", status_code=200
+        )
         return jsonify({"success": True, "projects": complete_projects})
     except Exception as e:
-        logger.error(f"Error getting projects: {e}")
+        test_logger.request_error(
+            method="GET",
+            path="/api/getProjects",
+            error_message=f"ERROR can not load projects: {e}",
+            status_code=500,
+        )
         return jsonify({"error": f"Failed to get projects: {str(e)}"}), 500
 
 
@@ -281,7 +371,16 @@ def get_recommendations():
         Response: Server-sent event stream with recommendations or agent thoughts.
     """
 
+    test_logger.request_start(method="POST", path="/api/recommendations")
+
     if not request.auth:
+        test_logger.request_error(
+            method="POST",
+            path="/api/recommendations",
+            error_message="ERROR user not authenticated",
+            status_code=401,
+        )
+
         return {"error": "Not authenticated"}, 401
 
     print("Attempting to get recommendations")
@@ -289,10 +388,17 @@ def get_recommendations():
     try:
         data = request.get_json()
         if not data or "projectId" not in data:
+            test_logger.request_error(
+                method="POST",
+                path="/api/recommendations",
+                error_message=f"ERROR failed to get recommendations with data: {data}",
+                status_code=400,
+            )
             print(f"Failed getting recs with data: {data}")
             return jsonify({"error": "Missing project_id"}), 400
 
         # project_id validated above but currently unused in mock implementation
+        project_id_ctx.set(data["projectId"])
         update_recommendations = data.get("update_recommendations", False)
         project = get_project_by_id(data["projectId"])
         user_description, project_id = project["description"], project["project_id"]
@@ -305,9 +411,13 @@ def get_recommendations():
                     )  # In the future there might be a refresh papers button, so we would need to empty the database to reload a new set of recommendations
                     print(f"Deleted {removed} row(s).")
                     for response_part in trigger_stategraph_agent_show_thoughts(
-                        user_description + "project ID: " + project_id
+                        user_description, project_id
                     ):
-                        logger.info(f"Getting agent response: {response_part}")
+                        test_logger.request_info(
+                            method="POST",
+                            path="/api/recommendations",
+                            info_message=f"Agent response part: {response_part}",
+                        )
                         if response_part["is_final"]:
                             try:
                                 llm_response_content = response_part["final_content"]
@@ -315,16 +425,30 @@ def get_recommendations():
 
                                 # Check if this is an out-of-scope response
                                 if response_data.get("type") == "out_of_scope":
-                                    logger.info("Agent detected out of scope query")
+                                    test_logger.request_info(
+                                        method="POST",
+                                        path="/api/recommendations",
+                                        info_message="Agent detected out of scope query",
+                                    )
                                     yield f"data: {json.dumps({'out_of_scope': response_data})}\n\n"
                                     return
 
                                 elif response_data.get("type") == "no_results":
-                                    logger.info("Agent couldn't find any results")
+                                    test_logger.request_info(
+                                        method="POST",
+                                        path="/api/recommendations",
+                                        info_message="Agent couldn't find any results",
+                                    )
                                     yield f"data: {json.dumps({'no_results': response_data})}\n\n"
                                     return
 
                             except json.JSONDecodeError:
+                                test_logger.request_error(
+                                    method="POST",
+                                    path="/api/recommendations",
+                                    error_message=f"ERROR failed to parse LLM response: {llm_response_content}",
+                                    status_code=500,
+                                )
                                 print(
                                     f"Failed to parse LLM response: {llm_response_content}"
                                 )
@@ -338,7 +462,11 @@ def get_recommendations():
                         else:
                             yield f"data: {json.dumps({'thought': response_part['thought']})}\n\n"
                 recs_basic_data = get_papers_for_project(project_id)
-                logger.info(f"Sending {len(recs_basic_data)} papers to the frontend.")
+                test_logger.request_info(
+                    method="POST",
+                    path="/api/recommendations",
+                    info_message=f"Sending {len(recs_basic_data)} papers to the frontend.",
+                )
                 recommendations = []
                 for rec in recs_basic_data:
                     paper = get_paper_by_hash(rec["paper_hash"])
@@ -361,16 +489,29 @@ def get_recommendations():
                     recommendations.append(paper_dict)
                 yield f"data: {json.dumps({'recommendations': recommendations})}\n\n"
             except Exception as e:
-                logger.error(f"Error in recommendations generation: {e}")
+                test_logger.request_error(
+                    method="POST",
+                    path="/api/recommendations",
+                    error_message=f"ERROR in recommendations generation: {e}",
+                    status_code=500,
+                )
                 error_payload = json.dumps(
                     {"error": f"An internal error occurred: {str(e)}"}
                 )
                 yield f"data: {error_payload}\n\n"
 
+        test_logger.request_success(
+            method="POST", path="/api/recommendations", status_code=200
+        )
         return Response(stream_with_context(generate()), mimetype="text/event-stream")
 
     except Exception as e:
-        logger.error(f"Error in /api/recommendations: {e}")
+        test_logger.request_error(
+            method="POST",
+            path="/api/recommendations",
+            error_message=f"ERROR failed to get recommendations: {e}",
+            status_code=500,
+        )
         return jsonify({"error": f"Failed to get recommendations: {str(e)}"}), 500
 
 
@@ -381,17 +522,47 @@ def extract_pdf_text():
     Returns:
         Response: JSON with extracted text or error message.
     """
+    test_logger.request_start(method="POST", path="/api/extract-pdf-text")
+
     if not request.auth:
+        test_logger.request_error(
+            method="POST",
+            path="/api/extract-pdf-text",
+            error_message="ERROR user not authenticated",
+            status_code=401,
+        )
+
         return jsonify({"error": "Unauthorized"}), 401
 
     if "file" not in request.files:
+        test_logger.request_error(
+            method="POST",
+            path="/api/extract-pdf-text",
+            error_message="ERROR no file part in the request",
+            status_code=400,
+        )
+
         return jsonify({"error": "No file provided"}), 400
 
     file = request.files["file"]
     if file.filename == "":
+        test_logger.request_error(
+            method="POST",
+            path="/api/extract-pdf-text",
+            error_message="ERROR no selected file",
+            status_code=400,
+        )
+
         return jsonify({"error": "No file selected"}), 400
 
     if not file.filename or not file.filename.lower().endswith(".pdf"):
+        test_logger.request_error(
+            method="POST",
+            path="/api/extract-pdf-text",
+            error_message="ERROR uploaded file is not a PDF",
+            status_code=400,
+        )
+
         return jsonify({"error": "File must be a PDF"}), 400
 
     try:
@@ -404,13 +575,28 @@ def extract_pdf_text():
         text_content = " ".join(text_content.split())
 
         if not text_content.strip():
+            test_logger.request_error(
+                method="POST",
+                path="/api/extract-pdf-text",
+                error_message="ERROR could not extract text from PDF",
+                status_code=400,
+            )
+
             return jsonify({"error": "Could not extract text from PDF"}), 400
 
         formatted_text = f"User provided this paper: \n{text_content}"
+        test_logger.request_success(
+            method="POST", path="/api/extract-pdf-text", status_code=200
+        )
         return jsonify({"success": True, "extracted_text": formatted_text})
 
     except Exception as e:
-        logger.error(f"Error extracting PDF text: {e}")
+        test_logger.request_error(
+            method="POST",
+            path="/api/extract-pdf-text",
+            error_message=f"ERROR failed to extract PDF text: {e}",
+            status_code=500,
+        )
         return jsonify({"error": f"Failed to process PDF: {str(e)}"}), 500
 
 
@@ -425,38 +611,101 @@ def api_update_newsletter():
     Returns:
         Response: JSON status message.
     """
+    test_logger.request_start(
+        method="POST", path="/api/pubsub/update_newsletter_papers"
+    )
     if not request.auth:
+        test_logger.request_error(
+            method="POST",
+            path="/api/pubsub/update_newsletter_papers",
+            error_message="ERROR user not authenticated",
+            status_code=401,
+        )
         return jsonify({"error": "Unauthorized"}), 401
 
-    logger.info("Triggered api_update_newsletter")
+    test_logger.request_info(
+        method="POST",
+        path="/api/pubsub/update_newsletter_papers",
+        info_message="Triggered api_update_newsletter",
+    )
+
     payload = request.get_json() or {}
     project_id = payload.get("projectId")
     if not project_id:
+        test_logger.request_error(
+            method="POST",
+            path="/api/pubsub/update_newsletter_papers",
+            error_message="ERROR missing projectId",
+            status_code=400,
+        )
+
         return jsonify({"error": "Missing projectId"}), 400
 
     if not should_update(project_id, DAYS_FOR_UPDATE):
+        test_logger.request_info(
+            method="POST",
+            path="/api/pubsub/update_newsletter_papers",
+            info_message="Project does not need update at this time",
+        )
+        test_logger.request_success(
+            method="POST", path="/api/pubsub/update_newsletter_papers", status_code=200
+        )
         return jsonify({"status": "Project not updated"}), 200
 
     # first read queries
     queries = get_queries_for_project(project_id)
     if not queries:
         # no queries: return ok but without doing anything
+        test_logger.request_warning(
+            method="POST",
+            path="/api/pubsub/update_newsletter_papers",
+            warning_message="No queries found for project, skipping update",
+        )
+        test_logger.request_success(
+            method="POST", path="/api/pubsub/update_newsletter_papers", status_code=200
+        )
         return jsonify({"status": "no-queries"}), 200
 
     try:
         update_newsletter_papers(project_id)
+        test_logger.request_success(
+            method="POST", path="/api/pubsub/update_newsletter_papers", status_code=200
+        )
         return jsonify({"status": "ok"}), 200
     except ValueError as e:
         msg = str(e)
         # Chroma sends ValueError with this text when there are no IDs
         if "Expected IDs to be a non-empty list" in msg:
             # return 200 so frontend continues and reads get_newsletter_papers
+            test_logger.request_warning(
+                method="POST",
+                path="/api/pubsub/update_newsletter_papers",
+                warning_message="No newsletter papers to update",
+            )
+            test_logger.request_success(
+                method="POST",
+                path="/api/pubsub/update_newsletter_papers",
+                status_code=200,
+            )
             return jsonify({"status": "no-results"}), 200
         # if there is another ValueError, we make it fall down
+        test_logger.request_error(
+            method="POST",
+            path="/api/pubsub/update_newsletter_papers",
+            error_message=f"ERROR ValueError in update_newsletter_papers: {msg}",
+            status_code=500,
+        )
+
         return jsonify({"error": msg}), 500
     except Exception as e:
         # rest of exceptions
-        logger.exception("Error to update newsletters")
+        test_logger.request_error(
+            method="POST",
+            path="/api/pubsub/update_newsletter_papers",
+            error_message=f"ERROR Exception in update_newsletter_papers: {e}",
+            status_code=500,
+        )
+
         return jsonify({"error": str(e)}), 500
 
 
@@ -469,22 +718,45 @@ def api_get_newsletter():
     Returns:
         Response: JSON list of newsletter papers with metadata.
     """
+    test_logger.request_start(method="GET", path="/api/pubsub/get_newsletter_papers")
+
     if not request.auth:
+        test_logger.request_error(
+            method="GET",
+            path="/api/pubsub/get_newsletter_papers",
+            error_message="ERROR user not authenticated",
+            status_code=401,
+        )
         return jsonify({"error": "Unauthorized"}), 401
 
     project_id = request.args.get("projectId") or request.args.get("project_id")
     if not project_id:
+        test_logger.request_error(
+            method="GET",
+            path="/api/pubsub/get_newsletter_papers",
+            error_message="ERROR missing projectId",
+            status_code=400,
+        )
+
         return jsonify({"error": "Missing projectId"}), 400
 
     rows = get_pubsub_papers_for_project(project_id)  # [(hash, summary), …]
     papers = []
     for paper_hash, summary in rows:
         if mark_paper_seen(project_id, paper_hash):
-            logger.info(f"Row ({project_id}, {paper_hash}) marked as seen.")
-        else:
-            logger.error(
-                f"No matching row found or could not update row ({project_id}, {paper_hash})."
+            test_logger.request_info(
+                method="GET",
+                path="/api/pubsub/get_newsletter_papers",
+                info_message=f"Row ({project_id}, {paper_hash}) marked as seen.",
             )
+        else:
+            test_logger.request_error(
+                method="GET",
+                path="/api/pubsub/get_newsletter_papers",
+                error_message=f"ERROR no matching row found or could not update row ({project_id}, {paper_hash})",
+                status_code=500,
+            )
+
         paper = get_paper_by_hash(paper_hash)
         if paper is not None:
             papers.append(
@@ -495,9 +767,18 @@ def api_get_newsletter():
                 }
             )
         else:
+            test_logger.request_error(
+                method="GET",
+                path="/api/pubsub/get_newsletter_papers",
+                error_message=f"ERROR paper not found for hash {paper_hash}",
+                status_code=404,
+            )
             papers.append(
                 {"title": "Paper not found", "link": "#", "description": summary}
             )
+    test_logger.request_success(
+        method="GET", path="/api/pubsub/get_newsletter_papers", status_code=200
+    )
     return jsonify(papers)
 
 
@@ -513,15 +794,32 @@ def rate_paper():
     Returns:
         Response: JSON status message and replacement info if applicable.
     """
+    test_logger.request_start(method="POST", path="/api/rate_paper")
+
     if not request.auth:
+        test_logger.request_error(
+            method="POST",
+            path="/api/rate_paper",
+            error_message="ERROR user not authenticated",
+            status_code=401,
+        )
+
         return jsonify({"error": "Unauthorized"}), 401
 
     data = request.get_json()
     if not data:
+        test_logger.request_error(
+            method="POST",
+            path="/api/rate_paper",
+            error_message="ERROR no data provided",
+            status_code=400,
+        )
+
         return jsonify({"status": "error", "message": "No data provided"}), 400
 
     paper_hash = data.get("paper_hash")
     project_id = data.get("project_id")
+    project_id_ctx.set(project_id)
     rating = data.get("rating")
 
     print(
@@ -535,12 +833,24 @@ def rate_paper():
         or rating < 1
         or rating > 5
     ):
+        test_logger.request_error(
+            method="POST",
+            path="/api/rate_paper",
+            error_message="ERROR invalid paper_hash, project_id, or rating",
+            status_code=400,
+        )
         return jsonify(
             {"status": "error", "message": "Invalid paper_hash, project_id, or rating"}
         ), 400
 
     conn = connect_to_db()
     if not conn:
+        test_logger.request_error(
+            method="POST",
+            path="/api/rate_paper",
+            error_message="ERROR database connection failed",
+            status_code=500,
+        )
         return jsonify(
             {"status": "error", "message": "Database connection failed"}
         ), 500
@@ -558,6 +868,13 @@ def rate_paper():
         conn.commit()
 
         if cur.rowcount == 0:
+            test_logger.request_error(
+                method="POST",
+                path="/api/rate_paper",
+                error_message="ERROR paper not found",
+                status_code=404,
+            )
+
             return jsonify({"status": "error", "message": "Paper not found"}), 404
 
         # Update user profile embedding based on the rating
@@ -581,9 +898,12 @@ def rate_paper():
                 print(f"Replacement result: {replacement_result}")
 
             except Exception as replacement_error:
-                logger.warning(
-                    f"Failed to replace low-rated paper: {replacement_error}"
+                test_logger.request_warning(
+                    method="POST",
+                    path="/api/rate_paper",
+                    warning_message=f"Failed to replace low-rated paper: {replacement_error}",
                 )
+
                 replacement_result = None
 
         # Return response with replacement info
@@ -591,10 +911,18 @@ def rate_paper():
         if replacement_result and replacement_result.get("status") == "success":
             response_data["replacement"] = replacement_result
 
+        test_logger.request_success(
+            method="POST", path="/api/rate_paper", status_code=200
+        )
         return jsonify(response_data)
     except Exception as e:
+        test_logger.request_error(
+            method="POST",
+            path="/api/rate_paper",
+            error_message=f"ERROR updating rating, database error: {e}",
+            status_code=500,
+        )
         conn.rollback()
-        logger.error(f"Error updating rating: {e}")
         return jsonify({"status": "error", "message": f"Database error: {e}"}), 500
     finally:
         cur.close()
@@ -610,12 +938,31 @@ def api_get_project(project_id):
     Returns:
         Response: JSON with project metadata or error message.
     """
+    test_logger.request_start(method="GET", path=f"/api/project/{project_id}")
     if not request.auth:
+        test_logger.request_error(
+            method="GET",
+            path=f"/api/project/{project_id}",
+            error_message="ERROR user not authenticated",
+            status_code=401,
+        )
         return jsonify({"error": "Unauthorized"}), 401
 
+    project_id_ctx.set(project_id)
     proj = get_project_by_id(project_id)
     if not proj:
+        test_logger.request_error(
+            method="GET",
+            path=f"/api/project/{project_id}",
+            error_message="ERROR project not found",
+            status_code=404,
+        )
+
         return jsonify({"error": "Project not found"}), 404
+
+    test_logger.request_success(
+        method="GET", path=f"/api/project/{project_id}", status_code=200
+    )
     return jsonify(
         {
             "projectId": proj["project_id"],
@@ -640,21 +987,51 @@ def api_update_project_prompt(project_id):
     Returns:
         Response: JSON with updated description or error message.
     """
+    test_logger.request_start(
+        method="POST", path=f"/api/project/{project_id}/update_prompt"
+    )
+
     if not request.auth:
+        test_logger.request_error(
+            method="POST",
+            path=f"/api/project/{project_id}/update_prompt",
+            error_message="ERROR user not authenticated",
+            status_code=401,
+        )
         return jsonify({"error": "Unauthorized"}), 401
 
+    project_id_ctx.set(project_id)
     data = request.get_json() or {}
     new_prompt = data.get("prompt")
     if not new_prompt:
+        test_logger.request_error(
+            method="POST",
+            path=f"/api/project/{project_id}/update_prompt",
+            error_message="ERROR missing prompt in request",
+            status_code=400,
+        )
+
         return jsonify({"error": "Missing prompt"}), 400
     status = update_project_description(project_id, new_prompt)
     if status == Status.SUCCESS:
         # Fetch updated project to return new description
         project = get_project_by_id(project_id)
+        test_logger.request_success(
+            method="POST",
+            path=f"/api/project/{project_id}/update_prompt",
+            status_code=200,
+        )
         return jsonify(
             {"success": True, "description": project.get("description", new_prompt)}
         )
     else:
+        test_logger.request_error(
+            method="POST",
+            path=f"/api/project/{project_id}/update_prompt",
+            error_message="ERROR failed to update project prompt",
+            status_code=500,
+        )
+
         return jsonify({"error": "Failed to update project prompt"}), 500
 
 
@@ -665,17 +1042,40 @@ def load_more_papers():
     Returns:
         Response: Server-sent event stream with more recommendations or error message.
     """
+    test_logger.request_start(method="POST", path="/api/load_more_papers")
     if not request.auth:
+        test_logger.request_error(
+            method="POST",
+            path="/api/load_more_papers",
+            error_message="ERROR user not authenticated",
+            status_code=401,
+        )
+
         return jsonify({"error": "Unauthorized"}), 401
 
     try:
         data = request.get_json()
         project_id = data.get("project_id") if data else None
+        project_id_ctx.set(project_id if project_id else "")
         if not project_id:
+            test_logger.request_error(
+                method="POST",
+                path="/api/load_more_papers",
+                error_message="ERROR missing project_id",
+                status_code=400,
+            )
+
             return jsonify({"error": "Missing project_id"}), 400
 
         project = get_project_data(project_id)
         if not project:
+            test_logger.request_error(
+                method="POST",
+                path="/api/load_more_papers",
+                error_message="ERROR project not found",
+                status_code=404,
+            )
+
             return jsonify({"error": "Project not found"}), 404
 
         def generate():
@@ -743,20 +1143,42 @@ def load_more_papers():
                 if (yield from yield_recommendations(-0.4)):
                     return
 
+                test_logger.request_error(
+                    method="POST",
+                    path="/api/load_more_papers",
+                    error_message="ERROR no more papers available to show",
+                    status_code=404,
+                )
                 yield f"data: {json.dumps({'error': 'No more papers available to show.'})}\n\n"
 
             except Exception as e:
-                logger.error(f"Error in generator: {e}")
+                test_logger.request_error(
+                    method="POST",
+                    path="/api/load_more_papers",
+                    error_message=f"ERROR in generator: {e}",
+                    status_code=500,
+                )
+
                 yield f"data: {json.dumps({'error': f'Internal error: {str(e)}'})}\n\n"
 
+        test_logger.request_success(
+            method="POST", path="/api/load_more_papers", status_code=200
+        )
         return Response(stream_with_context(generate()), mimetype="text/event-stream")
 
     except Exception as e:
-        logger.error(f"Error in /load_more_papers: {e}")
+        test_logger.request_error(
+            method="POST",
+            path="/api/load_more_papers",
+            error_message=f"ERROR failed to load more papers: {e}",
+            status_code=500,
+        )
+
         return jsonify({"error": f"Failed to load more papers: {str(e)}"}), 500
 
 
 if __name__ == "__main__":
+    setup_logging()
     if not os.getenv("CLERK_SECRET_KEY"):
         raise ValueError(
             "CLERK_SECRET_KEY environment variable is required for authentication."
