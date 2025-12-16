@@ -398,7 +398,7 @@ def get_recommendations():
         test_logger.request_error(
             method="POST",
             path="/api/recommendations",
-            error_message=f"ERROR user not authenticated",
+            error_message="ERROR user not authenticated",
             status_code=401,
         )
 
