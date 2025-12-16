@@ -7,9 +7,10 @@ interface PaperCardProps {
   paper: Paper;
   onRate: (paperHash: string, rating: number) => Promise<void>;
   isReplacement?: boolean;
+  isFadingOut?: boolean;
 }
 
-export function PaperCard({ paper, onRate, isReplacement = false }: PaperCardProps) {
+export function PaperCard({ paper, onRate, isReplacement = false, isFadingOut = false }: PaperCardProps) {
   const [currentRating, setCurrentRating] = useState(paper.rating || 0);
   const [isRating, setIsRating] = useState(false);
 
@@ -64,8 +65,10 @@ export function PaperCard({ paper, onRate, isReplacement = false }: PaperCardPro
 
   return (
     <Card
-      className={`recommendation-card transition-all duration-300 ${
-        isReplacement ? "animate-pulse bg-blue-50" : ""
+      className={`recommendation-card transition-all duration-500 ${
+        isReplacement ? "animate-pulse bg-blue-50 scale-100" : ""
+      } ${
+        isFadingOut ? "opacity-0 scale-95" : "opacity-100 scale-100"
       }`}
       data-paper-hash={paper.hash}
       data-title={paper.title.toLowerCase()}

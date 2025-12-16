@@ -103,6 +103,11 @@ export async function streamSSE(
       reader.releaseLock();
     }
   } catch (error) {
+    // Ignore abort errors - these are intentional cancellations
+    if (error instanceof Error && error.name === 'AbortError') {
+      return;
+    }
+    
     if (onError) {
       onError(error instanceof Error ? error : new Error(String(error)));
     } else {

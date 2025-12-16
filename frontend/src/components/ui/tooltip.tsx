@@ -55,66 +55,60 @@ export function ProjectDescriptionTooltip() {
     <Tooltip
       side="right"
       content={
-        <div className="space-y-2">
-          <div className="mb-3">
-            <em className="text-[#1a237e]">Example:</em>
-            <br />
-            <span className="text-[#1a237e]">
+        <div className="space-y-3">
+          <div className="mb-4">
+            <div className="text-[#1a237e] font-semibold text-[1.05em] mb-2">Example:</div>
+            <div className="text-[#1a237e] italic">
               "I am looking for papers in the field of machine learning in healthcare published after 2018."
-            </span>
+            </div>
           </div>
           <div>
-            <strong className="text-[#1a237e]">You can use natural language filters in your prompt:</strong>
+            <div className="text-[#1a237e] font-semibold text-[1.05em] mb-2">
+              You can use natural language filters in your prompt:
+            </div>
           </div>
-          <div className="space-y-1.5 mt-2">
+          <div className="space-y-2.5 mt-3">
             <div>
-              <b className="text-[#1a237e]">Authors</b>
-              <br />
-              <span className="text-[#4a5568] text-[0.95em] inline-block ml-2">
+              <div className="text-[#1a237e] font-semibold mb-1">Authors</div>
+              <div className="text-[#4a5568] text-[0.93em] leading-relaxed pl-2">
                 Filter by specific authors of the paper.
-              </span>
+              </div>
             </div>
             <div>
-              <b className="text-[#1a237e]">Publication Date</b>
-              <br />
-              <span className="text-[#4a5568] text-[0.95em] inline-block ml-2">
+              <div className="text-[#1a237e] font-semibold mb-1">Publication Date</div>
+              <div className="text-[#4a5568] text-[0.93em] leading-relaxed pl-2">
                 The year or date when the paper was published.
-              </span>
+              </div>
             </div>
             <div>
-              <b className="text-[#1a237e]">Field-Weighted Citation Impact (FWCI)</b>
-              <br />
-              <span className="text-[#4a5568] text-[0.95em] inline-block ml-2">
+              <div className="text-[#1a237e] font-semibold mb-1">Field-Weighted Citation Impact (FWCI)</div>
+              <div className="text-[#4a5568] text-[0.93em] leading-relaxed pl-2">
                 A metric that shows how well-cited a paper is compared to others in its field (1.0 = world average).
-              </span>
+              </div>
             </div>
             <div>
-              <b className="text-[#1a237e]">Citation Normalized Percentile</b>
-              <br />
-              <span className="text-[#4a5568] text-[0.95em] inline-block ml-2">
+              <div className="text-[#1a237e] font-semibold mb-1">Citation Normalized Percentile</div>
+              <div className="text-[#4a5568] text-[0.93em] leading-relaxed pl-2">
                 Indicates the paper's citation performance as a percentile among similar papers (higher is better).
-              </span>
+              </div>
             </div>
             <div>
-              <b className="text-[#1a237e]">Cited By Count</b>
-              <br />
-              <span className="text-[#4a5568] text-[0.95em] inline-block ml-2">
+              <div className="text-[#1a237e] font-semibold mb-1">Cited By Count</div>
+              <div className="text-[#4a5568] text-[0.93em] leading-relaxed pl-2">
                 The total number of times this paper has been cited by other works.
-              </span>
+              </div>
             </div>
             <div>
-              <b className="text-[#1a237e]">Counts By Year</b>
-              <br />
-              <span className="text-[#4a5568] text-[0.95em] inline-block ml-2">
+              <div className="text-[#1a237e] font-semibold mb-1">Counts By Year</div>
+              <div className="text-[#4a5568] text-[0.93em] leading-relaxed pl-2">
                 Shows how many times the paper was cited in each year since publication.
-              </span>
+              </div>
             </div>
             <div>
-              <b className="text-[#1a237e]">Similarity Score</b>
-              <br />
-              <span className="text-[#4a5568] text-[0.95em] inline-block ml-2">
+              <div className="text-[#1a237e] font-semibold mb-1">Similarity Score</div>
+              <div className="text-[#4a5568] text-[0.93em] leading-relaxed pl-2">
                 A score indicating how closely the paper matches your search or interests (higher means more relevant).
-              </span>
+              </div>
             </div>
           </div>
         </div>

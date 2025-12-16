@@ -121,7 +121,7 @@ export function useRecommendationsStream({
         abortControllerRef.current.abort();
       }
     };
-  }, [startStream, enabled]);
+  }, [projectId, updateRecommendations, enabled]);
 
   return {
     ...state,

@@ -1,8 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRecommendationsStream } from "@/hooks/useRecommendationsStream";
+import { useNewsletterPapers } from "@/hooks/useNewsletterPapers";
+import { useLoadMorePapers } from "@/hooks/useLoadMorePapers";
 import { PaperCard } from "@/components/project/PaperCard";
+import type { Paper } from "@/types";
 
 interface Project {
   project_id: string;
@@ -36,8 +39,7 @@ async function ratePaper(projectId: string, paperHash: string, rating: number) {
 
 export default function ProjectOverview() {
   const { projectId } = useParams<{ projectId: string }>();
-  const [searchParams] = useSearchParams();
-  const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const updateRecommendations = searchParams.get("updateRecommendations") === "true";
   
@@ -45,6 +47,10 @@ export default function ProjectOverview() {
   const [sortBy, setSortBy] = useState("");
   const [filterBy, setFilterBy] = useState("");
   const [replacementPapers, setReplacementPapers] = useState<Set<string>>(new Set());
+  const [additionalPapers, setAdditionalPapers] = useState<Paper[]>([]);
+  const [replacedPapers, setReplacedPapers] = useState<Map<string, Paper>>(new Map());
+  const [removedPapers, setRemovedPapers] = useState<Set<string>>(new Set());
+  const [fadingOutPapers, setFadingOutPapers] = useState<Set<string>>(new Set());
 
   // Fetch project details
   const { data: project, isLoading: projectLoading } = useQuery({
@@ -67,32 +73,127 @@ export default function ProjectOverview() {
     enabled: !!projectId,
   });
 
+  // Fetch newsletter papers - only after recommendations have loaded
+  const { data: newsletterPapers = [], isLoading: newsletterLoading } = useNewsletterPapers(
+    projectId,
+    recommendations.length > 0 || !streamLoading
+  );
+
+  // Load More Papers hook
+  const { loadMore, isLoading: isLoadingMore, error: loadMoreError } = useLoadMorePapers({
+    projectId: projectId!,
+    onPapersLoaded: (newPapers) => {
+      setAdditionalPapers(prev => [...prev, ...newPapers]);
+    },
+  });
+
+  // Remove updateRecommendations param from URL after stream completes
+  // This prevents re-running the agent on page refresh
+  const hasRemovedParam = useRef(false);
+  
+  useEffect(() => {
+    if (!updateRecommendations || hasRemovedParam.current || streamLoading) {
+      return;
+    }
+    
+    // Only remove the param AFTER stream has completely finished
+    if (recommendations.length > 0 || thoughts.length > 0) {
+      hasRemovedParam.current = true;
+      searchParams.delete("updateRecommendations");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [updateRecommendations, streamLoading, recommendations.length, thoughts.length, searchParams, setSearchParams]);
+
   // Rate paper mutation
   const rateMutation = useMutation({
     mutationFn: ({ paperHash, rating }: { paperHash: string; rating: number }) =>
       ratePaper(projectId!, paperHash, rating),
-    onSuccess: (data) => {
-      // Handle replacement if returned
-      if (data.replacement) {
-        setReplacementPapers(prev => new Set(prev).add(data.replacement.paper.hash));
-        // Remove highlight after 5 seconds
+    onSuccess: (data, variables) => {
+      console.log('Rating response:', data);
+      console.log('Variables:', variables);
+      
+      // Handle replacement if returned (rating 1-2)
+      if (data.replacement && data.replacement.status === 'success') {
+        const replacement = data.replacement;
+        console.log('Replacement data:', replacement);
+        
+        const replacementPaper: Paper = {
+          hash: replacement.replacement_paper_hash,
+          title: replacement.replacement_title,
+          description: replacement.replacement_summary,
+          link: replacement.replacement_url,
+          is_replacement: true,
+          rating: 0,
+          authors: replacement.replacement_authors,
+          publication_date: replacement.replacement_publication_date,
+          fwci: replacement.replacement_fwci,
+          cited_by_count: replacement.replacement_cited_by_count,
+          venue_name: replacement.replacement_venue_name,
+          is_oa: replacement.replacement_is_oa,
+          oa_status: replacement.replacement_oa_status,
+          pdf_url: replacement.replacement_pdf_url,
+        };
+        
+        console.log('Created replacement paper:', replacementPaper);
+        
+        // Start fade out animation
+        setFadingOutPapers(prev => new Set(prev).add(variables.paperHash));
+        
+        // After fade out, replace the paper
         setTimeout(() => {
-          setReplacementPapers(prev => {
+          // Store the replacement mapping
+          setReplacedPapers(prev => {
+            const newMap = new Map(prev).set(variables.paperHash, replacementPaper);
+            console.log('Updated replacedPapers map:', Array.from(newMap.entries()));
+            return newMap;
+          });
+          
+          // Remove from fading out
+          setFadingOutPapers(prev => {
             const next = new Set(prev);
-            next.delete(data.replacement.paper.paper_hash);
+            next.delete(variables.paperHash);
             return next;
           });
-        }, 5000);
+          
+          // Add to replacement tracking for highlighting
+          setReplacementPapers(prev => new Set(prev).add(replacementPaper.hash));
+          
+          // Remove highlight after 5 seconds
+          setTimeout(() => {
+            setReplacementPapers(prev => {
+              const next = new Set(prev);
+              next.delete(replacementPaper.hash);
+              return next;
+            });
+          }, 5000);
+        }, 500); // Wait for fade out animation
+      } else if (variables.rating <= 2) {
+        // Rating is 1-2 but no replacement found - remove the paper
+        console.log('No replacement found (low rating), removing paper:', variables.paperHash);
+        
+        // Start fade out animation
+        setFadingOutPapers(prev => new Set(prev).add(variables.paperHash));
+        
+        // After fade out, remove the paper
+        setTimeout(() => {
+          setRemovedPapers(prev => new Set(prev).add(variables.paperHash));
+          setFadingOutPapers(prev => {
+            const next = new Set(prev);
+            next.delete(variables.paperHash);
+            return next;
+          });
+        }, 500); // Wait for fade out animation
       }
-      
-      // Invalidate queries to refetch
-      queryClient.invalidateQueries({ queryKey: ["recommendations", projectId] });
     },
   });
 
-  // Filter and sort papers
+  // Filter and sort papers (including loaded additional papers)
   const filteredAndSortedPapers = useMemo(() => {
-    let papers = [...recommendations];
+    // Apply replacements to recommendations and filter out removed papers
+    let papers = [...recommendations
+      .filter(p => !removedPapers.has(p.hash))
+      .map(p => replacedPapers.get(p.hash) || p), 
+      ...additionalPapers.filter(p => !removedPapers.has(p.hash))];
 
     // Apply search filter
     if (searchQuery.trim()) {
@@ -145,7 +246,7 @@ export default function ProjectOverview() {
     }
 
     return papers;
-  }, [recommendations, searchQuery, sortBy, filterBy]);
+  }, [recommendations, additionalPapers, searchQuery, sortBy, filterBy, replacedPapers, removedPapers]);
 
   const handleRatePaper = async (paperHash: string, rating: number) => {
     await rateMutation.mutateAsync({ paperHash, rating });
@@ -184,27 +285,68 @@ export default function ProjectOverview() {
           </div>
         </div>
 
-        {/* Agent Thoughts Section */}
-        {thoughts.length > 0 && (
+        {/* Agent Thoughts Section - Only show when streaming or has thoughts */}
+        {(streamLoading || thoughts.length > 0) && (
           <div className="agent-thoughts-section">
             <h2>Agent's Thoughts</h2>
             <ul className="agent-thoughts-list">
-              {thoughts.map((thought, index) => (
-                <li key={index}>
-                  <strong>Step {index + 1}:</strong>
-                  <p>{thought}</p>
-                </li>
-              ))}
+              {streamLoading && thoughts.length === 0 && (
+                <li>🧠 Processing user input...</li>
+              )}
+              {thoughts.map((thought, index) => {
+                // Determine icon based on thought content
+                let icon = '🧠';
+                let content = thought;
+                
+                if (content.includes('Calling tool:')) {
+                  icon = '🛠️';
+                } else if (content.includes('Tool response')) {
+                  icon = '✅';
+                } else if (content.includes('user input')) {
+                  icon = '👤';
+                } else if (content.includes('Final response')) {
+                  icon = '🏁';
+                } else if (content.includes('Checking')) {
+                  icon = '🧠';
+                } else if (content.includes('Extracted keywords')) {
+                  icon = '🧠';
+                } else if (content.includes('Performing')) {
+                  icon = '🧠';
+                } else if (content.includes('Updating')) {
+                  icon = '🧠';
+                }
+                
+                return (
+                  <li key={index}>
+                    {icon} {content}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
 
-        {/* Latest Papers Section - Placeholder for newsletter/pubsub papers */}
+        {/* Latest Papers Section - Newsletter/PubSub papers */}
         <div className="recommendations-section">
           <h2>Latest Papers</h2>
-          <div className="recommendations-grid">
-            {/* Newsletter papers would go here */}
-          </div>
+          {newsletterLoading ? (
+            <p className="no-papers-message">Loading latest papers...</p>
+          ) : newsletterPapers.length > 0 ? (
+            <div className="latest-papers-grid">
+              {newsletterPapers.map((paper) => (
+                <PaperCard
+                  key={paper.hash}
+                  paper={paper}
+                  onRate={handleRatePaper}
+                  isReplacement={false}
+                />
+              ))}
+            </div>
+          ) : streamLoading ? (
+            <p className="no-papers-message">Latest papers will appear after recommendations are generated...</p>
+          ) : (
+            <p className="no-papers-message">No latest papers available yet. Refresh the page after recommendations are generated.</p>
+          )}
         </div>
 
         {/* Recommendations Section */}
@@ -290,18 +432,25 @@ export default function ProjectOverview() {
                     paper={paper}
                     onRate={handleRatePaper}
                     isReplacement={replacementPapers.has(paper.hash)}
+                    isFadingOut={fadingOutPapers.has(paper.hash)}
                   />
                 ))}
               </div>
               
-              {/* Load More Button - Placeholder for future implementation */}
+              {/* Load More Button */}
               <div className="load-more-container">
                 <button 
-                  className="load-more-btn" 
-                  style={{ display: 'none' }}
+                  className="load-more-btn"
+                  onClick={loadMore}
+                  disabled={isLoadingMore}
                 >
-                  Load More
+                  {isLoadingMore ? 'Loading...' : 'Load More'}
                 </button>
+                {loadMoreError && (
+                  <p style={{ color: '#dc3545', textAlign: 'center', marginTop: '8px' }}>
+                    Failed to load more papers. Please try again.
+                  </p>
+                )}
               </div>
             </>
           )}
