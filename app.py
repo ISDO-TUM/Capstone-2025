@@ -13,6 +13,8 @@ This is the main entrypoint for running the web application and serving the fron
 
 import json
 import os
+import logging
+import logging.config
 import sys
 import io
 import pathlib
