@@ -172,8 +172,10 @@ def authenticate_user():
             )
         except Exception as e:
             status_code = 500 # default
-            if hasattr(e, "status_code"): status_code = e.status_code
-            if hasattr(e, "response"): status_code = e.response.status_code
+            if hasattr(e, "status_code"): 
+                status_code = e.status_code
+            if hasattr(e, "response"): 
+                status_code = e.response.status_code
             test_logger.request_error(
                 method="GET",
                 path=request.path,
@@ -411,7 +413,7 @@ def get_recommendations():
         test_logger.request_error(
             method="POST",
             path="/api/recommendations",
-            error_message=f"ERROR user not authenticated",
+            error_message="ERROR user not authenticated",
             status_code=401
             )
         
