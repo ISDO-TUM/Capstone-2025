@@ -45,11 +45,11 @@ def add_new_project_to_db(
         project_id = str(uuid.uuid4())
 
     sql_insert = """
-    INSERT INTO projects_table (project_id, title, description, log_history)
-        VALUES (%s, %s, %s, %s)
+    INSERT INTO projects_table (user_id, project_id, title, description, log_history)
+        VALUES (%s, %s, %s, %s, %s)
     """
 
-    cursor.execute(sql_insert, (project_id, title, description, log_history))
+    cursor.execute(sql_insert, (user_id, project_id, title, description, log_history))
     conn.commit()
     cursor.close()
     conn.close()
@@ -484,3 +484,40 @@ def delete_project(user_id: str, project_id: str) -> Status:
         conn.close()
 
     return status
+
+
+def get_log_history_flag(user_id: str, project_id: str) -> bool:
+    """
+    Retrieve the log history flag for a project owned by the current user.
+    Args:
+        user_id (str): Identifier of the authenticated user.
+        project_id (str): The project ID.
+    Returns:
+        bool | None: The flag specifying if we can log agent interactions
+    """
+    conn = connect_to_db()
+    if conn is None:
+        raise Exception("Failed to connect to database")
+
+    cursor = conn.cursor()
+
+    # First verify the project exists and belongs to the user
+    cursor.execute(
+        """
+        SELECT project_id, log_history FROM projects_table
+        WHERE project_id = %s AND user_id = %s
+    """,
+        (project_id, user_id),
+    )
+
+    result = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if result is None:
+        logger.warning(
+            f"Project {project_id} not found or not owned by user {user_id} when fetching log history flag"
+        )
+        return Status.FAILURE
+
+    return result[1] if result[1] else False

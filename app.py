@@ -156,7 +156,6 @@ else:
     clerk_sdk = Clerk(bearer_auth=CLERK_SECRET_KEY)
 
 
-
 def setup_logging(path: str = "custom_logging/config.json"):
     """
     Initialize and configure logging using a JSON configuration file.
