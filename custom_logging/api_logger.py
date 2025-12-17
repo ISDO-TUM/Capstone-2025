@@ -7,7 +7,7 @@ class APILogger(StructuredLogger):
 
     def request_start(self, method: str, path: str):
         self.info(
-            "API request started",
+            f"API request started for path: {path}",
             metadata={
                 "method": method,
                 "path": path,
@@ -18,7 +18,7 @@ class APILogger(StructuredLogger):
         self, method: str, path: str, error_message: str, status_code: int
     ):
         self.error(
-            "API request error",
+            f"API request error for path: {path}",
             metadata={
                 "method": method,
                 "path": path,
@@ -29,7 +29,7 @@ class APILogger(StructuredLogger):
 
     def request_success(self, method: str, path: str, status_code: int):
         self.info(
-            "API request successful",
+            f"API request successful for path: {path}",
             metadata={
                 "method": method,
                 "path": path,
@@ -49,6 +49,6 @@ class APILogger(StructuredLogger):
 
     def request_info(self, method: str, path: str, info_message: str):
         self.info(
-            "API request info",
+            f"API request info: {info_message}",
             metadata={"method": method, "path": path, "info_message": info_message},
         )

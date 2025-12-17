@@ -1,5 +1,6 @@
-from custom_logging.base import StructuredLogger, project_id_ctx
+from custom_logging.base import StructuredLogger, project_id_ctx, user_id_ctx
 from contextvars import ContextVar
+from database.projects_database_handler import get_log_history_flag
 
 user_query_ctx: ContextVar[str] = ContextVar("user_query", default="")
 
@@ -16,6 +17,9 @@ class AgentLogger(StructuredLogger):
         super().__init__("agent")
         self._pending_metadata = {}
         self.node_name = "unknown node"
+
+    def _user_consent_flag(self) -> bool:
+        return get_log_history_flag(user_id_ctx.get(), project_id_ctx.get())
 
     def set_user_query(self, user_query: str):
         """
@@ -43,6 +47,9 @@ class AgentLogger(StructuredLogger):
             node_name (str): The name of the node being executed.
             **metadata: Additional key-value pairs to include in the log metadata.
         """
+        if not self._user_consent_flag():
+            metadata = dict()
+
         self.node_name = node_name
         self.info(
             f"Node {node_name} started - project_id={project_id_ctx.get()}",
@@ -57,6 +64,9 @@ class AgentLogger(StructuredLogger):
             node_name (str): The name of the completed node.
             metadata (dict): Node-specific completion data.
         """
+        if not self._user_consent_flag():
+            metadata = dict()
+
         self.info(
             f"Node {node_name} completed - project_id={project_id_ctx.get()}",
             metadata={"node_name": node_name, **self._pending_metadata, **metadata},
@@ -73,6 +83,9 @@ class AgentLogger(StructuredLogger):
             error (Exception | str): The error that occurred, either as an Exception object or string.
             **metadata: Additional key-value pairs to include in the error log metadata.
         """
+        if not self._user_consent_flag():
+            metadata = dict()
+
         error_message = str(error) if isinstance(error, Exception) else error
         self.error(
             f"Node {self.node_name} error - project_id={project_id_ctx.get()}",
