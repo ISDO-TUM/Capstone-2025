@@ -13,7 +13,7 @@ from typing import Dict
 
 
 class MockLLMResponse:
-    """Mock response object that mimics LangChain's AIMessage."""
+    """Mock response object mirroring the runtime LLMResponse."""
 
     def __init__(self, content: str):
         self.content = content
@@ -25,11 +25,11 @@ class MockLLMResponse:
 class MockLLM:
     """
     Mock LLM that returns deterministic responses based on the prompt.
-    Mimics the ChatOpenAI interface from LangChain.
+    Mimics the OpenAIChatModel interface used in production.
     """
 
     def __init__(self, **kwargs):
-        """Initialize with any kwargs to match ChatOpenAI interface."""
+        """Initialize with any kwargs to match the production LLM signature."""
         self.model = kwargs.get("model", "mock-gpt-4")
         self.temperature = kwargs.get("temperature", 0)
         self.responses = self._get_mock_responses()

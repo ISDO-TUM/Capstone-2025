@@ -11,7 +11,7 @@ All ranking and retrieval tools are designed to be used by the Stategraph agent 
 
 import logging
 from llm.Embeddings import embed_user_profile
-from langchain_core.tools import tool
+from llm.tools.plain_tool import tool
 from chroma_db.chroma_vector_db import chroma_db
 from database.papers_database_handler import get_papers_by_hash, get_all_papers
 from database.projects_database_handler import (
