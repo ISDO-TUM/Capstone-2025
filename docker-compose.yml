@@ -33,7 +33,6 @@ services:
     build: .
     container_name: capstone_web
     restart: always
-    command: sh /app/scripts/startup.sh
     ports:
       - "80:80"
     volumes:

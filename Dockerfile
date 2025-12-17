@@ -41,4 +41,5 @@ ENV OPENAI_API_KEY="your_openai_api_key"
 ENV CHROMA_HOST="chromadb"
 
 # Run app.py when the container launches
-CMD ["uv", "run", "app.py", "--no-dev"]
+RUN chmod +x /app/scripts/startup.sh
+ENTRYPOINT ["/app/scripts/startup.sh"]

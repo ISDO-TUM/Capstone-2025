@@ -19,9 +19,14 @@ export PGROLL_PG_URL="postgres://${DB_USER:-user}:${DB_PASSWORD:-password}@${DB_
 # Initialize pgroll (safe to run multiple times)
 pgroll init || true
 
-# Run all migrations
-pgroll migrate migrations/ --complete
-
+# Run database migrations
+if [ "$DEPLOY_ENV" = "production" ]; then
+    echo "Running production migrations without --complete"
+    pgroll migrate migrations/
+else
+    echo "Running preview migrations with --complete"
+    pgroll migrate migrations/ --complete
+fi
 echo "Migrations complete!"
 
 # Start the application

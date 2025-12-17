@@ -134,3 +134,145 @@ jobs:
           name: test-screenshots
           path: tests/e2e/screenshots/
           retention-days: 7
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: e2e-tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    outputs:
+      has_migration: ${{ steps.check.outputs.has_migration }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Check for new migrations
+        id: check
+        run: |
+          echo "Latest SHA before the push: ${{ github.event.before }}"
+          echo "Latest SHA after the push: ${{ github.event.after }}"
+          if [ -n "$(git diff --name-only --diff-filter=A ${{ github.event.before }} ${{ github.event.after }} migrations/*.json)" ]; then
+            echo "Detected new migration files"
+            echo "has_migration=true" >> $GITHUB_OUTPUT
+          else
+            echo "No new migrations"
+            echo "has_migration=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Trigger Dokploy deployment
+        run: |
+          http_code=$(curl -X POST \
+            "https://dokploy.capstone2025.de/api/application.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\": \"Qz6AmfHxcrLPkXpB2kqUF\"}" \
+            -w "%{http_code}" \
+            -o /tmp/dokploy_response.txt \
+            -s)
+
+          echo "Status Code: $http_code"
+          response_body=$(cat /tmp/dokploy_response.txt)
+          echo "Response: $response_body"
+
+          if [ "$http_code" -eq 200 ]; then
+            echo "Deployment triggered successfully!"
+          else
+            echo "Deployment failed with status code: $http_code"
+            exit 1
+          fi
+
+  complete-db-migration:
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.deploy.outputs.has_migration == 'true'
+    environment: production
+    outputs:
+      approved: ${{ steps.set-outputs.approved }}
+    steps:
+      - name: Complete database migration
+        run: |
+          echo "Set PGROLL_COMMAND to complete"
+          http_code=$(curl -X POST \
+            "https://dokploy.capstone2025.de/api/application.update" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"applicationId": "pF8Wb0rVFG13ufavvhvH-", "env": "PGROLL_COMMAND=complete"}' \
+            -w "%{http_code}" \
+            -o /tmp/dokploy_response.txt \
+            -s)
+
+          echo "Status Code: $http_code"
+          response_body=$(cat /tmp/dokploy_response.txt)
+          echo "Response: $response_body"
+
+          echo "Run pgroll complete"
+          http_code=$(curl -X POST \
+            "https://dokploy.capstone2025.de/api/application.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\": \"pF8Wb0rVFG13ufavvhvH-\"}" \
+            -w "%{http_code}" \
+            -o /tmp/dokploy_response.txt \
+            -s)
+
+          echo "Status Code: $http_code"
+          response_body=$(cat /tmp/dokploy_response.txt)
+          echo "Response: $response_body"
+
+          if [ "$http_code" -eq 200 ]; then
+            echo "Migration completed successfully!"
+          else
+            echo "Completing migration failed with status code: $http_code"
+            exit 1
+          fi
+
+  rollback-on-rejection:
+    runs-on: ubuntu-latest
+    needs: complete-db-migration
+    # `failure()` alone may trigger the step even for approved workflows if an error occurs midway.
+    # `result == 'failure'` alone won’t catch rejection scenarios, so we combine both checks.
+    if: ${{ failure() && needs.complete-db-migration.result == 'failure' &&
+            github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Rollback database migration
+        run: |
+          echo "Set PGROLL_COMMAND to rollback"
+          http_code=$(curl -X POST \
+            "https://dokploy.capstone2025.de/api/application.update" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"applicationId": "pF8Wb0rVFG13ufavvhvH-", "env": "PGROLL_COMMAND=rollback"}' \
+            -w "%{http_code}" \
+            -o /tmp/dokploy_response.txt \
+            -s)
+
+          echo "Status Code: $http_code"
+          response_body=$(cat /tmp/dokploy_response.txt)
+          echo "Response: $response_body"
+
+          echo "Run pgroll rollback"
+          http_code=$(curl -X POST \
+            "https://dokploy.capstone2025.de/api/application.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\": \"pF8Wb0rVFG13ufavvhvH-\"}" \
+            -w "%{http_code}" \
+            -o /tmp/dokploy_response.txt \
+            -s)
+
+          echo "Status Code: $http_code"
+          response_body=$(cat /tmp/dokploy_response.txt)
+          echo "Response: $response_body"
+
+          if [ "$http_code" -eq 200 ]; then
+            echo "Migration rolled back successfully!"
+          else
+            echo "Rolling back migration failed with status code: $http_code"
+            exit 1
+          fi
+
+      - name: Manual application rollback warning!
+        run: |
+          echo "::warning::Automatic application rollback is currently not supported by Dokploy. Please manually rollback the application on Dokploy if needed."
