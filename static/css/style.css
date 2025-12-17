@@ -119,6 +119,36 @@ body {
     padding: 12px;
 }
 
+.checkbox-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 15px 18px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.7);
+    box-shadow: 0 2px 12px 0 rgba(0,0,0,0.06);
+    margin-top: 6px;
+}
+
+.checkbox-consent input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    accent-color: #1a237e;
+}
+
+.checkbox-consent-text {
+    font-size: 1rem;
+    color: #1a237e;
+    font-weight: 500;
+}
+
+.consent-hint {
+    margin-top: 10px;
+    font-size: 0.95rem;
+    color: #4a5568;
+}
+
 /* Form layout for desktop */
 @media (min-width: 768px) {
     #createProjectForm {
