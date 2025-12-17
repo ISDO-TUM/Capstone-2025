@@ -11,4 +11,3 @@ logs/
 # E2E test artifacts
 tests/e2e/screenshots/
 tests/e2e/.llm_cache/
-logs/

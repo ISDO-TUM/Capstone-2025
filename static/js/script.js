@@ -142,20 +142,22 @@ async function handleRouting () {
     if (path === '/create-project') {
        setupPDFUpload();
 
-       const createProjectForm = document.getElementById('createProjectForm');
-       createProjectForm?.addEventListener('submit', async(event) => {
-        event.preventDefault();
-        const title       = document.getElementById('projectTitle').value;
-        const description = document.getElementById('projectDescription').value;
-        const logHistory  = document.getElementById('logHistory').value;
+        const createProjectForm = document.getElementById('createProjectForm');
+        createProjectForm?.addEventListener('submit', async(event) => {
+         event.preventDefault();
+         const title       = document.getElementById('projectTitle').value;
+         const description = document.getElementById('projectDescription').value;
+         const logHistoryCheckbox = document.getElementById('logHistory');
+         const logHistory  = logHistoryCheckbox?.checked ? 'true' : 'false';
+ 
+             // POST to real endpoint instead of localStorage
+             const res = await fetch('/api/projects', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ title, description, logHistory }),
+               credentials: 'include'
+             });
 
-            // POST to real endpoint instead of localStorage
-            const res = await fetch('/api/projects', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ title, description, logHistory }),
-              credentials: 'include'
-            });
             if (!res.ok) {
               return alert('Error creating project');
             }
