@@ -1,4 +1,5 @@
 """CLI helper for exporting the Pydantic graph as Mermaid text."""
+
 from __future__ import annotations
 
 import argparse

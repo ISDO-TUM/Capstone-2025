@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pydantic_graph import BaseNode, GraphRunContext
 
 from llm_pydantic.state import AgentState
-from llm_pydantic.tooling import AgentDeps
+from llm_pydantic.tooling.tooling_mock import AgentDeps
 
 
 @dataclass(slots=True)
@@ -18,12 +18,16 @@ class QualityControlNode(BaseNode[AgentState, AgentDeps]):
         tools = ctx.deps.tools
         ctx.state.has_filter_instructions = tools.detect_filters(ctx.state.user_query)
         decision, reason = tools.qc_decision(ctx.state.user_query, ctx.state.keywords)
+
         ctx.state.qc_decision = decision
         ctx.state.qc_reason = reason
+
         if decision != "accept":
-            ctx.state.out_of_scope_message = (
-                "This prototype only proceeds when QC passes."
-            )
+            if not ctx.state.out_of_scope_message:
+                ctx.state.out_of_scope_message = (
+                    "This prototype only proceeds when QC passes."
+                )
+
             ctx.state.requires_user_input = True
             return OutOfScopeNode()
         return RetrievePapersNode()

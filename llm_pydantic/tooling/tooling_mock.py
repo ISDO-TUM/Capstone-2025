@@ -4,6 +4,7 @@ The real `llm.StategraphAgent` pulls dozens of bespoke tools. For this first
 pass we keep the surface area intentionally tiny so the graph wiring can be
 reviewed without needing the upstream infra.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

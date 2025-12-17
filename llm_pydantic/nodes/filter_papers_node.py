@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pydantic_graph import BaseNode, GraphRunContext
 
 from llm_pydantic.state import AgentState
-from llm_pydantic.tooling import AgentDeps
+from llm_pydantic.tooling.tooling_mock import AgentDeps
 
 
 @dataclass(slots=True)
@@ -20,13 +20,17 @@ class FilterPapersNode(BaseNode[AgentState, AgentDeps]):
             ctx.state.papers_raw,
             ctx.state.has_filter_instructions,
         )
+
         ctx.state.papers_filtered = filtered
+        ctx.state.filter_explanation = criteria
+
         if not filtered:
             ctx.state.no_results_summary = criteria.get(
                 "explanation", "Filters removed every candidate"
             )
             ctx.state.requires_user_input = True
             return NoResultsNode()
+
         return StorePapersNode()
 
 

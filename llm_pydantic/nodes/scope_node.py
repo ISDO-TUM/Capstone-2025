@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pydantic_graph import BaseNode, GraphRunContext
 
 from llm_pydantic.state import AgentState
-from llm_pydantic.tooling import AgentDeps
+from llm_pydantic.tooling.tooling_mock import AgentDeps
 
 
 @dataclass(slots=True)
@@ -16,14 +16,14 @@ class ScopeCheckNode(BaseNode[AgentState, AgentDeps]):
         self, ctx: GraphRunContext[AgentState, AgentDeps]
     ) -> QualityControlNode | OutOfScopeNode:
         is_out = ctx.deps.tools.detect_out_of_scope(ctx.state.user_query)
+
         if is_out:
             ctx.state.qc_decision = "out_of_scope"
             ctx.state.qc_reason = "Query contains topics outside academic search"
-            ctx.state.out_of_scope_message = (
-                "We only handle academic paper discovery."
-            )
+            ctx.state.out_of_scope_message = "We only handle academic paper discovery."
             ctx.state.requires_user_input = True
             return OutOfScopeNode()
+
         return QualityControlNode()
 
 

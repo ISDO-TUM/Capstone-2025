@@ -18,7 +18,7 @@ if __package__ in (None, ""):
 from llm_pydantic.agent import build_agent_graph
 from llm_pydantic.nodes.input_node import InputNode
 from llm_pydantic.state import AgentState
-from llm_pydantic.tooling import AgentDeps
+from llm_pydantic.tooling.tooling_mock import AgentDeps
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -56,12 +56,14 @@ async def _run_agent_stream_async(user_query: str):
     deps = AgentDeps()
     step = 0
     print("Streaming agent thoughts (pydantic graph)")
-    async with graph.iter(InputNode(user_message=user_query), state=state, deps=deps) as run:
+    async with graph.iter(
+        InputNode(user_message=user_query), state=state, deps=deps
+    ) as run:
         async for node in run:
             step += 1
             if isinstance(node, End):
                 print(f"\nStep {step}: Agent finished.")
-                
+
                 if run.result is None:
                     print("No result returned by agent.")
                     return None

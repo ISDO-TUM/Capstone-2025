@@ -1,13 +1,19 @@
 """Minimal tool decorator used for agent integrations without LangChain."""
+
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Iterable
+from typing import Any, Callable
 
 
 class PlainTool:
     """Wraps a callable and exposes a LangChain-like interface."""
 
-    def __init__(self, func: Callable[..., Any], name: str | None = None, description: str | None = None) -> None:
+    def __init__(
+        self,
+        func: Callable[..., Any],
+        name: str | None = None,
+        description: str | None = None,
+    ) -> None:
         self._func = func
         self.name = name or func.__name__
         self.description = description or (func.__doc__ or "")
@@ -27,7 +33,12 @@ class PlainTool:
         return self._func(input_data)
 
 
-def tool(func: Callable[..., Any] | None = None, *, name: str | None = None, description: str | None = None):
+def tool(
+    func: Callable[..., Any] | None = None,
+    *,
+    name: str | None = None,
+    description: str | None = None,
+):
     """Decorator that returns a PlainTool wrapper."""
 
     def decorator(fn: Callable[..., Any]) -> PlainTool:
