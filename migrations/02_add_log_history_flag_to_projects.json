@@ -1,0 +1,15 @@
+{
+  "operations": [
+    {
+      "add_column": {
+        "table": "projects_table",
+        "column": {
+          "name": "log_history",
+          "type": "bool",
+          "nullable": false,
+          "default": "false"
+        }
+      }
+    }
+  ]
+}
