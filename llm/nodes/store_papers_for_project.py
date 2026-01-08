@@ -8,6 +8,7 @@ from llm.node_logger import NodeLogger
 from llm.state import AgentOutput, AgentState
 from llm.tools.paper_handling_tools import generate_relevance_summary
 from llm.tools.Tools_aggregator import get_tools
+from llm_pydantic.tooling.tooling_mock import AgentDeps
 
 node_logger = NodeLogger(
     "store_papers_for_project",
@@ -17,7 +18,7 @@ node_logger = NodeLogger(
 
 
 @dataclass()
-class StorePapersForProject(BaseNode[AgentState]):
+class StorePapersForProject(BaseNode[AgentState, AgentDeps]):
     """
     Store the recommended papers for a project in the database.
     Args:
@@ -26,7 +27,9 @@ class StorePapersForProject(BaseNode[AgentState]):
         dict: Updated state with store_papers_for_project_result.
     """
 
-    async def run(self, ctx: GraphRunContext[AgentState]) -> End[AgentOutput | None]:  # ty:ignore[invalid-method-override]
+    async def run(
+        self, ctx: GraphRunContext[AgentState, AgentDeps]
+    ) -> End[AgentOutput | None]:  # ty:ignore[invalid-method-override]
         state = ctx.state
 
         node_logger.log_begin(state.__dict__)

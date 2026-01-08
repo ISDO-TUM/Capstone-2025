@@ -9,6 +9,7 @@ from pydantic_graph import BaseNode, GraphRunContext
 from llm.node_logger import NodeLogger
 from llm.state import AgentState
 from llm.tools.Tools_aggregator import get_tools
+from llm_pydantic.tooling.tooling_mock import AgentDeps
 
 logger = logging.getLogger("OutOfScopeCheck")
 logger.setLevel(logging.WARNING)
@@ -24,7 +25,7 @@ node_logger = NodeLogger(
 
 
 @dataclass()
-class OutOfScopeCheck(BaseNode[AgentState]):
+class OutOfScopeCheck(BaseNode[AgentState, AgentDeps]):
     """
     Detect if the user query is out of scope for academic paper recommendations.
     Args:
@@ -33,7 +34,7 @@ class OutOfScopeCheck(BaseNode[AgentState]):
         dict: Updated state with out_of_scope_result.
     """
 
-    async def run(self, ctx: GraphRunContext[AgentState]) -> QualityControl:
+    async def run(self, ctx: GraphRunContext[AgentState, AgentDeps]) -> QualityControl:
         state = ctx.state
 
         node_logger.log_begin(state.__dict__)

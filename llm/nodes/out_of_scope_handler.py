@@ -8,6 +8,7 @@ from pydantic_graph import BaseNode, End, GraphRunContext
 from llm.LLMDefinition import LLM
 from llm.node_logger import NodeLogger
 from llm.state import AgentOutput, AgentState
+from llm_pydantic.tooling.tooling_mock import AgentDeps
 
 logger = logging.getLogger("out_of_scope_handler_node")
 logger.setLevel(logging.INFO)
@@ -23,7 +24,7 @@ node_logger = NodeLogger(
 
 
 @dataclass()
-class OutOfScopeHandler(BaseNode[AgentState]):
+class OutOfScopeHandler(BaseNode[AgentState, AgentDeps]):
     """
     Handle out-of-scope queries by providing explanation and requesting new input.
     Args:
@@ -32,7 +33,9 @@ class OutOfScopeHandler(BaseNode[AgentState]):
         dict: Updated state with out_of_scope_message and requires_user_input.
     """
 
-    async def run(self, ctx: GraphRunContext[AgentState]) -> End[AgentOutput]:  # ty:ignore[invalid-method-override]
+    async def run(
+        self, ctx: GraphRunContext[AgentState, AgentDeps]
+    ) -> End[AgentOutput]:  # ty:ignore[invalid-method-override]
         state = ctx.state
 
         node_logger.log_begin(state.__dict__)

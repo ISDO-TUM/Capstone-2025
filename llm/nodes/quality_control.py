@@ -10,6 +10,7 @@ from llm.LLMDefinition import LLM
 from llm.node_logger import NodeLogger
 from llm.state import AgentState
 from llm.tools.Tools_aggregator import get_tools
+from llm_pydantic.tooling.tooling_mock import AgentDeps
 
 logger = logging.getLogger("quality_control_node")
 logger.setLevel(logging.INFO)
@@ -31,7 +32,7 @@ node_logger = NodeLogger(
 
 
 @dataclass()
-class QualityControl(BaseNode[AgentState]):
+class QualityControl(BaseNode[AgentState, AgentDeps]):
     """
     Perform quality control and filter detection on the user query.
     Args:
@@ -41,7 +42,7 @@ class QualityControl(BaseNode[AgentState]):
     """
 
     async def run(
-        self, ctx: GraphRunContext[AgentState]
+        self, ctx: GraphRunContext[AgentState, AgentDeps]
     ) -> OutOfScopeHandler | ExpandSubqueries | UpdatePapersByProject:
         state = ctx.state
 

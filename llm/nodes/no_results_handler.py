@@ -9,6 +9,7 @@ from llm.LLMDefinition import LLM
 from llm.node_logger import NodeLogger
 from llm.state import AgentOutput, AgentState
 from llm.tools.Tools_aggregator import get_tools
+from llm_pydantic.tooling.tooling_mock import AgentDeps
 
 # --- Smart No-Results Handler Node ---
 
@@ -26,7 +27,7 @@ node_logger = NodeLogger(
 
 
 @dataclass()
-class NoResultsHandler(BaseNode[AgentState]):
+class NoResultsHandler(BaseNode[AgentState, AgentDeps]):
     """
     If no papers are found after filtering, generate a smart explanation using the LLM.
     Finds the closest value for each filterable metric (year, citations, impact factor, etc.) using the find_closest_paper_metrics tool.
@@ -36,7 +37,9 @@ class NoResultsHandler(BaseNode[AgentState]):
         dict: Updated state with no_results_message.
     """
 
-    async def run(self, ctx: GraphRunContext[AgentState]) -> End[AgentOutput]:  # ty:ignore[invalid-method-override]
+    async def run(
+        self, ctx: GraphRunContext[AgentState, AgentDeps]
+    ) -> End[AgentOutput]:  # ty:ignore[invalid-method-override]
         state = ctx.state
 
         node_logger.log_begin(state.__dict__)

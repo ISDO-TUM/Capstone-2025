@@ -9,6 +9,7 @@ from pydantic_graph import BaseNode, GraphRunContext
 from llm.node_logger import NodeLogger
 from llm.state import AgentState
 from llm.tools.Tools_aggregator import get_tools
+from llm_pydantic.tooling.tooling_mock import AgentDeps
 
 logger = logging.getLogger("filter_papers_node")
 logger.setLevel(logging.INFO)
@@ -22,7 +23,7 @@ node_logger = NodeLogger(
 
 
 @dataclass()
-class FilterPapers(BaseNode[AgentState]):
+class FilterPapers(BaseNode[AgentState, AgentDeps]):
     """
     Apply natural language filtering to the retrieved papers based on the user query.
     Args:
@@ -32,7 +33,7 @@ class FilterPapers(BaseNode[AgentState]):
     """
 
     async def run(
-        self, ctx: GraphRunContext[AgentState]
+        self, ctx: GraphRunContext[AgentState, AgentDeps]
     ) -> NoResultsHandler | StorePapersForProject:
         state = ctx.state
 

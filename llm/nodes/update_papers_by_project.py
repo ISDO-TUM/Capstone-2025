@@ -9,6 +9,7 @@ from pydantic_graph import BaseNode, GraphRunContext
 from llm.node_logger import NodeLogger
 from llm.state import AgentState
 from llm.tools.Tools_aggregator import get_tools
+from llm_pydantic.tooling.tooling_mock import AgentDeps
 
 logger = logging.getLogger("update_papers_by_project_node")
 logger.setLevel(logging.INFO)
@@ -31,7 +32,7 @@ node_logger = NodeLogger(
 
 
 @dataclass()
-class UpdatePapersByProject(BaseNode[AgentState]):
+class UpdatePapersByProject(BaseNode[AgentState, AgentDeps]):
     """
     Update the paper database for a specific project based on the user query and QC decision.
     Args:
@@ -40,7 +41,7 @@ class UpdatePapersByProject(BaseNode[AgentState]):
         dict: Updated state with update_papers_by_project_result.
     """
 
-    async def run(self, ctx: GraphRunContext[AgentState]) -> GetBestPapers:
+    async def run(self, ctx: GraphRunContext[AgentState, AgentDeps]) -> GetBestPapers:
         state = ctx.state
 
         node_logger.log_begin(state.__dict__)

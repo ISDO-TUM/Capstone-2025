@@ -6,6 +6,7 @@ from pydantic_graph import BaseNode, GraphRunContext
 
 from llm.node_logger import NodeLogger
 from llm.state import AgentState
+from llm_pydantic.tooling.tooling_mock import AgentDeps
 
 # --- Node: Input Handler ---
 
@@ -18,7 +19,7 @@ node_logger = NodeLogger(
 
 
 @dataclass()
-class Input(BaseNode[AgentState]):
+class Input(BaseNode[AgentState, AgentDeps]):
     """
     Initialize the state with the user query and extract project_id if present.
     Args:
@@ -29,7 +30,7 @@ class Input(BaseNode[AgentState]):
 
     user_message: str
 
-    async def run(self, ctx: GraphRunContext[AgentState]) -> OutOfScopeCheck:
+    async def run(self, ctx: GraphRunContext[AgentState, AgentDeps]) -> OutOfScopeCheck:
         state = ctx.state
         user_query = self.user_message
 

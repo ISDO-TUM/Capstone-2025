@@ -34,12 +34,13 @@ from llm.nodes.quality_control import QualityControl
 from llm.nodes.store_papers_for_project import StorePapersForProject
 from llm.nodes.update_papers_by_project import UpdatePapersByProject
 from llm.state import AgentOutput, AgentState
+from llm_pydantic.tooling.tooling_mock import AgentDeps
 
 logger = logging.getLogger("StategraphAgent")
 logger.setLevel(logging.WARNING)
 
 
-def build_agent_graph() -> Graph[AgentState, AgentOutput]:
+def build_agent_graph() -> Graph[AgentState, AgentDeps, AgentOutput]:
     """Create the reusable graph instance for callers/tests."""
 
     return Graph(
@@ -63,14 +64,17 @@ async def run_agent(
     user_message: str,
     *,
     state: AgentState | None = None,
+    deps: AgentDeps | None = None,
 ) -> AgentOutput:
     """Helper that runs the graph for a single query."""
 
     graph = build_agent_graph()
     run_state = state or AgentState()
+    run_deps = deps or AgentDeps()
     result = await graph.run(
         Input(user_message=user_message),
         state=run_state,
+        deps=run_deps,
     )
     return result.output
 
@@ -79,10 +83,11 @@ def run_agent_sync(
     user_message: str,
     *,
     state: AgentState | None = None,
+    deps: AgentDeps | None = None,
 ) -> AgentOutput:
     """Synchronous convenience wrapper for quick experiments."""
 
-    return asyncio.run(run_agent(user_message, state=state))
+    return asyncio.run(run_agent(user_message, state=state, deps=deps))
 
 
 async def trigger_stategraph_agent_show_thoughts_async(user_message: str):
@@ -98,6 +103,7 @@ async def trigger_stategraph_agent_show_thoughts_async(user_message: str):
     try:
         # Initialize state and dependencies
         state = AgentState()
+        deps = AgentDeps()
         graph = build_agent_graph()
 
         # Map node class names to user-friendly descriptions
@@ -118,6 +124,7 @@ async def trigger_stategraph_agent_show_thoughts_async(user_message: str):
         async with graph.iter(
             Input(user_message=user_message),
             state=state,
+            deps=deps,
         ) as graph_run:
             previous_node_name = None
             async for node in graph_run:

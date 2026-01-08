@@ -8,6 +8,7 @@ from pydantic_graph import BaseNode, GraphRunContext
 
 from llm.node_logger import NodeLogger
 from llm.state import AgentState
+from llm_pydantic.tooling.tooling_mock import AgentDeps
 
 logger = logging.getLogger("expand_subqueries_node")
 logger.setLevel(logging.INFO)
@@ -21,7 +22,7 @@ node_logger = NodeLogger(
 
 
 @dataclass()
-class ExpandSubqueries(BaseNode[AgentState]):
+class ExpandSubqueries(BaseNode[AgentState, AgentDeps]):
     """
     If the QC decision was 'split', extract subqueries and keywords from the multi_step_reasoning tool result.
     Args:
@@ -30,9 +31,10 @@ class ExpandSubqueries(BaseNode[AgentState]):
         dict: Updated state with extracted subqueries.
     """
 
-    async def run(self, ctx: GraphRunContext[AgentState]) -> UpdatePapersByProject:
+    async def run(
+        self, ctx: GraphRunContext[AgentState, AgentDeps]
+    ) -> UpdatePapersByProject:
         state = ctx.state
-
         node_logger.log_begin(state.__dict__)
 
         qc_tool_result = state.qc_tool_result

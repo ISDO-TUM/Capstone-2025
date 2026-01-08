@@ -8,6 +8,7 @@ from pydantic_graph import BaseNode, GraphRunContext
 from llm.node_logger import NodeLogger
 from llm.state import AgentState
 from llm.tools.Tools_aggregator import get_tools
+from llm_pydantic.tooling.tooling_mock import AgentDeps
 
 logger = logging.getLogger("get_best_papers_node")
 logger.setLevel(logging.INFO)
@@ -23,7 +24,7 @@ node_logger = NodeLogger(
 
 
 @dataclass()
-class GetBestPapers(BaseNode[AgentState]):
+class GetBestPapers(BaseNode[AgentState, AgentDeps]):
     """
     Retrieve the most relevant papers for a project based on filter instructions.
     Args:
@@ -32,7 +33,7 @@ class GetBestPapers(BaseNode[AgentState]):
         dict: Updated state with papers_raw.
     """
 
-    async def run(self, ctx: GraphRunContext[AgentState]) -> FilterPapers:
+    async def run(self, ctx: GraphRunContext[AgentState, AgentDeps]) -> FilterPapers:
         state = ctx.state
 
         node_logger.log_begin(state.__dict__)
