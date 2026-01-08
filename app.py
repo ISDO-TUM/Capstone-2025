@@ -27,7 +27,7 @@ from flask import (
     stream_with_context,
 )
 from pypdf import PdfReader
-from llm.StategraphAgent import trigger_stategraph_agent_show_thoughts
+from llm.agent import trigger_stategraph_agent_show_thoughts
 from chroma_db.chroma_vector_db import chroma_db
 from database.database_connection import connect_to_db
 from database.papers_database_handler import get_paper_by_hash, insert_papers

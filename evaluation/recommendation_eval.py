@@ -14,7 +14,7 @@ os.environ["CHROMA_HOST"] = "localhost"
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from llm.LLMDefinition import set_default_llm, get_available_models
-from llm.StategraphAgent import (
+from llm.agent import (
     input_node,
     out_of_scope_check_node,
     quality_control_node,

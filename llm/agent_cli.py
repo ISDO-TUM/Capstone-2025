@@ -12,10 +12,10 @@ if __package__ in (None, ""):
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
 
-from database.projects_database_handler import add_new_project_to_db
-from database.projectpaper_database_handler import get_papers_for_project
 from database.papers_database_handler import get_paper_by_hash
-from llm.StategraphAgent import trigger_stategraph_agent_show_thoughts
+from database.projectpaper_database_handler import get_papers_for_project
+from database.projects_database_handler import add_new_project_to_db
+from llm.agent import trigger_stategraph_agent_show_thoughts
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

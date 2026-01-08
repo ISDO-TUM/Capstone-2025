@@ -1,7 +1,13 @@
+from __future__ import annotations
+
 import json
 import logging
+from dataclasses import dataclass
 
-from llm.nodes.node_logger import node_logger
+from pydantic_graph import BaseNode, GraphRunContext
+
+from llm.node_logger import NodeLogger
+from llm.state import AgentState
 from llm.tools.Tools_aggregator import get_tools
 
 logger = logging.getLogger("update_papers_by_project_node")
@@ -10,12 +16,22 @@ logger.setLevel(logging.INFO)
 # --- Update Papers by Project Node ---
 
 
-@node_logger(
+node_logger = NodeLogger(
     "update_papers_by_project",
-    input_keys=["user_query", "qc_decision", "qc_tool_result", "project_id"],
-    output_keys=["update_papers_by_project_result"],
+    input_keys=[
+        "user_query",
+        "qc_decision",
+        "qc_tool_result",
+        "project_id",
+        "subqueries",
+        "keywords",
+    ],
+    output_keys=["update_papers_by_project_result", "all_papers", "error"],
 )
-def update_papers_by_project_node(state):
+
+
+@dataclass()
+class UpdatePapersByProject(BaseNode[AgentState]):
     """
     Update the paper database for a specific project based on the user query and QC decision.
     Args:
@@ -23,67 +39,79 @@ def update_papers_by_project_node(state):
     Returns:
         dict: Updated state with update_papers_by_project_result.
     """
-    tools = get_tools()
-    tool_map = {getattr(tool, "name", None): tool for tool in tools}
-    update_papers_for_project_tool = tool_map.get("update_papers_for_project")
-    logger.info(f"Available tool names: {list(tool_map.keys())}")
-    logger.info(
-        f"Looking for tool: update_papers_for_project, found: {update_papers_for_project_tool is not None}"
-    )
-    update_papers_by_project_result = None
-    all_papers = []
-    project_id = state.get("project_id")
-    try:
-        # If subqueries exist, process each
-        subqueries = state.get("subqueries", [])
-        if subqueries:
-            update_results = []
-            for sub in subqueries:
-                keywords = sub.get("keywords", [])
-                if update_papers_for_project_tool and project_id:
-                    result = update_papers_for_project_tool.invoke(
-                        {"queries": keywords, "project_id": project_id}
-                    )
-                    update_results.append(result)
-            update_papers_by_project_result = update_results
-        else:
-            # Fallback: single query as before
-            queries = []
-            if state.get("qc_decision") == "reformulate" and state.get(
-                "qc_tool_result"
-            ):
-                try:
-                    qc_result = json.loads(state["qc_tool_result"])
-                    if (
-                        "result" in qc_result
-                        and "refined_keywords" in qc_result["result"]
-                    ):
-                        queries = qc_result["result"]["refined_keywords"]
-                    elif "reformulated_description" in qc_result:
-                        queries = [qc_result["reformulated_description"]]
-                except Exception:
-                    queries = [state.get("user_query", "")]
-            elif state.get("qc_decision") == "split" and state.get("qc_tool_result"):
-                # Should not happen, handled above
-                queries = [state.get("user_query", "")]
+
+    async def run(self, ctx: GraphRunContext[AgentState]) -> GetBestPapers:
+        state = ctx.state
+
+        node_logger.log_begin(state.__dict__)
+
+        tools = get_tools()
+        tool_map = {getattr(tool, "name", None): tool for tool in tools}
+        update_papers_for_project_tool = tool_map.get("update_papers_for_project")
+        logger.info(f"Available tool names: {list(tool_map.keys())}")
+        logger.info(
+            f"Looking for tool: update_papers_for_project, found: {update_papers_for_project_tool is not None}"
+        )
+        update_papers_by_project_result = None
+        all_papers = []
+        project_id = state.project_id
+        try:
+            # If subqueries exist, process each
+            subqueries = state.subqueries or []
+            if subqueries:
+                update_results = []
+                for sub in subqueries:
+                    keywords = sub.get("keywords", [])
+                    if update_papers_for_project_tool and project_id:
+                        result = update_papers_for_project_tool.invoke(
+                            {"queries": keywords, "project_id": project_id}
+                        )
+                        update_results.append(result)
+                update_papers_by_project_result = update_results
             else:
-                # Use keywords if available, otherwise fall back to user query
-                if state.get("keywords"):
-                    queries = state["keywords"]
+                # Fallback: single query as before
+                queries = []
+                if state.qc_decision == "reformulate" and state.qc_tool_result:
+                    try:
+                        qc_result = json.loads(state.qc_tool_result)
+                        if (
+                            "result" in qc_result
+                            and "refined_keywords" in qc_result["result"]
+                        ):
+                            queries = qc_result["result"]["refined_keywords"]
+                        elif "reformulated_description" in qc_result:
+                            queries = [qc_result["reformulated_description"]]
+                    except Exception as e:
+                        print(e)
+                        queries = [state.user_query]
+                elif state.qc_decision == "split" and state.qc_tool_result:
+                    # Should not happen, handled above
+                    queries = [state.user_query]
                 else:
-                    queries = [state.get("user_query", "")]
-            if update_papers_for_project_tool and project_id:
-                logger.info(
-                    f"Calling update_papers_for_project with queries: {queries} and project_id: {project_id}"
-                )
-                update_papers_by_project_result = update_papers_for_project_tool.invoke(
-                    {"queries": queries, "project_id": project_id}
-                )
-                logger.info(
-                    f"update_papers_for_project result: {update_papers_by_project_result}"
-                )
-        state["update_papers_by_project_result"] = update_papers_by_project_result
-        state["all_papers"] = all_papers
-    except Exception as e:
-        state["error"] = f"Update papers by project node error: {e}"
-    return state
+                    # Use keywords if available, otherwise fall back to user query
+                    if state.keywords:
+                        queries = state.keywords
+                    else:
+                        queries = [state.user_query]
+                if update_papers_for_project_tool and project_id:
+                    logger.info(
+                        f"Calling update_papers_for_project with queries: {queries} and project_id: {project_id}"
+                    )
+                    update_papers_by_project_result = (
+                        update_papers_for_project_tool.invoke(
+                            {"queries": queries, "project_id": project_id}
+                        )
+                    )
+                    logger.info(
+                        f"update_papers_for_project result: {update_papers_by_project_result}"
+                    )
+            state.update_papers_by_project_result = update_papers_by_project_result
+            state.all_papers = all_papers
+        except Exception as e:
+            state.error = f"Update papers by project node error: {e}"
+
+        node_logger.log_end(state.__dict__)
+        return GetBestPapers()
+
+
+from llm.nodes.get_best_papers import GetBestPapers  # noqa: E402 # isort:skip
