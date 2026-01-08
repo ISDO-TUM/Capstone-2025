@@ -15,9 +15,9 @@ logger.setLevel(logging.INFO)
 
 
 node_logger = NodeLogger(
-    "filter_papers",
-    input_keys=["user_query", "papers_raw", "has_filter_instructions"],
-    output_keys=["papers_filtered", "applied_filter_criteria", "error"],
+    "expand_subqueries",
+    input_keys=["qc_tool_result"],
+    output_keys=["subqueries"],
 )
 
 

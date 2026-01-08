@@ -47,7 +47,7 @@ class OutOfScopeCheck(BaseNode[AgentState, AgentDeps]):
                 break
         if detect_out_of_scope_query is None:
             state.error = "detect_out_of_scope_query tool not found"
-            return state
+            return QualityControl()
 
         # Call the tool
         result = detect_out_of_scope_query.invoke(

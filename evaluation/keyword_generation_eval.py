@@ -1,5 +1,7 @@
+import asyncio
 import os
 import sys
+
 import pandas as pd
 
 # Set CHROMA_HOST to localhost for local execution
@@ -8,12 +10,14 @@ os.environ["CHROMA_HOST"] = "localhost"
 # Setup paths
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from pydantic_graph import GraphRunContext
+
 from llm.LLMDefinition import set_default_llm, get_available_models
-from llm.agent import (
-    input_node,
-    out_of_scope_check_node,
-    quality_control_node,
-)
+from llm.nodes.input import Input
+from llm.nodes.out_of_scope_check import OutOfScopeCheck
+from llm.nodes.quality_control import QualityControl
+from llm.state import AgentState
+from llm_pydantic.tooling.tooling_mock import AgentDeps
 from paper_handling.paper_handler import fetch_works_multiple_queries
 
 # --- Configuration ---
@@ -21,6 +25,26 @@ NUMBER_OF_PAPERS_TO_TEST = 50
 MODELS_TO_TEST = get_available_models()
 SEARCH_RESULTS_TO_CHECK_LIST = [25, 50, 100]
 RESULTS_FILENAME = "keyword_generation_results.txt"
+
+
+def _run_node_sync(node, state: AgentState, deps: AgentDeps) -> AgentState:
+    """Helper to run a single async node synchronously for scripts/tests."""
+
+    ctx = GraphRunContext(state=state, deps=deps)
+    asyncio.run(node.run(ctx))
+    return ctx.state
+
+
+def input_node(state: AgentState, deps: AgentDeps) -> AgentState:
+    return _run_node_sync(Input(user_message=state.user_query), state, deps)
+
+
+def out_of_scope_check_node(state: AgentState, deps: AgentDeps) -> AgentState:
+    return _run_node_sync(OutOfScopeCheck(), state, deps)
+
+
+def quality_control_node(state: AgentState, deps: AgentDeps) -> AgentState:
+    return _run_node_sync(QualityControl(), state, deps)
 
 
 def get_papers_from_csv(num_papers):
@@ -83,12 +107,19 @@ def run_single_evaluation_run(paper, model_name, search_results_count) -> tuple:
         return "ERROR", None
 
     try:
-        state = {"user_query": query_text}
-        state = input_node(state)
-        state = out_of_scope_check_node(state)
-        state = quality_control_node(state)
+        deps = AgentDeps()
+        state = AgentState(user_query=query_text)
+        state = input_node(state, deps)
+        state = out_of_scope_check_node(state, deps)
+        state = quality_control_node(state, deps)
 
-        generated_keywords = state.get("keywords", [])
+        if state.error:
+            print(
+                f"WARNING: Keyword generation pipeline returned an error: {state.error}"
+            )
+            return "ERROR", None
+
+        generated_keywords = state.keywords or []
         if not generated_keywords:
             print(
                 "WARNING: Keyword generation resulted in an empty list. Aborting run."
