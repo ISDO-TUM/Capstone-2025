@@ -9,7 +9,7 @@ from llm.LLMDefinition import LLM
 from llm.node_logger import NodeLogger
 from llm.state import AgentOutput, AgentState
 from llm.tools.Tools_aggregator import get_tools
-from llm_pydantic.tooling.tooling_mock import AgentDeps
+from llm.tools.tooling_mock import AgentDeps
 
 # --- Smart No-Results Handler Node ---
 

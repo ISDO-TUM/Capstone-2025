@@ -6,7 +6,7 @@ from pydantic_graph import BaseNode, GraphRunContext
 
 from llm.node_logger import NodeLogger
 from llm.state import AgentState
-from llm_pydantic.tooling.tooling_mock import AgentDeps
+from llm.tools.tooling_mock import AgentDeps
 
 # --- Node: Input Handler ---
 

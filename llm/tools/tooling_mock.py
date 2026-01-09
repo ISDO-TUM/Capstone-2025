@@ -36,9 +36,19 @@ class MockToolbelt:
     def detect_filters(self, query: str) -> bool:
         return any(token in query.lower() for token in {"after", "before", "since"})
 
-    def retrieve_papers(self, query: str, count: int = 5) -> list[dict[str, Any]]:
+    def retrieve_papers(
+        self,
+        query: str | None = None,
+        keywords: list[str] | None = None,
+        project_id: str | None = None,
+        count: int = 5,
+    ) -> list[dict[str, Any]]:
         base = self.seed_papers or [
-            {"paper_hash": f"demo-{i}", "title": f"Paper {i}", "abstract": "..."}
+            {
+                "paper_hash": f"demo-{i}",
+                "title": f"Paper {i}",
+                "abstract": "...",
+            }
             for i in range(1, 8)
         ]
         return base[:count]

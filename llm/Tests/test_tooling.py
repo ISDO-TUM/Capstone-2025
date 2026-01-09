@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 import pytest
 
-from llm_pydantic.tooling.tooling import create_agent_deps
+from llm.tools.tooling_mock import AgentDeps
 from llm.state import AgentState
 
 # ---------------------------------------------------------------------------
@@ -38,7 +38,7 @@ def use_mock(request) -> bool:
 @pytest.fixture
 def deps(use_mock: bool):
     """Agent dependencies."""
-    return create_agent_deps(use_mock=use_mock)
+    return AgentDeps()
 
 
 # ---------------------------------------------------------------------------
@@ -137,7 +137,7 @@ async def test_complete_tooling_workflow(deps):
     # ---------------------------------------------------------------------
     # Filtering (FilterPapersNode)
     # ---------------------------------------------------------------------
-    state.papers_filtered, criteria = await tools.filter_papers(
+    state.papers_filtered, criteria = tools.filter_papers(
         query=state.user_query,
         raw=state.papers_raw,
         has_filters=state.has_filter_instructions,

@@ -21,7 +21,7 @@ from llm.nodes.input import Input
 from llm.nodes.out_of_scope_check import OutOfScopeCheck
 from llm.nodes.quality_control import QualityControl
 from llm.state import AgentState
-from llm_pydantic.tooling.tooling_mock import AgentDeps
+from llm.tools.tooling_mock import AgentDeps
 from paper_handling.paper_handler import fetch_works_multiple_queries
 from llm.Embeddings import embed_paper_text
 from chroma_db.chroma_vector_db import CHROMA_HOST, CHROMA_PORT

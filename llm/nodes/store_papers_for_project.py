@@ -8,7 +8,7 @@ from llm.node_logger import NodeLogger
 from llm.state import AgentOutput, AgentState
 from llm.tools.paper_handling_tools import generate_relevance_summary
 from llm.tools.Tools_aggregator import get_tools
-from llm_pydantic.tooling.tooling_mock import AgentDeps
+from llm.tools.tooling_mock import AgentDeps
 
 node_logger = NodeLogger(
     "store_papers_for_project",

@@ -9,7 +9,7 @@ from pydantic_graph import BaseNode, GraphRunContext
 from llm.node_logger import NodeLogger
 from llm.state import AgentState
 from llm.tools.Tools_aggregator import get_tools
-from llm_pydantic.tooling.tooling_mock import AgentDeps
+from llm.tools.tooling_mock import AgentDeps
 
 logger = logging.getLogger("OutOfScopeCheck")
 logger.setLevel(logging.WARNING)

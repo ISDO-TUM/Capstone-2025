@@ -34,7 +34,7 @@ from llm.nodes.quality_control import QualityControl
 from llm.nodes.store_papers_for_project import StorePapersForProject
 from llm.nodes.update_papers_by_project import UpdatePapersByProject
 from llm.state import AgentOutput, AgentState
-from llm_pydantic.tooling.tooling_mock import AgentDeps
+from llm.tools.tooling_mock import AgentDeps
 
 logger = logging.getLogger("StategraphAgent")
 logger.setLevel(logging.WARNING)
