@@ -16,6 +16,8 @@ import logging
 import os
 import sys
 import io
+import threading
+from queue import Queue, Empty
 
 from flask import (
     Flask,
@@ -82,6 +84,53 @@ logger = logging.getLogger(__name__)
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB
+
+# Dictionary to track background agent processing
+# Key: project_id, Value: dict with 'events' (list), 'complete' (bool), 'listeners' (list of Queues)
+agent_sessions = {}
+agent_locks = threading.Lock()
+
+
+class AgentSession:
+    """Manages an agent processing session with support for multiple listeners"""
+    def __init__(self):
+        self.events = []  # History of all events
+        self.complete = False
+        self.listeners = []  # List of queues for active listeners
+        self.lock = threading.Lock()
+    
+    def add_event(self, event):
+        """Add an event and broadcast to all listeners"""
+        with self.lock:
+            self.events.append(event)
+            for listener in self.listeners:
+                listener.put(event)
+    
+    def mark_complete(self):
+        """Mark session as complete and notify all listeners"""
+        with self.lock:
+            self.complete = True
+            for listener in self.listeners:
+                listener.put(None)  # Signal end
+    
+    def subscribe(self):
+        """Subscribe to events, returns a queue and replays past events"""
+        q = Queue()
+        with self.lock:
+            # Replay all past events
+            for event in self.events:
+                q.put(event)
+            if self.complete:
+                q.put(None)  # Already complete
+            else:
+                self.listeners.append(q)
+        return q
+    
+    def unsubscribe(self, q):
+        """Remove a listener queue"""
+        with self.lock:
+            if q in self.listeners:
+                self.listeners.remove(q)
 
 
 # Initialize Clerk only if not in test mode
@@ -331,6 +380,8 @@ def get_projects():
 def get_recommendations():
     """
     Get recommendations for a project. Streams agent thoughts and recommendations to the frontend.
+    Agent processing runs in background thread to continue even if client disconnects.
+    Supports reconnecting to an in-progress session.
     Returns:
         Response: Server-sent event stream with recommendations or agent thoughts.
     """
@@ -339,7 +390,6 @@ def get_recommendations():
         return {"error": "Not authenticated"}, 401
 
     print("Attempting to get recommendations")
-    """Get recommendations for a project. Updated to use project_id and update_recommendations flag."""
     try:
         user_id = request.auth["user_id"]
         data = request.get_json()
@@ -347,67 +397,126 @@ def get_recommendations():
             print(f"Failed getting recs with data: {data}")
             return jsonify({"error": "Missing project_id"}), 400
 
-        # project_id validated above but currently unused in mock implementation
         update_recommendations = data.get("update_recommendations", False)
         project = get_project_by_id(user_id, data["projectId"])
         if not project:
             return jsonify({"error": "Project not found"}), 404
         user_description, project_id = project["description"], project["project_id"]
 
-        def generate():
-            try:
-                if update_recommendations:
-                    removed = delete_project_rows(
-                        project_id
-                    )  # In the future there might be a refresh papers button, so we would need to empty the database to reload a new set of recommendations
-                    print(f"Deleted {removed} row(s).")
-                    for response_part in trigger_stategraph_agent_show_thoughts(
-                        user_description + "project ID: " + project_id
-                    ):
-                        logger.info(f"Getting agent response: {response_part}")
-                        if response_part["is_final"]:
-                            try:
-                                llm_response_content = response_part["final_content"]
-                                response_data = json.loads(llm_response_content)
+        # Check if there's an existing agent session for this project
+        with agent_locks:
+            existing_session = agent_sessions.get(project_id)
+        
+        # If agent is already processing and we're not forcing update, connect to existing session
+        if existing_session is not None and not update_recommendations:
+            logger.info(f"Reconnecting to existing agent session for project {project_id}")
+            listener_queue = existing_session.subscribe()
+            
+            def generate_reconnect():
+                """Reconnect to existing agent stream with event replay"""
+                try:
+                    while True:
+                        try:
+                            event = listener_queue.get(timeout=1.0)
+                            if event is None:  # End signal
+                                break
+                            yield f"data: {json.dumps(event)}\n\n"
+                        except Empty:
+                            yield f": keepalive\n\n"
+                            continue
+                except GeneratorExit:
+                    logger.info(f"Client disconnected from reconnected stream for project {project_id}")
+                finally:
+                    existing_session.unsubscribe(listener_queue)
+            
+            return Response(stream_with_context(generate_reconnect()), mimetype="text/event-stream")
 
-                                # Check if this is an out-of-scope response
-                                if response_data.get("type") == "out_of_scope":
-                                    logger.info("Agent detected out of scope query")
-                                    yield f"data: {json.dumps({'out_of_scope': response_data})}\n\n"
-                                    return
-
-                                elif response_data.get("type") == "no_results":
-                                    logger.info("Agent couldn't find any results")
-                                    yield f"data: {json.dumps({'no_results': response_data})}\n\n"
-                                    return
-
-                            except json.JSONDecodeError:
-                                print(
-                                    f"Failed to parse LLM response: {llm_response_content}"
-                                )
-                                error_payload = json.dumps(
-                                    {
-                                        "error": "Failed to parse recommendations from LLM."
-                                    }
-                                )
-                                yield f"data: {error_payload}\n\n"
-                                return
+        # If NOT updating recommendations and no agent is processing, fetch from database
+        if not update_recommendations:
+            def generate_existing():
+                """Immediately return existing recommendations from database"""
+                try:
+                    recs_basic_data = get_papers_for_project(project_id)
+                    logger.info(f"Returning {len(recs_basic_data)} existing papers from database.")
+                    recommendations = []
+                    for rec in recs_basic_data:
+                        paper = get_paper_by_hash(rec["paper_hash"])
+                        if paper is not None:
+                            paper_dict = create_paper_dict(
+                                paper,
+                                rec.get("summary", "Relevant based on user interest."),
+                                rec.get("is_replacement", False),
+                            )
                         else:
-                            yield f"data: {json.dumps({'thought': response_part['thought']})}\n\n"
+                            paper_dict = {
+                                "title": "N/A",
+                                "link": "#",
+                                "description": "Relevant based on user interest.",
+                                "hash": "N/A",
+                                "is_replacement": False,
+                            }
+                        recommendations.append(paper_dict)
+                    yield f"data: {json.dumps({'recommendations': recommendations})}\n\n"
+                except Exception as e:
+                    logger.error(f"Error fetching existing recommendations: {e}")
+                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            
+            return Response(stream_with_context(generate_existing()), mimetype="text/event-stream")
+
+        # Create new agent session for updating recommendations
+        session = AgentSession()
+        with agent_locks:
+            agent_sessions[project_id] = session
+
+        def process_agent_in_background():
+            """Run agent processing in background thread"""
+            try:
+                removed = delete_project_rows(project_id)
+                print(f"Deleted {removed} row(s).")
+                
+                for response_part in trigger_stategraph_agent_show_thoughts(
+                    user_description + "project ID: " + project_id
+                ):
+                    logger.info(f"Getting agent response: {response_part}")
+                    if response_part["is_final"]:
+                        try:
+                            llm_response_content = response_part["final_content"]
+                            response_data = json.loads(llm_response_content)
+
+                            # Check if this is an out-of-scope response
+                            if response_data.get("type") == "out_of_scope":
+                                logger.info("Agent detected out of scope query")
+                                session.add_event({"out_of_scope": response_data})
+                                session.mark_complete()
+                                return
+
+                            elif response_data.get("type") == "no_results":
+                                logger.info("Agent couldn't find any results")
+                                session.add_event({"no_results": response_data})
+                                session.mark_complete()
+                                return
+
+                        except json.JSONDecodeError:
+                            print(f"Failed to parse LLM response: {llm_response_content}")
+                            session.add_event({"error": "Failed to parse recommendations from LLM."})
+                            session.mark_complete()
+                            return
+                    else:
+                        session.add_event({"thought": response_part["thought"]})
+                
+                # Fetch and send recommendations after agent completes
                 recs_basic_data = get_papers_for_project(project_id)
                 logger.info(f"Sending {len(recs_basic_data)} papers to the frontend.")
                 recommendations = []
                 for rec in recs_basic_data:
                     paper = get_paper_by_hash(rec["paper_hash"])
                     if paper is not None:
-                        # Use the centralized create_paper_dict function
                         paper_dict = create_paper_dict(
                             paper,
                             rec.get("summary", "Relevant based on user interest."),
                             rec.get("is_replacement", False),
                         )
                     else:
-                        # Fallback for missing papers
                         paper_dict = {
                             "title": "N/A",
                             "link": "#",
@@ -416,13 +525,48 @@ def get_recommendations():
                             "is_replacement": False,
                         }
                     recommendations.append(paper_dict)
-                yield f"data: {json.dumps({'recommendations': recommendations})}\n\n"
+                session.add_event({"recommendations": recommendations})
+                session.mark_complete()
+                
             except Exception as e:
-                logger.error(f"Error in recommendations generation: {e}")
-                error_payload = json.dumps(
-                    {"error": f"An internal error occurred: {str(e)}"}
-                )
-                yield f"data: {error_payload}\n\n"
+                logger.error(f"Error in background agent processing: {e}")
+                session.add_event({"error": f"An internal error occurred: {str(e)}"})
+                session.mark_complete()
+            finally:
+                # Clean up session after a delay to allow reconnections
+                def cleanup():
+                    import time
+                    time.sleep(60)  # Keep session for 60 seconds after completion
+                    with agent_locks:
+                        if project_id in agent_sessions:
+                            del agent_sessions[project_id]
+                            logger.info(f"Cleaned up agent session for project {project_id}")
+                
+                threading.Thread(target=cleanup, daemon=True).start()
+
+        # Start background processing
+        thread = threading.Thread(target=process_agent_in_background, daemon=True)
+        thread.start()
+
+        # Subscribe to the session
+        listener_queue = session.subscribe()
+
+        def generate():
+            """Stream events from the session to the client"""
+            try:
+                while True:
+                    try:
+                        event = listener_queue.get(timeout=1.0)
+                        if event is None:  # End signal
+                            break
+                        yield f"data: {json.dumps(event)}\n\n"
+                    except Empty:
+                        yield f": keepalive\n\n"
+                        continue
+            except GeneratorExit:
+                logger.info(f"Client disconnected from project {project_id} stream, but agent continues processing")
+            finally:
+                session.unsubscribe(listener_queue)
 
         return Response(stream_with_context(generate()), mimetype="text/event-stream")
 

@@ -3,12 +3,13 @@ import { pdfApi } from '@/lib/api';
 
 export interface UsePDFUploadOptions {
   onExtracted?: (text: string) => void;
+  onRemoved?: () => void;
 }
 
 /**
  * Hook for handling PDF file upload and text extraction
  */
-export function usePDFUpload({ onExtracted }: UsePDFUploadOptions = {}) {
+export function usePDFUpload({ onExtracted, onRemoved }: UsePDFUploadOptions = {}) {
   const [file, setFile] = useState<File | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -57,7 +58,10 @@ export function usePDFUpload({ onExtracted }: UsePDFUploadOptions = {}) {
   const removeFile = useCallback(() => {
     setFile(null);
     setError(null);
-  }, []);
+    if (onRemoved) {
+      onRemoved();
+    }
+  }, [onRemoved]);
 
   return {
     file,
