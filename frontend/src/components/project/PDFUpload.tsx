@@ -5,13 +5,15 @@ import { cn } from "@/lib/utils";
 
 interface PDFUploadProps {
   onExtracted?: (text: string) => void;
+  onRemoved?: () => void;
 }
 
-export function PDFUpload({ onExtracted }: PDFUploadProps) {
+export function PDFUpload({ onExtracted, onRemoved }: PDFUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const { file, isExtracting, error, handleFileSelect, removeFile } = usePDFUpload({
     onExtracted,
+    onRemoved,
   });
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -45,6 +47,14 @@ export function PDFUpload({ onExtracted }: PDFUploadProps) {
     },
     [handleFileSelect]
   );
+
+  const handleRemoveFile = useCallback(() => {
+    removeFile();
+    // Reset the file input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, [removeFile]);
 
   const formatFileSize = (bytes: number): string => {
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
@@ -93,7 +103,7 @@ export function PDFUpload({ onExtracted }: PDFUploadProps) {
             type="button"
             variant="destructive"
             size="sm"
-            onClick={removeFile}
+            onClick={handleRemoveFile}
             className="px-4 py-2 text-xs font-semibold"
           >
             Remove

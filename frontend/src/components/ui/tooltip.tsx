@@ -26,7 +26,7 @@ export function Tooltip({ content, children, side = "top", className }: TooltipP
       {isVisible && (
         <div
           className={cn(
-            "absolute z-50 rounded-xl p-4 text-[0.95em] font-normal leading-relaxed",
+            "absolute z-[100] rounded-xl p-4 text-[0.95em] font-normal leading-relaxed",
             "w-[320px] bg-[rgba(255,255,255,0.95)] text-[#1a237e]",
             "text-left backdrop-blur-md",
             "shadow-[0_4px_24px_0_rgba(31,38,135,0.15)] border-[1.5px] border-[#b3d1ff]",
@@ -53,7 +53,7 @@ export function Tooltip({ content, children, side = "top", className }: TooltipP
 export function ProjectDescriptionTooltip() {
   return (
     <Tooltip
-      side="right"
+      side="bottom"
       content={
         <div className="space-y-3">
           <div className="mb-4">

@@ -14,14 +14,15 @@ export default function CreateProject() {
   
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [extractedText, setExtractedText] = useState<string>("");
   const [errors, setErrors] = useState<{ title?: string; description?: string }>({});
 
   const handlePDFExtracted = (extractedText: string) => {
-    const currentText = description.trim();
-    const newText = currentText
-      ? `${currentText}\n\n${extractedText}`
-      : extractedText;
-    setDescription(newText);
+    setExtractedText(extractedText);
+  };
+
+  const handlePDFRemoved = () => {
+    setExtractedText("");
   };
 
   const validateForm = (): boolean => {
@@ -52,9 +53,14 @@ export default function CreateProject() {
     }
 
     try {
+      // Combine user description with extracted PDF text for backend
+      const combinedDescription = extractedText
+        ? `${description.trim()}\n\n${extractedText}`
+        : description.trim();
+
       const result = await createProject.mutateAsync({
         title: title.trim(),
-        description: description.trim(),
+        description: combinedDescription,
       });
       
       // Redirect to project overview with updateRecommendations flag
@@ -140,9 +146,9 @@ export default function CreateProject() {
               Upload Reference Paper (Optional)
             </Label>
             <p className="text-sm text-text-light mb-2.5">
-              Upload a PDF to enhance your project recommendations
+              Upload a PDF to enhance your project recommendations. The content will be analyzed automatically.
             </p>
-            <PDFUpload onExtracted={handlePDFExtracted} />
+            <PDFUpload onExtracted={handlePDFExtracted} onRemoved={handlePDFRemoved} />
           </div>
 
           {/* Submit Button */}

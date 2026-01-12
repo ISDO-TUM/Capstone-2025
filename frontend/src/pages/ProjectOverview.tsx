@@ -13,6 +13,18 @@ interface Project {
   description: string;
 }
 
+// Extract only the user's description, removing any PDF-extracted text (only in UI)
+function extractUserDescription(fullDescription: string): string {
+  const pdfMarker = "\n\nUser provided this paper:";
+  const markerIndex = fullDescription.indexOf(pdfMarker);
+  
+  if (markerIndex !== -1) {
+    return fullDescription.substring(0, markerIndex).trim();
+  }
+  
+  return fullDescription;
+}
+
 async function fetchProject(projectId: string): Promise<Project> {
   const response = await fetch(`/api/project/${projectId}`, {
     credentials: "include",
@@ -280,7 +292,7 @@ export default function ProjectOverview() {
           <h1>{project.title}</h1>
           <div className="description-wrapper">
             <div className="description-content">
-              {project.description}
+              {extractUserDescription(project.description)}
             </div>
           </div>
         </div>

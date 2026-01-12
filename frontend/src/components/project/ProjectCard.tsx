@@ -47,11 +47,24 @@ function truncateText(text: string, maxLength: number): string {
   return text.slice(0, maxLength - 3).trim() + '...';
 }
 
+// Extract only the user's description, removing any PDF-extracted text (only in UI)
+function extractUserDescription(fullDescription: string): string {
+  const pdfMarker = "\n\nUser provided this paper:";
+  const markerIndex = fullDescription.indexOf(pdfMarker);
+  
+  if (markerIndex !== -1) {
+    return fullDescription.substring(0, markerIndex).trim();
+  }
+  
+  return fullDescription;
+}
+
 export function ProjectCard({ project, index }: ProjectCardProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const animationDelay = `${index * 0.04 + 0.1}s`;
-  const truncatedDescription = truncateText(project.description, 120);
+  const userDescription = extractUserDescription(project.description);
+  const truncatedDescription = truncateText(userDescription, 120);
 
   const deleteMutation = useMutation({
     mutationFn: deleteProject,
