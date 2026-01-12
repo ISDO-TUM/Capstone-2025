@@ -463,7 +463,7 @@
   overflow-x: auto !important;
   overflow-y: hidden !important;
   padding-bottom: 12px !important;
-  align-items: flex-start !important;
+  align-items: stretch !important;
   grid-template-columns: none !important;
 }
 
@@ -484,7 +484,8 @@
   border: 1px solid #b3d9ff !important;
   display: flex !important;
   flex-direction: column !important;
-  height: auto !important;
+  height: 100% !important;
+  min-height: 400px !important;
   padding: 12px !important;
 }
 

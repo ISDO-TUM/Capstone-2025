@@ -86,10 +86,22 @@ export default function ProjectOverview() {
   });
 
   // Fetch newsletter papers - only after recommendations have loaded
-  const { data: newsletterPapers = [], isLoading: newsletterLoading } = useNewsletterPapers(
+  const { data: newsletterPapers = [], isLoading: newsletterLoading, refetch: refetchNewsletterPapers } = useNewsletterPapers(
     projectId,
     recommendations.length > 0 || !streamLoading
   );
+
+  // Auto-fetch newsletter papers after recommendations finish loading
+  const hasLoadedNewsletter = useRef(false);
+  useEffect(() => {
+    if (!streamLoading && recommendations.length > 0 && !hasLoadedNewsletter.current) {
+      hasLoadedNewsletter.current = true;
+      // Small delay to ensure backend has processed everything
+      setTimeout(() => {
+        refetchNewsletterPapers();
+      }, 1000);
+    }
+  }, [streamLoading, recommendations.length, refetchNewsletterPapers]);
 
   // Load More Papers hook
   const { loadMore, isLoading: isLoadingMore, error: loadMoreError } = useLoadMorePapers({
@@ -357,7 +369,7 @@ export default function ProjectOverview() {
           ) : streamLoading ? (
             <p className="no-papers-message">Latest papers will appear after recommendations are generated...</p>
           ) : (
-            <p className="no-papers-message">No latest papers available yet. Refresh the page after recommendations are generated.</p>
+            <p className="no-papers-message">No latest papers available yet. Loading...</p>
           )}
         </div>
 
