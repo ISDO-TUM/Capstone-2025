@@ -1057,7 +1057,9 @@ def replace_low_rated_paper(project_id: str, low_rated_paper_hash: str) -> str:
             "replacement_publication_date": replacement_paper.get("publication_date"),
             "replacement_fwci": replacement_paper.get("fwci"),
             "replacement_cited_by_count": replacement_paper.get("cited_by_count"),
-            "replacement_citation_normalized_percentile": replacement_paper.get("citation_normalized_percentile"),
+            "replacement_citation_normalized_percentile": replacement_paper.get(
+                "citation_normalized_percentile"
+            ),
             "replacement_venue_name": replacement_paper.get("venue_name"),
             "replacement_is_oa": replacement_paper.get("is_oa"),
             "replacement_oa_status": replacement_paper.get("oa_status"),
