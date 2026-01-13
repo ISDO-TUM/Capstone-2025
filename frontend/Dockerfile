@@ -18,8 +18,17 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Install envsubst for template rendering
+RUN apk add --no-cache gettext
+
+# Allow overriding the backend target at build time
+ARG API_PROXY_TARGET="http://web:80"
+ENV API_PROXY_TARGET=${API_PROXY_TARGET}
+
+# Render nginx config from template with the provided backend target
+COPY nginx.conf.template /etc/nginx/nginx.conf.template
+RUN envsubst '${API_PROXY_TARGET}' < /etc/nginx/nginx.conf.template > /etc/nginx/conf.d/default.conf \
+    && rm /etc/nginx/nginx.conf.template
 
 # Copy built assets from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
