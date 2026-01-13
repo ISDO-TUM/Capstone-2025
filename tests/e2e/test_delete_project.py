@@ -7,9 +7,10 @@ class TestDeleteProject:
     """Test the delete project functionality."""
 
     def test_delete_project_button_exists(self, page, test_project_data):
-        """Test that delete button appears on project cards in dashboard."""
+        """Test that delete button appears on project cards in React dashboard."""
         # Create a project first
         page.goto("/create-project")
+        page.wait_for_load_state("networkidle")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -19,9 +20,10 @@ class TestDeleteProject:
 
         # Go back to dashboard
         page.goto("/")
+        page.wait_for_load_state("networkidle")
         time.sleep(2)
 
-        # Wait for project cards to load
+        # Wait for project cards to load (React component)
         page.wait_for_selector(".project-card", timeout=10000)
 
         # Check that delete button exists
@@ -30,9 +32,10 @@ class TestDeleteProject:
         assert delete_btn.is_visible(), "Delete button is not visible"
 
     def test_delete_project_flow(self, page, test_project_data):
-        """Test the complete delete project flow."""
+        """Test the complete delete project flow in React app."""
         # Create a project
         page.goto("/create-project")
+        page.wait_for_load_state("networkidle")
         page.fill("#projectTitle", "Project to Delete")
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -42,6 +45,7 @@ class TestDeleteProject:
 
         # Go to dashboard
         page.goto("/")
+        page.wait_for_load_state("networkidle")
         time.sleep(2)
 
         # Wait for project card to appear
@@ -70,9 +74,10 @@ class TestDeleteProject:
         )
 
     def test_delete_project_confirmation_cancel(self, page, test_project_data):
-        """Test that canceling delete confirmation doesn't delete the project."""
+        """Test that canceling delete confirmation doesn't delete the project in React app."""
         # Create a project
         page.goto("/create-project")
+        page.wait_for_load_state("networkidle")
         page.fill("#projectTitle", "Project Not to Delete")
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -82,6 +87,7 @@ class TestDeleteProject:
 
         # Go to dashboard
         page.goto("/")
+        page.wait_for_load_state("networkidle")
         time.sleep(2)
 
         # Wait for project card

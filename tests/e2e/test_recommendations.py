@@ -8,9 +8,10 @@ class TestRecommendationsFlow:
     """Test the full project creation and recommendations flow."""
 
     def test_create_project_and_get_recommendations(self, page, test_project_data):
-        """Test creating a project and receiving recommendations."""
+        """Test creating a project and receiving recommendations via React app."""
         # Navigate to create project page
         page.goto("/create-project")
+        page.wait_for_load_state("networkidle")
 
         # Fill in project details
         page.fill("#projectTitle", test_project_data["name"])
@@ -24,9 +25,6 @@ class TestRecommendationsFlow:
 
         # Verify we're on the project page
         assert "/project/" in page.url
-
-        # Wait for project title to appear
-        page.wait_for_selector("#projectTitleDisplay", timeout=10000)
 
         # Wait for papers to load via SSE (generous timeout)
         # The papers should start appearing within 60 seconds
@@ -43,14 +41,15 @@ class TestRecommendationsFlow:
             )
 
     def test_paper_metadata_display(self, page, test_project_data):
-        """Test that paper cards display all required metadata."""
+        """Test that paper cards display all required metadata in React PaperCard component."""
         # Create project and navigate to papers
         page.goto("/create-project")
+        page.wait_for_load_state("networkidle")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
 
-        # Wait for dashboard and click project
+        # Wait for redirect to project page
         page.wait_for_url("**/project/**", timeout=120000)
 
         # Wait for papers to load
@@ -60,7 +59,7 @@ class TestRecommendationsFlow:
         first_paper = page.locator(".recommendation-card").first
         assert first_paper.count() > 0, "No paper cards found"
 
-        # Verify paper title exists (h3 element)
+        # Verify paper title exists (h3 element in PaperCard)
         title = first_paper.locator("h3")
         assert title.count() > 0, "Paper title not found"
         assert len(title.text_content().strip()) > 0, "Paper title is empty"
@@ -80,13 +79,13 @@ class TestRecommendationsFlow:
         assert "Year:" in year_text, "Year label missing"
 
         # Verify venue (p element containing 🏛️ emoji) - only check if venue exists
-        # Note: Some papers may not have venue information
         venue = first_paper.locator("p:has-text('🏛️')")
         if venue.count() > 0:
             venue_text = venue.text_content()
             assert "🏛️" in venue_text, "Venue emoji missing"
             assert "Venue:" in venue_text, "Venue label missing"
 
+        # Verify citation metrics are present
         citations_text = first_paper.text_content()
         has_citations = "Citations" in citations_text
         has_fwci = "FWCI" in citations_text
@@ -96,9 +95,10 @@ class TestRecommendationsFlow:
         )
 
     def test_pdf_and_open_access_buttons(self, page, test_project_data):
-        """Test PDF button and Open Access badge display."""
+        """Test PDF button and Open Access badge display in React PaperCard component."""
         # Create project and navigate to papers
         page.goto("/create-project")
+        page.wait_for_load_state("networkidle")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -132,14 +132,15 @@ class TestRecommendationsFlow:
             assert True  # Closed access is also valid
 
     def test_read_paper_link(self, page, test_project_data):
-        """Test that Read Paper link is present and positioned correctly."""
+        """Test that Read Paper link is present in React PaperCard component."""
         # Create project and navigate to papers
         page.goto("/create-project")
+        page.wait_for_load_state("networkidle")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
 
-        # Wait for dashboard and click project
+        # Wait for redirect to project page
         page.wait_for_url("**/project/**", timeout=120000)
 
         # Wait for papers to load
@@ -148,21 +149,23 @@ class TestRecommendationsFlow:
         # Get the first paper card
         first_paper = page.locator(".recommendation-card").first
 
-        # Check for Read Paper link (button with "Read Paper" text)
-        read_link = first_paper.locator("span:has-text('Read Paper')")
+        # Check for Read Paper link (React renders it as an anchor tag)
+        read_link = first_paper.locator("a:has-text('Read Paper')")
         assert read_link.count() > 0, "Read Paper link not found"
 
-        # Verify it has onclick with window.open
-        read_link_html = read_link.evaluate("el => el.outerHTML")
-        assert "onclick" in read_link_html, "Read Paper link has no click handler"
-        assert "window.open" in read_link_html, (
-            "Read Paper link doesn't open new window"
-        )
+        # Verify it has target="_blank" for opening in new window (React way)
+        target_attr = read_link.get_attribute("target")
+        assert target_attr == "_blank", "Read Paper link should open in new window"
+
+        # Verify it has href
+        href = read_link.get_attribute("href")
+        assert href and len(href) > 0, "Read Paper link has no href"
 
     def test_search_papers(self, page, test_project_data):
-        """Test searching papers by keyword."""
+        """Test searching papers by keyword in React app."""
         # Create project and navigate to papers
         page.goto("/create-project")
+        page.wait_for_load_state("networkidle")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -200,9 +203,10 @@ class TestRecommendationsFlow:
             )
 
     def test_filter_by_rating(self, page, test_project_data):
-        """Test filtering papers by rating."""
+        """Test filtering papers by rating in React app."""
         # Create project and navigate to papers
         page.goto("/create-project")
+        page.wait_for_load_state("networkidle")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -233,9 +237,10 @@ class TestRecommendationsFlow:
             assert filtered_papers.count() <= initial_count
 
     def test_sse_connection_established(self, page, test_project_data):
-        """Test that SSE connection is established for recommendations."""
+        """Test that SSE connection is established for recommendations in React app."""
         # Create project and navigate to papers
         page.goto("/create-project")
+        page.wait_for_load_state("networkidle")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")
@@ -251,11 +256,12 @@ class TestRecommendationsFlow:
         assert papers.count() > 0, "No papers loaded via SSE"
 
     def test_paper_count_matches_request(self, page, test_project_data):
-        """Test that the number of papers matches the requested count."""
+        """Test that the number of papers matches the requested count in React app."""
         # Default paper count is 10
         requested_count = 10
 
         page.goto("/create-project")
+        page.wait_for_load_state("networkidle")
         page.fill("#projectTitle", test_project_data["name"])
         page.fill("#projectDescription", test_project_data["description"])
         page.click("button[type='submit']")

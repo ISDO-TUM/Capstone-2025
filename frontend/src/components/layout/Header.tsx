@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
 import { UserButton } from "@clerk/clerk-react";
 
+// Check if we're in test mode (This is needed for e2e tests)
+const isTestMode = import.meta.env.VITE_TEST_MODE === 'true';
+
 export default function Header() {
   return (
     <header className="main-header">
@@ -20,7 +23,12 @@ export default function Header() {
         >
           Start a New Project
         </Link>
-        <UserButton />
+        {!isTestMode && <UserButton />}
+        {isTestMode && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-text-muted">Test User</span>
+          </div>
+        )}
       </div>
     </header>
   );

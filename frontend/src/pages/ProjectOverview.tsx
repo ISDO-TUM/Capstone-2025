@@ -464,6 +464,7 @@ export default function ProjectOverview() {
               {/* Load More Button */}
               <div className="load-more-container">
                 <button 
+                  id="loadMoreBtn"
                   className="load-more-btn"
                   onClick={loadMore}
                   disabled={isLoadingMore}

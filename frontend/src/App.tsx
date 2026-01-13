@@ -17,7 +17,33 @@ const queryClient = new QueryClient({
   },
 });
 
+// Check if running in test mode (set at build time) (This is needed for e2e tests)
+const isTestMode = import.meta.env.VITE_TEST_MODE === 'true';
+
+// Shared app routes component
+function AppRoutes() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<AppLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="create-project" element={<CreateProject />} />
+            <Route path="project/:projectId" element={<ProjectOverview />} />
+          </Route>
+          <Route path="*" element={<div className="p-6">404 - Not Found</div>} />
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
+}
+
 function App() {
+  // In test mode, skip Clerk entirely and go straight to app
+  if (isTestMode) {
+    return <AppWithoutAuth />;
+  }
+
   const [clerkPublishableKey, setClerkPublishableKey] = useState<string | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
 
@@ -112,20 +138,17 @@ function AppWithAuth() {
     );
   }
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<AppLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="create-project" element={<CreateProject />} />
-            <Route path="project/:projectId" element={<ProjectOverview />} />
-          </Route>
-          <Route path="*" element={<div className="p-6">404 - Not Found</div>} />
-        </Routes>
-      </BrowserRouter>
-    </QueryClientProvider>
-  );
+  return <AppRoutes />;
+}
+
+// App without authentication for test mode
+function AppWithoutAuth() {
+  // Set a mock token getter for test mode
+  useLayoutEffect(() => {
+    setClerkTokenGetter(async () => 'mock-test-token');
+  }, []);
+
+  return <AppRoutes />;
 }
 
 export default App;

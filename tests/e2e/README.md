@@ -4,98 +4,84 @@ This directory contains end-to-end tests for the Capstone-2025 application using
 
 ## Quick Start
 
-### Automated Testing (Recommended)
-
-**E2E tests run automatically in the CI/CD pipeline** on:
-- Pull requests to `main` or `develop` branches
-- Pushes to `main` branch
-
-View test results in the GitHub Actions tab. This is the recommended approach as all services are properly configured.
-
 ### Running Tests Locally
 
+**⚠️ IMPORTANT: E2E tests require TEST_MODE=true**
+
+Tests use a special test mode that:
+- Bypasses Clerk authentication (uses mock user)
+- Builds frontend with test-specific configuration
+- Enables deterministic test behavior
+
 #### Prerequisites
-- **PostgreSQL** (port 5432)
-- **ChromaDB** (port 8000)
-- **Playwright** and **Pytest** installed
+- **Docker & Docker Compose** installed
 - **uv** and virtual environment set up
+- **Playwright** installed (`playwright install chromium`)
 
-#### Using the Test Script (Recommended)
-
-**Always use the test script instead of `uv run pytest`** to avoid environment corruption:
-
-**Mac/Linux:**
-```bash
-# From project root, run all E2E tests
-./run_tests.sh tests/e2e -v
-
-# Run specific test file
-./run_tests.sh tests/e2e/test_basic.py -v
-
-# Run specific test
-./run_tests.sh tests/e2e/test_basic.py::test_homepage_loads -v
-
-# Run unit tests separately
-./run_tests.sh llm/Tests chroma_db/Tests paper_handling -v
-```
-
-**Windows:**
-```batch
-# From project root, run all E2E tests
-run_tests.bat tests/e2e -v
-
-# Run specific test file
-run_tests.bat tests/e2e/test_basic.py -v
-
-# Run specific test
-run_tests.bat tests/e2e/test_basic.py::test_homepage_loads -v
-
-# Run unit tests separately
-run_tests.bat llm/Tests chroma_db/Tests paper_handling -v
-```
-
-**Why use the test scripts instead of `uv run pytest`?**
-
-`uv run pytest` has a known bug where it constantly recreates the virtual environment due to symlink validation issues, causing:
-- Tests to fail unpredictably on subsequent runs
-- Environment corruption with wrong platform binaries
-- Wasted time recreating `.venv` on every execution
-
-The test scripts use direct venv activation (`source .venv/bin/activate` on Mac/Linux, `.venv\Scripts\activate.bat` on Windows) which bypasses this bug and provides stable test execution.
-
-**Important:** Do not run unit tests and E2E tests together (e.g., `./run_tests.sh .` or `run_tests.bat .`). They have conflicting fixture requirements:
-- Unit tests mock ChromaDB globally
-- E2E tests require real ChromaDB connections
-
-Always run them separately as shown above.
-
-#### Setup Environment
+#### Step 1: Start Services with TEST_MODE
 
 **Mac/Linux:**
 ```bash
-# Install dependencies (from project root)
-uv sync
-playwright install chromium
+# From project root
+cd /path/to/Capstone-2025
 
-# Start required services
-docker compose up -d db chromadb
+# Build and start ALL services with TEST_MODE enabled
+TEST_MODE=true docker compose up -d --build
 
-# Wait for services to start
-sleep 5
+# Verify services are running
+docker compose ps
 ```
 
 **Windows (PowerShell):**
 ```powershell
-# Install dependencies (from project root)
-uv sync
-playwright install chromium
+# From project root
+cd C:\path\to\Capstone-2025
 
-# Start required services
-docker compose up -d db chromadb
+# Build and start ALL services with TEST_MODE enabled
+$env:TEST_MODE="true"
+docker compose up -d --build
 
-# Wait for services to start
-Start-Sleep -Seconds 5
+# Verify services are running
+docker compose ps
 ```
+
+**What TEST_MODE does:**
+- **Backend**: Bypasses Clerk authentication, uses mock test user
+- **Frontend**: Builds with test configuration, skips ClerkProvider
+- **nginx**: Uses local proxy configuration for backend API
+
+#### Step 2: Run Tests
+
+```bash
+# Run all E2E tests
+uv run pytest tests/e2e/ -v
+
+# Run specific test file
+uv run pytest tests/e2e/test_basic.py -v
+
+# Run specific test
+uv run pytest tests/e2e/test_basic.py::test_homepage_loads -v
+```
+
+#### Step 3: Stop Services
+
+```bash
+# When done testing
+docker compose down
+```
+
+### Running for Local Development (Without Tests)
+
+If you want to run the app normally (with real Clerk authentication):
+
+```bash
+# Start without TEST_MODE (default is false)
+docker compose up -d
+
+# App runs at http://localhost with real authentication
+```
+
+**Note:** E2E tests will **NOT work** without TEST_MODE=true.
 
 ## Test Coverage
 
@@ -106,7 +92,14 @@ The E2E test suite covers:
 - Create project page loads
 - Basic project creation flow
 
-### 2. Recommendations Flow (`test_recommendations.py`)
+### 2. Delete Project (`test_delete_project.py`)
+- Delete button exists on project cards
+- Complete delete project flow with confirmation
+- Cancel deletion (confirmation modal)
+- Delete multiple projects
+- Delete button styling validation
+
+### 3. Recommendations Flow (`test_recommendations.py`)
 - Complete project creation → recommendations workflow
 - Paper metadata display (authors, year, venue, citations, FWCI, percentile)
 - PDF button and Open Access badge rendering
@@ -115,7 +108,7 @@ The E2E test suite covers:
 - SSE connection establishment
 - Paper count validation
 
-### 3. Paper Rating (`test_paper_rating.py`)
+### 4. Paper Rating (`test_paper_rating.py`)
 - Rating papers with 1-5 stars
 - Low rating (1-2 stars) triggers replacement
 - Rating persistence after page reload
@@ -124,7 +117,7 @@ The E2E test suite covers:
 - UI updates on rating
 - Cannot rate replaced papers
 
-### 4. Load More Papers (`test_load_more.py`)
+### 5. Load More Papers (`test_load_more.py`)
 - Load More button exists and works
 - Clicking Load More increases paper count
 - Metadata consistency between initial and loaded papers
@@ -141,6 +134,7 @@ tests/
 │   ├── conftest.py              # Pytest fixtures and configuration
 │   ├── screenshots/             # Failure screenshots (auto-generated)
 │   ├── test_basic.py            # Basic navigation tests
+│   ├── test_delete_project.py   # Project deletion tests
 │   ├── test_recommendations.py  # Full recommendation flow
 │   ├── test_paper_rating.py     # Rating and replacement tests
 │   └── test_load_more.py        # Load More functionality
@@ -149,66 +143,75 @@ tests/
 
 ## Running Specific Tests
 
-All commands should be run from the project root using the test script:
+**Prerequisites:** Services must be running with `TEST_MODE=true docker compose up -d --build`
 
 ### Run All E2E Tests
-**Mac/Linux:** `./run_tests.sh tests/e2e`
-
-**Windows:** `run_tests.bat tests/e2e`
+```bash
+uv run pytest tests/e2e/ -v
+```
 
 ### Run Specific Test File
-**Mac/Linux:** `./run_tests.sh tests/e2e/test_basic.py -v`
-
-**Windows:** `run_tests.bat tests/e2e/test_basic.py -v`
+```bash
+uv run pytest tests/e2e/test_basic.py -v
+```
 
 ### Run Specific Test Class
-**Mac/Linux:** `./run_tests.sh tests/e2e/test_recommendations.py::TestRecommendationsFlow -v`
-
-**Windows:** `run_tests.bat tests/e2e/test_recommendations.py::TestRecommendationsFlow -v`
+```bash
+uv run pytest tests/e2e/test_recommendations.py::TestRecommendationsFlow -v
+```
 
 ### Run Single Test
-**Mac/Linux:** `./run_tests.sh tests/e2e/test_basic.py::test_homepage_loads -v`
-
-**Windows:** `run_tests.bat tests/e2e/test_basic.py::test_homepage_loads -v`
+```bash
+uv run pytest tests/e2e/test_basic.py::test_homepage_loads -v
+```
 
 ### Run with Verbose Output
-**Mac/Linux:** `./run_tests.sh tests/e2e -vv`
-
-**Windows:** `run_tests.bat tests/e2e -vv`
+```bash
+uv run pytest tests/e2e/ -vv
+```
 
 ## Debugging
 
-### View Browser During Tests
-**Mac/Linux:** `./run_tests.sh tests/e2e --headed`
+**Prerequisites:** Services running with `TEST_MODE=true docker compose up -d --build`
 
-**Windows:** `run_tests.bat tests/e2e --headed`
+### View Browser During Tests
+```bash
+uv run pytest tests/e2e/ --headed
+```
 
 ### Slow Down Execution
-**Mac/Linux:** `./run_tests.sh tests/e2e --headed --slowmo=1000`
-
-**Windows:** `run_tests.bat tests/e2e --headed --slowmo=1000`
+```bash
+uv run pytest tests/e2e/ --headed --slowmo=1000
+```
 
 ### Run Single Test with Debugging
-**Mac/Linux:** `./run_tests.sh tests/e2e/test_load_more.py::TestLoadMorePapers::test_load_more_button_exists_and_increases_count -v`
-
-**Windows:** `run_tests.bat tests/e2e/test_load_more.py::TestLoadMorePapers::test_load_more_button_exists_and_increases_count -v`
+```bash
+uv run pytest tests/e2e/test_load_more.py::TestLoadMorePapers::test_load_more_button_exists_and_increases_count -v
+```
 
 ### View Screenshots
 Failed tests automatically save screenshots to `tests/e2e/screenshots/`.
 
 ### Pytest Debugging Options
-**Mac/Linux:**
 ```bash
-./run_tests.sh tests/e2e -v -s          # Show print statements
-./run_tests.sh tests/e2e -v --pdb       # Drop into debugger on failure
-./run_tests.sh tests/e2e -v --maxfail=1 # Stop after first failure
+uv run pytest tests/e2e/ -v -s          # Show print statements
+uv run pytest tests/e2e/ -v --pdb       # Drop into debugger on failure
+uv run pytest tests/e2e/ -v --maxfail=1 # Stop after first failure
 ```
 
-**Windows:**
-```batch
-run_tests.bat tests/e2e -v -s          # Show print statements
-run_tests.bat tests/e2e -v --pdb       # Drop into debugger on failure
-run_tests.bat tests/e2e -v --maxfail=1 # Stop after first failure
+### Check Docker Services
+```bash
+# Verify all services are running
+docker compose ps
+
+# Check backend logs
+docker compose logs web
+
+# Check frontend logs
+docker compose logs frontend
+
+# Restart services if needed
+TEST_MODE=true docker compose restart
 ```
 
 ## Mock LLM
@@ -237,95 +240,115 @@ Edit `tests/e2e/mock_llm.py` to modify mock responses for different scenarios.
 ## Fixtures
 
 ### `flask_server` (session scope)
-Starts Flask app on port 5556 for testing.
+Verifies Docker Compose services are ready:
+- Frontend (nginx) on http://localhost:80
+- Backend (Flask API) on http://localhost:8080
+- PostgreSQL on localhost:5432
+- ChromaDB on localhost:8000
+
+**Returns:** Base URL for testing (http://localhost)
 
 ### `page` (function scope)
 Provides fresh Playwright Page for each test with:
 - Viewport: 1920x1080
-- Console logging enabled
-- Error logging enabled
+- Base URL: http://localhost
+- Console and error logging enabled
 - Screenshot capture on failure
+- Test mode script injection
 
 ### `test_project_data`
-Sample project data with name, description, deadline, and paper count.
+Sample project data with name and description for testing.
 
 ### `enable_test_mode` (session scope, autouse)
 Automatically enables TEST_MODE and Mock LLM:
 - Replaces real LLM with Mock LLM (zero API calls, deterministic responses)
-- Sets database connection parameters
-- Configures ChromaDB host
+- Sets environment variables for testing
+- Mocks OpenAI embeddings client
 
 ## Troubleshooting
 
-### ChromaDB Connection Error
+### Tests Failing with Authentication Errors
 ```
-ValueError: Could not connect to a Chroma server
-```
-**Solution (Mac/Linux)**:
-```bash
-# Start ChromaDB
-docker compose up -d chromadb
-# OR set environment variable
-export CHROMA_HOST=localhost
-```
-
-**Solution (Windows - PowerShell)**:
-```powershell
-# Start ChromaDB
-docker compose up -d chromadb
-# OR set environment variable
-$env:CHROMA_HOST="localhost"
-```
-
-### PostgreSQL Connection Error
-```
-connection to server failed: fe_sendauth: no password supplied
+Clerk authentication required
 # OR
-psycopg2.OperationalError: password authentication failed for user "user"
+No papers loaded / Project creation fails
 ```
-**Solution (Mac/Linux)**:
+**Solution:**
 ```bash
-# Reset database volume and start fresh
-docker compose down -v
-docker compose up -d db
+# You MUST start services with TEST_MODE=true
+docker compose down
+TEST_MODE=true docker compose up -d --build
 
-# OR set environment variables
-export DB_HOST=127.0.0.1
-export DB_NAME=papers
-export DB_USER=user
-export DB_PASSWORD=password
-export DB_PORT=5432
+# Then run tests
+uv run pytest tests/e2e/ -v
 ```
 
-**Solution (Windows - PowerShell)**:
-```powershell
-# Reset database volume and start fresh
-docker compose down -v
-docker compose up -d db
+### Services Not Running
+```
+❌ Frontend (nginx) is not running on port 80
+# OR
+❌ Backend (Flask) is not running on port 8080
+```
+**Solution:**
+```bash
+# Check services status
+docker compose ps
 
-# OR set environment variables
-$env:DB_HOST="127.0.0.1"
-$env:DB_NAME="papers"
-$env:DB_USER="user"
-$env:DB_PASSWORD="password"
-$env:DB_PORT="5432"
+# Restart services with TEST_MODE
+TEST_MODE=true docker compose up -d --build
+
+# Check logs if services crash
+docker compose logs web
+docker compose logs frontend
+```
+
+### Port Already in Use
+```
+Bind for 0.0.0.0:80 failed: port is already allocated
+```
+**Solution:**
+```bash
+# Stop any existing containers
+docker compose down
+
+# Check what's using the port
+lsof -i :80  # Mac/Linux
+netstat -ano | findstr :80  # Windows
+
+# Start fresh
+TEST_MODE=true docker compose up -d --build
+```
+
+### Database Connection Error
+```
+psycopg2.OperationalError: connection failed
+```
+**Solution:**
+```bash
+# Reset database and restart
+docker compose down -v
+TEST_MODE=true docker compose up -d --build
 ```
 
 ### Playwright Not Found
 ```
 ModuleNotFoundError: No module named 'playwright'
 ```
-**Solution**:
+**Solution:**
 ```bash
-pip install pytest pytest-playwright
+uv sync
 playwright install chromium
 ```
 
-### Test Timeout Issues
-If tests are timing out:
-- Check that ChromaDB and PostgreSQL are running
-- Verify OpenAI API key is set correctly
-- Increase timeouts in test files if needed (currently 90s for LLM operations)
+### Frontend Shows Real Clerk Login
+**Problem:** Frontend wasn't built with TEST_MODE
+
+**Solution:**
+```bash
+# Must rebuild with TEST_MODE to bake in test configuration
+docker compose down
+TEST_MODE=true docker compose up -d --build
+```
 
 ## CI/CD
 
@@ -342,11 +365,12 @@ View workflow configuration in `.github/workflows/e2e-tests.yml`.
 
 ## Best Practices
 
-- **Use Test Scripts**: Always use `./run_tests.sh` (Mac/Linux) or `run_tests.bat` (Windows) instead of `uv run pytest` to avoid environment corruption
-- **Separate Test Suites**: Never run unit tests and E2E tests together - they have conflicting fixture requirements
-- **Docker First**: Always start Docker services before running tests (`docker compose up -d`)
-- **Reset Database**: If authentication fails, reset the database with `docker compose down -v` then `docker compose up -d`
-- **Run in CI**: Let GitHub Actions handle full test runs automatically
-- **Debug Locally**: Run specific tests with `--headed` flag for visual debugging
-- **Check Screenshots**: Review failure screenshots in `tests/e2e/screenshots/` for debugging
-- **Serial Execution**: Tests run one at a time by default (no parallel execution)
+- **Always Use TEST_MODE**: E2E tests require `TEST_MODE=true docker compose up -d --build`
+- **Rebuild When Switching**: Frontend config is baked at build time - rebuild when switching between test/dev mode
+- **Check Services First**: Run `docker compose ps` to verify all services are running before tests
+- **Reset When Needed**: Use `docker compose down -v` to clear all data and start fresh
+- **Debug with Logs**: Check `docker compose logs web` and `docker compose logs frontend` for errors
+- **Run Specific Tests**: Don't run the full suite while debugging - target specific failing tests
+- **Use --headed**: Add `--headed` flag to see browser during debugging
+- **Check Screenshots**: Review failure screenshots in `tests/e2e/screenshots/`
+- **Serial Execution**: Tests run one at a time to avoid database conflicts

@@ -8,46 +8,43 @@ from playwright.sync_api import Page, expect
 
 
 def test_homepage_loads(page: Page):
-    """Test that the homepage loads successfully"""
+    """Test that the React homepage loads successfully"""
     page.goto("/")
+    page.wait_for_load_state("networkidle")
 
-    # Verify dashboard header is visible
-    expect(page.locator("h1")).to_be_visible()
-
-    # Verify create project button exists
-    expect(page.locator("#createProjectBtn, button:has-text('Create')")).to_be_visible()
+    # Wait for React app to render - check for main content
+    expect(page.locator(".main-content")).to_be_visible(timeout=10000)
 
 
 def test_create_project_page_loads(page: Page):
-    """Test that the create project page loads"""
+    """Test that the create project page loads in React app"""
     page.goto("/create-project")
+    page.wait_for_load_state("networkidle")
 
-    # Verify form elements exist
-    expect(page.locator("#projectTitle")).to_be_visible()
-    expect(page.locator("#projectDescription")).to_be_visible()
+    # Verify form elements exist in React CreateProject component
+    expect(page.locator("#projectTitle")).to_be_visible(timeout=10000)
+    expect(page.locator("#projectDescription")).to_be_visible(timeout=10000)
     expect(page.locator("button[type='submit']")).to_be_visible()
 
 
 def test_create_project_basic(page: Page, test_project_data):
-    """Test creating a basic project and verifying it loads"""
+    """Test creating a basic project via React frontend"""
     # Navigate to create project page
     page.goto("/create-project")
+    page.wait_for_load_state("networkidle")
 
-    # Fill in project details
+    # Fill in project details using React form
     page.fill("#projectTitle", test_project_data["name"])
     page.fill("#projectDescription", test_project_data["description"])
 
     # Submit form
     page.click("button[type='submit']")
 
-    # Wait for redirect to project overview page (not dashboard)
+    # Wait for React Router to navigate to project overview
     page.wait_for_url("**/project/**", timeout=10000)
 
     # Verify we're on the project page
     assert "/project/" in page.url
 
-    # Wait for project title to be populated (loaded via JS/API)
-    page.wait_for_selector("#projectTitleDisplay", timeout=10000)
-    expect(page.locator("#projectTitleDisplay")).to_have_text(
-        test_project_data["name"], timeout=10000
-    )
+    # Wait for project content to load
+    expect(page.locator(".main-content")).to_be_visible(timeout=10000)

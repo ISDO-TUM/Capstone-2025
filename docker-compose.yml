@@ -47,6 +47,7 @@ services:
       - DB_USER=${DB_USER:-user}
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - DB_PORT=5432
+      - TEST_MODE=${TEST_MODE:-false}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
       - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
@@ -60,7 +61,11 @@ services:
       - capstone_network
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_TEST_MODE: ${TEST_MODE:-false}
+        DEPLOYMENT_ENV: local
     container_name: capstone_frontend
     restart: always
     ports:

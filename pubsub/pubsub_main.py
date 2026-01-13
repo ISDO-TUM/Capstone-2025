@@ -131,7 +131,14 @@ def update_newsletter_papers(project_id: str):
     logger.info("  ↳ calling LLM agent to pick+summarize…")
     agent_out = call_temp_agent(str(potential), project_prompt, str(k)).content
     logger.info(f"    ✓ raw agent output: {agent_out}")
-    agent_response = ast.literal_eval(agent_out)
+
+    # Parse agent response with error handling
+    try:
+        agent_response = ast.literal_eval(agent_out)
+    except (ValueError, SyntaxError) as e:
+        logger.error(f"Failed to parse agent response: {e}")
+        logger.error(f"Raw output was: {agent_out}")
+        return  # Exit with no error
 
     recommendation_hashes = []
     summaries = []
