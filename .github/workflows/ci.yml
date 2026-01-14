@@ -142,7 +142,7 @@ jobs:
         run: docker compose logs web | tail -50
 
       - name: Run E2E tests
-        run: uv run pytest tests/e2e/ -v -s
+        run: uv run pytest tests/e2e/ -v
 
       - name: Show all backend logs on failure
         if: failure()
