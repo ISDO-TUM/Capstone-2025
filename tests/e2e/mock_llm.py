@@ -65,12 +65,12 @@ class MockLLM:
                 [
                     {
                         "paper_hash": "test_hash_1",
-                        "summary": "A relevant paper about machine learning in healthcare with novel diagnostic approaches."
+                        "summary": "A relevant paper about machine learning in healthcare with novel diagnostic approaches.",
                     },
                     {
                         "paper_hash": "test_hash_2",
-                        "summary": "Research on automated medical diagnosis systems using deep learning techniques."
-                    }
+                        "summary": "Research on automated medical diagnosis systems using deep learning techniques.",
+                    },
                 ]
             ),
             # Default response

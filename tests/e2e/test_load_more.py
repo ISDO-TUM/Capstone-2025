@@ -33,7 +33,7 @@ class TestLoadMorePapers:
                 "document.getElementById('loadMoreBtn') && !document.getElementById('loadMoreBtn').disabled",
                 timeout=120000,
             )
-            
+
             # Wait for new papers to be streamed via SSE
             page.wait_for_function(
                 f"document.querySelectorAll('.recommendation-card').length > {initial_count}",
@@ -70,7 +70,7 @@ class TestLoadMorePapers:
                 "document.getElementById('loadMoreBtn') && !document.getElementById('loadMoreBtn').disabled",
                 timeout=120000,
             )
-            
+
             # Wait for new papers to be streamed via SSE
             page.wait_for_function(
                 f"document.querySelectorAll('.recommendation-card').length > {initial_count}",

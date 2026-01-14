@@ -9,13 +9,13 @@ Responsibilities:
 """
 
 import logging
-import os
 from openai import OpenAI
 from llm.LLMDefinition import OPENAI_API_KEY, LLM, TEST_MODE
 
 # Use mock client in TEST_MODE to avoid real API calls
 if TEST_MODE:
     from unittest.mock import MagicMock
+
     client = MagicMock()
     # Mock embeddings.create to return standard 1536-dim vector
     mock_response = MagicMock()

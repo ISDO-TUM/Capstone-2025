@@ -15,7 +15,7 @@ class TestPaperRating:
 
         page.wait_for_url("**/project/**", timeout=120000)
         page.wait_for_selector(".recommendation-card", timeout=120000)
-        
+
         # Wait for papers to fully load (SSE stream complete)
         time.sleep(5)
 

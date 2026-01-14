@@ -250,13 +250,15 @@ class TestRecommendationsFlow:
 
         # Wait for papers to appear (confirms SSE worked)
         page.wait_for_selector(".recommendation-card", timeout=120000)
-        
+
         # Extra wait to ensure SSE stream is complete
         time.sleep(5)
 
         # Verify multiple papers loaded
         papers = page.locator(".recommendation-card")
-        assert papers.count() > 0, f"No papers loaded via SSE (found {papers.count()} cards)"
+        assert papers.count() > 0, (
+            f"No papers loaded via SSE (found {papers.count()} cards)"
+        )
 
     def test_paper_count_matches_request(self, page, test_project_data):
         """Test that the number of papers matches the requested count in React app."""
