@@ -37,28 +37,20 @@ class TestTimeouts:
 @pytest.fixture(scope="session", autouse=True)
 def enable_test_mode():
     """
-    Enable TEST_MODE and mock LLM for deterministic E2E tests.
+    Enable TEST_MODE and mock embeddings for deterministic E2E tests.
 
-    This replaces the real LLM with a mock to ensure:
+    Note: LLM mocking is now handled automatically by LLMDefinition.py
+    when TEST_MODE=true is set. This fixture only needs to mock embeddings.
+
+    This ensures:
     - Consistent test results (no API variability)
     - No API costs
     - Faster test execution
     - No rate limits
-
-    Also sets all database connection parameters for PostgreSQL.
     """
 
-    # Mock the LLM to avoid API calls and ensure deterministic responses
-    import llm.LLMDefinition as llm_def
-    from tests.e2e.mock_llm import MockedLLM
     import llm.Embeddings as embeddings_module
     from unittest.mock import MagicMock
-
-    # Store original LLM
-    original_llm = llm_def.LLM
-
-    # Replace with mock
-    llm_def.LLM = MockedLLM
 
     # Mock the OpenAI client for embeddings
     mock_client = MagicMock()
@@ -73,8 +65,7 @@ def enable_test_mode():
 
     yield
 
-    # Restore original LLM and client after tests
-    llm_def.LLM = original_llm
+    # Restore original client after tests
     embeddings_module.client = original_client
 
     # Cleanup environment variables

@@ -33,7 +33,12 @@ class TestLoadMorePapers:
                 "document.getElementById('loadMoreBtn') && !document.getElementById('loadMoreBtn').disabled",
                 timeout=120000,
             )
-            time.sleep(1)
+            
+            # Wait for new papers to be streamed via SSE
+            page.wait_for_function(
+                f"document.querySelectorAll('.recommendation-card').length > {initial_count}",
+                timeout=120000,
+            )
 
             new_count = page.locator(".recommendation-card").count()
             assert new_count > initial_count, (
@@ -65,7 +70,12 @@ class TestLoadMorePapers:
                 "document.getElementById('loadMoreBtn') && !document.getElementById('loadMoreBtn').disabled",
                 timeout=120000,
             )
-            time.sleep(1)
+            
+            # Wait for new papers to be streamed via SSE
+            page.wait_for_function(
+                f"document.querySelectorAll('.recommendation-card').length > {initial_count}",
+                timeout=120000,
+            )
 
             all_papers = page.locator(".recommendation-card")
             assert all_papers.count() > initial_count, "No new papers were loaded"

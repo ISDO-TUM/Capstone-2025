@@ -129,7 +129,7 @@ jobs:
           curl -v http://localhost:8080/api/clerk-config
           echo ""
           echo "Checking if backend can connect to database..."
-          docker compose exec -T web uv run python -c "from database.database_connection import get_connection; conn = get_connection(); print('✓ Database connection OK'); conn.close()" || echo "⚠ Database connection failed"
+          docker compose exec -T web uv run python -c "from database.database_connection import connect_to_db; conn = connect_to_db(); print('✓ Database connection OK'); conn.close()" || echo "⚠ Database connection failed"
           echo ""
           echo "Checking if backend can connect to ChromaDB..."
           docker compose exec -T web uv run python -c "from chroma_db.chroma_vector_db import chroma_db; print('✓ ChromaDB connection OK')" || echo "⚠ ChromaDB connection failed"
