@@ -1383,38 +1383,43 @@ function insertReplacementPaper(replacementDetails, position, container) {
             placeholder.remove();
         }
 
-        // Replace the invisible card's content
-        invisibleCard.dataset.paperHash = replacementDetails.replacement_paper_hash;
-        invisibleCard.dataset.title = replacementDetails.replacement_title.toLowerCase();
-        invisibleCard.dataset.rating = '0';
-        invisibleCard.classList.add('new-replacement');
+        // Create a full paper object with all metadata
+        const paper = {
+            hash: replacementDetails.replacement_paper_hash,
+            title: replacementDetails.replacement_title,
+            description: replacementDetails.replacement_summary,
+            link: replacementDetails.replacement_url,
+            authors: replacementDetails.replacement_authors,
+            publication_date: replacementDetails.replacement_publication_date,
+            fwci: replacementDetails.replacement_fwci,
+            cited_by_count: replacementDetails.replacement_cited_by_count,
+            citation_normalized_percentile: replacementDetails.replacement_citation_normalized_percentile,
+            venue_name: replacementDetails.replacement_venue_name,
+            is_oa: replacementDetails.replacement_is_oa,
+            oa_status: replacementDetails.replacement_oa_status,
+            pdf_url: replacementDetails.replacement_pdf_url,
+            rating: 0,
+            is_replacement: true
+        };
 
-        invisibleCard.innerHTML = `
-            <h3>${replacementDetails.replacement_title}</h3>
-            <a href="${replacementDetails.replacement_url}" target="_blank">Read Paper</a>
-            <p>${replacementDetails.replacement_summary}</p>
-            <div class="star-rating">
-                <span class="star" data-value="1">&#9733;</span>
-                <span class="star" data-value="2">&#9733;</span>
-                <span class="star" data-value="3">&#9733;</span>
-                <span class="star" data-value="4">&#9733;</span>
-                <span class="star" data-value="5">&#9733;</span>
-            </div>
-        `;
-
-        invisibleCard.style.visibility = 'visible';
-        invisibleCard.style.opacity = '0';
-        invisibleCard.style.transform = 'scale(0.8)';
-        invisibleCard.style.position = '';
-        invisibleCard.style.zIndex = '';
+        // Create a new card with full metadata
+        const newCard = createPaperCard(paper);
+        
+        // Copy animation styles from invisible card
+        newCard.style.visibility = 'visible';
+        newCard.style.opacity = '0';
+        newCard.style.transform = 'scale(0.8)';
+        
+        // Replace the invisible card with the new card
+        invisibleCard.replaceWith(newCard);
 
         setTimeout(() => {
-            invisibleCard.style.opacity = '1';
-            invisibleCard.style.transform = 'scale(1)';
+            newCard.style.opacity = '1';
+            newCard.style.transform = 'scale(1)';
         }, 100);
 
         setTimeout(() => {
-            invisibleCard.classList.remove('new-replacement');
+            newCard.classList.remove('new-replacement');
         }, 3000);
     }
 }

@@ -34,9 +34,7 @@ services:
     container_name: capstone_web
     restart: always
     ports:
-      - "80:80"
-    volumes:
-      - .:/app
+      - "8080:80"
     working_dir: /app
     depends_on:
       - db
@@ -48,6 +46,7 @@ services:
       - DB_USER=${DB_USER:-user}
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - DB_PORT=5432
+      - TEST_MODE=${TEST_MODE:-false}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
       - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
@@ -57,6 +56,21 @@ services:
       - FLASK_ENV=development
       - FLASK_DEBUG=1
       - CHROMA_HOST=chromadb
+    networks:
+      - capstone_network
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_TEST_MODE: ${TEST_MODE:-false}
+        DEPLOYMENT_ENV: local
+    container_name: capstone_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - web
     networks:
       - capstone_network
 

@@ -59,28 +59,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint-and-format
 
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: papers
-          POSTGRES_USER: user
-          POSTGRES_PASSWORD: password
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      chromadb:
-        image: chromadb/chroma
-        ports:
-          - 8000:8000
-        env:
-          IS_PERSISTENT: "FALSE"
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -99,33 +77,80 @@ jobs:
       - name: Install Playwright browsers
         run: uv run playwright install chromium --with-deps
 
-      - name: Install pgroll
+      - name: Create .env file for Docker Compose
         run: |
-          wget -O pgroll https://github.com/xataio/pgroll/releases/download/v0.14.3/pgroll.linux.amd64
-          chmod +x pgroll
-          mv pgroll /usr/local/bin/
+          cat > .env << EOF
+          TEST_MODE=true
+          DB_USER=user
+          DB_PASSWORD=password
+          DB_NAME=papers
+          DB_PORT=5432
+          OPENAI_API_KEY=dummy-test-key
+          CLERK_SECRET_KEY=dummy-secret
+          CLERK_PUBLISHABLE_KEY=dummy-publishable
+          CLERK_FRONTEND_API_URL=dummy-url
+          HOSTNAME=localhost
+          EOF
 
-      - name: Initialize database
-        env:
-          PGPASSWORD: password
-          PGROLL_PG_URL: postgres://user:password@localhost:5432/papers?sslmode=disable
+      - name: Start services with Docker Compose
+        run: TEST_MODE=true docker compose up -d --build
+          
+      - name: Wait for services to be ready
         run: |
-          pgroll init || true
-          pgroll migrate migrations/ --complete
+          echo "Waiting for frontend (nginx) on port 80..."
+          timeout 180 bash -c 'until curl -s http://localhost:80 > /dev/null 2>&1; do echo "Waiting..."; sleep 5; done'
+          echo "✓ Frontend ready"
+          
+          echo "Waiting for backend (Flask) on port 8080..."
+          timeout 180 bash -c 'until curl -s http://localhost:8080/api/clerk-config > /dev/null 2>&1; do echo "Waiting..."; sleep 5; done'
+          echo "✓ Backend ready"
+          
+          echo "Waiting for PostgreSQL on port 5432..."
+          timeout 90 bash -c 'until nc -z localhost 5432; do echo "Waiting..."; sleep 3; done'
+          echo "✓ PostgreSQL ready"
+          
+          echo "Waiting for ChromaDB on port 8000..."
+          timeout 120 bash -c 'until curl -s http://localhost:8000/api/v2/heartbeat > /dev/null 2>&1; do echo "Waiting..."; sleep 5; done'
+          echo "✓ ChromaDB ready"
+          
+          echo "Giving services extra time to fully initialize..."
+          sleep 10
+          
+          echo "All services ready!"
+          
+      - name: Verify ChromaDB is accessible
+        run: |
+          echo "Testing ChromaDB endpoint..."
+          curl -v http://localhost:8000/api/v2/heartbeat
+
+      - name: Verify backend API is working
+        run: |
+          echo "Testing backend health..."
+          curl -v http://localhost:8080/api/clerk-config
+          echo ""
+          echo "Checking if backend can connect to database..."
+          docker compose exec -T web uv run python -c "from database.database_connection import connect_to_db; conn = connect_to_db(); print('✓ Database connection OK'); conn.close()" || echo "⚠ Database connection failed"
+          echo ""
+          echo "Checking if backend can connect to ChromaDB..."
+          docker compose exec -T web uv run python -c "from chroma_db.chroma_vector_db import chroma_db; print('✓ ChromaDB connection OK')" || echo "⚠ ChromaDB connection failed"
+
+      - name: Check Docker services status
+        if: always()
+        run: docker compose ps
+
+      - name: Show backend startup logs
+        run: docker compose logs web | tail -50
 
       - name: Run E2E tests
-        env:
-          TEST_MODE: "true"
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_NAME: papers
-          DB_USER: user
-          DB_PASSWORD: password
-          CHROMA_HOST: localhost
-        run: |
-          source .venv/bin/activate
-          cd tests/e2e
-          pytest . -v
+        run: uv run pytest tests/e2e/ -v
+
+      - name: Show all backend logs on failure
+        if: failure()
+        run: docker compose logs web
+
+      - name: Show frontend logs on failure
+        if: failure()
+        run: docker compose logs frontend
 
       - name: Upload test screenshots on failure
         if: failure()
@@ -135,6 +160,9 @@ jobs:
           path: tests/e2e/screenshots/
           retention-days: 7
 
+      - name: Cleanup Docker Compose
+        if: always()
+        run: docker compose down -v
   deploy:
     runs-on: ubuntu-latest
     needs: e2e-tests

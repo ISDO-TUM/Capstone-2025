@@ -9,7 +9,6 @@ This module provides:
 """
 
 import pytest
-import threading
 import time
 import os
 import sys
@@ -38,28 +37,20 @@ class TestTimeouts:
 @pytest.fixture(scope="session", autouse=True)
 def enable_test_mode():
     """
-    Enable TEST_MODE and mock LLM for deterministic E2E tests.
+    Enable TEST_MODE and mock embeddings for deterministic E2E tests.
 
-    This replaces the real LLM with a mock to ensure:
+    Note: LLM mocking is now handled automatically by LLMDefinition.py
+    when TEST_MODE=true is set. This fixture only needs to mock embeddings.
+
+    This ensures:
     - Consistent test results (no API variability)
     - No API costs
     - Faster test execution
     - No rate limits
-
-    Also sets all database connection parameters for PostgreSQL.
     """
 
-    # Mock the LLM to avoid API calls and ensure deterministic responses
-    import llm.LLMDefinition as llm_def
-    from tests.e2e.mock_llm import MockedLLM
     import llm.Embeddings as embeddings_module
     from unittest.mock import MagicMock
-
-    # Store original LLM
-    original_llm = llm_def.LLM
-
-    # Replace with mock
-    llm_def.LLM = MockedLLM
 
     # Mock the OpenAI client for embeddings
     mock_client = MagicMock()
@@ -74,8 +65,7 @@ def enable_test_mode():
 
     yield
 
-    # Restore original LLM and client after tests
-    llm_def.LLM = original_llm
+    # Restore original client after tests
     embeddings_module.client = original_client
 
     # Cleanup environment variables
@@ -85,75 +75,74 @@ def enable_test_mode():
 @pytest.fixture(scope="session")
 def flask_server(enable_test_mode):
     """
-    Start Flask app in a background thread for testing.
+    Use Docker Compose services for E2E testing.
+
+    This fixture assumes Docker Compose is running with:
+    - React frontend (nginx) on http://localhost:80
+    - Flask backend API on http://localhost:8080
+    - PostgreSQL on localhost:5432
+    - ChromaDB on localhost:8000
+
+    Run tests with: docker compose up -d && pytest tests/e2e/ && docker compose down
 
     Args:
         enable_test_mode: Ensures environment variables are set before importing app
 
     Yields:
-        str: Base URL of the test server (e.g., 'http://127.0.0.1:5556')
+        str: Base URL of the React frontend (http://localhost)
     """
-    from app import app
     import socket
+    import requests
 
-    # Use a dynamic port if preferred port is taken
-    preferred_port = 5556
-    test_port = preferred_port
+    base_url = "http://localhost"
+    backend_url = "http://localhost:8080"
 
-    def find_free_port(start_port, max_attempts=10):
-        """Find an available port starting from start_port."""
-        for port in range(start_port, start_port + max_attempts):
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                try:
-                    s.bind(("127.0.0.1", port))
-                    return port
-                except OSError:
-                    continue
+    # Verify services are running
+    max_retries = 30
+    services = {
+        "Frontend (nginx)": ("localhost", 80),
+        "Backend (Flask)": ("localhost", 8080),
+        "PostgreSQL": ("localhost", 5432),
+        "ChromaDB": ("localhost", 8000),
+    }
+
+    print("\nWaiting for Docker Compose services to be ready...")
+
+    for service_name, (host, port) in services.items():
+        print(f"Checking {service_name} on port {port}...")
+        for i in range(max_retries):
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(1)
+                    result = s.connect_ex((host, port))
+                    if result == 0:
+                        print(f"✓ {service_name} is ready")
+                        break
+            except Exception:
+                pass
+
+            if i == max_retries - 1:
+                raise RuntimeError(
+                    f" {service_name} is not running on port {port}.\n"
+                    f"Please start Docker Compose with: docker compose up -d"
+                )
+            time.sleep(1)
+
+    # Verify backend API is responding
+    try:
+        response = requests.get(f"{backend_url}/api/clerk-config", timeout=5)
+        if response.status_code == 200:
+            print("Backend API is responding")
+        else:
+            print(f"⚠ Backend API returned status {response.status_code}")
+    except Exception as e:
         raise RuntimeError(
-            f"Could not find free port in range {start_port}-{start_port + max_attempts}"
+            f"Backend API is not responding at {backend_url}\n"
+            f"Error: {e}\n"
+            f"Please ensure Docker Compose is running: docker compose up -d"
         )
 
-    test_port = find_free_port(preferred_port)
-
-    # Flag to track server status
-    server_started = threading.Event()
-    server_error = []
-
-    def run_app():
-        try:
-            app.config["TESTING"] = True
-            # Signal that we're about to start
-            server_started.set()
-            app.run(host="127.0.0.1", port=test_port, debug=False, use_reloader=False)
-        except Exception as e:
-            server_error.append(e)
-            server_started.set()
-
-    thread = threading.Thread(target=run_app, daemon=True)
-    thread.start()
-
-    # Wait for server to start
-    server_started.wait(timeout=5)
-    if server_error:
-        raise RuntimeError(f"Failed to start server: {server_error[0]}")
-
-    # Give Flask a moment to fully initialize
-    time.sleep(2)
-
-    # Verify server is responding
-    max_retries = 10
-    for i in range(max_retries):
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                if s.connect_ex(("127.0.0.1", test_port)) == 0:
-                    break
-        except Exception:
-            pass
-        time.sleep(0.5)
-    else:
-        raise RuntimeError(f"Server did not start successfully on port {test_port}")
-
-    base_url = f"http://127.0.0.1:{test_port}"
+    print(f"\n✓ All services ready. Testing against {base_url}\n")
 
     yield base_url
 
@@ -188,8 +177,25 @@ def page(flask_server, request):
 
         page_instance = context.new_page()
 
-        # Enable console logging for debugging
-        page_instance.on("console", lambda msg: print(f"Browser console: {msg.text}"))
+        # Inject script to set test mode BEFORE the app JavaScript loads
+        page_instance.add_init_script("""
+            // Set test mode flag for React app
+            window.__CLERK_TEST_MODE__ = true;
+            
+            // Override fetch to add Authorization header to API calls
+            const originalFetch = window.fetch;
+            window.fetch = function(url, options = {}) {
+                if (typeof url === 'string' && url.includes('/api/') && !url.includes('/api/clerk-config')) {
+                    options.headers = options.headers || {};
+                    if (typeof options.headers.set === 'function') {
+                        options.headers.set('Authorization', 'Bearer mock-jwt-token');
+                    } else {
+                        options.headers['Authorization'] = 'Bearer mock-jwt-token';
+                    }
+                }
+                return originalFetch(url, options);
+            };
+        """)
 
         # Enable error logging
         page_instance.on("pageerror", lambda err: print(f"Browser error: {err}"))
@@ -273,8 +279,11 @@ def shared_project(flask_server):
         context = browser.new_context(base_url=flask_server)
         page = context.new_page()
 
-        # Create project
+        # Navigate to React create project page
         page.goto("/create-project")
+        page.wait_for_load_state("networkidle")
+
+        # Fill React form
         page.fill("#projectTitle", "Shared Test Project")
         page.fill(
             "#projectDescription",
@@ -282,12 +291,12 @@ def shared_project(flask_server):
         )
         page.click("button[type='submit']")
 
-        # Wait for redirect to project page
+        # Wait for React Router redirect to project page
         page.wait_for_url("**/project/**", timeout=60000)
         project_url = page.url
 
-        # Wait for papers to load
-        page.wait_for_selector(".recommendation-card", timeout=60000)
+        # Wait for papers to load via SSE
+        page.wait_for_selector(".recommendation-card", timeout=120000)
 
         context.close()
         browser.close()

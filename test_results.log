@@ -1,0 +1,132 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.11.7, pytest-9.0.2, pluggy-1.6.0 -- /Users/mohamedazizbouziri/Documents/Capstone-2025/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/mohamedazizbouziri/Documents/Capstone-2025
+configfile: pytest.ini
+plugins: playwright-0.7.2, anyio-4.12.0, base-url-2.1.0
+collecting ... collected 23 items
+
+tests/e2e/test_basic.py::test_homepage_loads PASSED                      [  4%]
+tests/e2e/test_basic.py::test_create_project_page_loads PASSED           [  8%]
+tests/e2e/test_basic.py::test_create_project_basic PASSED                [ 13%]
+tests/e2e/test_delete_project.py::TestDeleteProject::test_delete_project_button_exists PASSED [ 17%]
+tests/e2e/test_delete_project.py::TestDeleteProject::test_delete_project_flow PASSED [ 21%]
+tests/e2e/test_delete_project.py::TestDeleteProject::test_delete_project_confirmation_cancel PASSED [ 26%]
+tests/e2e/test_delete_project.py::TestDeleteProject::test_delete_multiple_projects PASSED [ 30%]
+tests/e2e/test_delete_project.py::TestDeleteProject::test_delete_button_styling PASSED [ 34%]
+tests/e2e/test_load_more.py::TestLoadMorePapers::test_load_more_button_exists_and_increases_count FAILED [ 39%]
+tests/e2e/test_load_more.py::TestLoadMorePapers::test_load_more_papers_complete_metadata FAILED [ 43%]
+tests/e2e/test_load_more.py::TestLoadMorePapers::test_load_more_metadata_consistency PASSED [ 47%]
+tests/e2e/test_load_more.py::TestLoadMorePapers::test_load_more_button_disabled_when_exhausted PASSED [ 52%]
+tests/e2e/test_paper_rating.py::TestPaperRating::test_rating_persists_and_updates_ui PASSED [ 56%]
+tests/e2e/test_paper_rating.py::TestPaperRating::test_multiple_paper_ratings PASSED [ 60%]
+tests/e2e/test_paper_rating.py::TestPaperRating::test_cannot_rate_replaced_paper PASSED [ 65%]
+tests/e2e/test_recommendations.py::TestRecommendationsFlow::test_create_project_and_get_recommendations PASSED [ 69%]
+tests/e2e/test_recommendations.py::TestRecommendationsFlow::test_paper_metadata_display PASSED [ 73%]
+tests/e2e/test_recommendations.py::TestRecommendationsFlow::test_pdf_and_open_access_buttons PASSED [ 78%]
+tests/e2e/test_recommendations.py::TestRecommendationsFlow::test_read_paper_link PASSED [ 82%]
+tests/e2e/test_recommendations.py::TestRecommendationsFlow::test_search_papers PASSED [ 86%]
+tests/e2e/test_recommendations.py::TestRecommendationsFlow::test_filter_by_rating PASSED [ 91%]
+tests/e2e/test_recommendations.py::TestRecommendationsFlow::test_sse_connection_established PASSED [ 95%]
+tests/e2e/test_recommendations.py::TestRecommendationsFlow::test_paper_count_matches_request PASSED [100%]
+
+=================================== FAILURES ===================================
+_____ TestLoadMorePapers.test_load_more_button_exists_and_increases_count ______
+
+self = <e2e.test_load_more.TestLoadMorePapers object at 0x104a96a50>
+page = <Page url='http://localhost/project/c04fa83b-b505-4af5-81bb-7056301490e2'>
+test_project_data = {'description': 'deep learning models for computer vision and image recognition using convolutional neural networks', 'name': 'Test Project E2E'}
+
+    def test_load_more_button_exists_and_increases_count(self, page, test_project_data):
+        """Test that Load More button exists and clicking it increases paper count."""
+        # Create project and navigate to papers
+        page.goto("/create-project")
+        page.fill("#projectTitle", test_project_data["name"])
+        page.fill("#projectDescription", test_project_data["description"])
+        page.click("button[type='submit']")
+    
+        page.wait_for_url("**/project/**", timeout=120000)
+        page.wait_for_selector(".recommendation-card", timeout=120000)
+        time.sleep(3)
+    
+        # Check button exists
+        load_more_btn = page.locator("#loadMoreBtn")
+        assert load_more_btn.count() > 0, "Load More Papers button not found"
+    
+        # Get initial paper count
+        initial_count = page.locator(".recommendation-card").count()
+    
+        # Click Load More and verify count increases
+        if load_more_btn.is_visible():
+            load_more_btn.click()
+            page.wait_for_function(
+                "document.getElementById('loadMoreBtn') && !document.getElementById('loadMoreBtn').disabled",
+                timeout=120000,
+            )
+            time.sleep(1)
+    
+            new_count = page.locator(".recommendation-card").count()
+>           assert new_count > initial_count, (
+                f"Paper count didn't increase: {initial_count} -> {new_count}"
+            )
+E           AssertionError: Paper count didn't increase: 10 -> 10
+E           assert 10 > 10
+
+tests/e2e/test_load_more.py:39: AssertionError
+----------------------------- Captured stdout call -----------------------------
+Browser console: Failed to load resource: the server responded with a status of 500 (INTERNAL SERVER ERROR)
+Browser console: Update_newsletter_papers status failed: 500 {error: malformed node or string: None}
+--------------------------- Captured stdout teardown ---------------------------
+
+ Screenshot saved: /Users/mohamedazizbouziri/Documents/Capstone-2025/tests/e2e/screenshots/test_load_more_button_exists_and_increases_count_failure.png
+__________ TestLoadMorePapers.test_load_more_papers_complete_metadata __________
+
+self = <e2e.test_load_more.TestLoadMorePapers object at 0x104a97150>
+page = <Page url='http://localhost/project/3809078c-c7a7-4915-982e-8fd5ce7b4b99'>
+test_project_data = {'description': 'deep learning models for computer vision and image recognition using convolutional neural networks', 'name': 'Test Project E2E'}
+
+    def test_load_more_papers_complete_metadata(self, page, test_project_data):
+        """
+        Test that papers loaded via Load More have complete metadata:
+        authors, year, venue, and citation metrics.
+        """
+        # Create project and navigate to papers
+        page.goto("/create-project")
+        page.fill("#projectTitle", test_project_data["name"])
+        page.fill("#projectDescription", test_project_data["description"])
+        page.click("button[type='submit']")
+    
+        page.wait_for_url("**/project/**", timeout=120000)
+        page.wait_for_selector(".recommendation-card", timeout=120000)
+        time.sleep(3)
+    
+        initial_count = page.locator(".recommendation-card").count()
+    
+        # Click Load More
+        load_more_btn = page.locator("#loadMoreBtn")
+        if load_more_btn.count() > 0 and load_more_btn.is_visible():
+            load_more_btn.click()
+            page.wait_for_function(
+                "document.getElementById('loadMoreBtn') && !document.getElementById('loadMoreBtn').disabled",
+                timeout=120000,
+            )
+            time.sleep(1)
+    
+            all_papers = page.locator(".recommendation-card")
+>           assert all_papers.count() > initial_count, "No new papers were loaded"
+E           AssertionError: No new papers were loaded
+E           assert 10 > 10
+E            +  where 10 = count()
+E            +    where count = <Locator frame=<Frame name= url='http://localhost/project/3809078c-c7a7-4915-982e-8fd5ce7b4b99'> selector='.recommendation-card'>.count
+
+tests/e2e/test_load_more.py:71: AssertionError
+----------------------------- Captured stdout call -----------------------------
+Browser console: Failed to load resource: the server responded with a status of 500 (INTERNAL SERVER ERROR)
+Browser console: Update_newsletter_papers status failed: 500 {error: malformed node or string: None}
+--------------------------- Captured stdout teardown ---------------------------
+
+ Screenshot saved: /Users/mohamedazizbouziri/Documents/Capstone-2025/tests/e2e/screenshots/test_load_more_papers_complete_metadata_failure.png
+=========================== short test summary info ============================
+FAILED tests/e2e/test_load_more.py::TestLoadMorePapers::test_load_more_button_exists_and_increases_count
+FAILED tests/e2e/test_load_more.py::TestLoadMorePapers::test_load_more_papers_complete_metadata
+=================== 2 failed, 21 passed in 159.69s (0:02:39) ===================

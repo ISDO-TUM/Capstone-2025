@@ -1,5 +1,4 @@
 #!/bin/sh
-set -e
 
 echo "Starting application initialization..."
 
@@ -20,7 +19,7 @@ export PGROLL_PG_URL="postgres://${DB_USER:-user}:${DB_PASSWORD:-password}@${DB_
 pgroll init || true
 
 # Run database migrations
-if [ "$DEPLOY_ENV" = "production" ]; then
+if [ "$DEPLOYMENT_ENV" = "production" ]; then
     echo "Running production migrations without --complete"
     pgroll migrate migrations/
 else
@@ -31,4 +30,9 @@ echo "Migrations complete!"
 
 # Start the application
 echo "Starting Flask application..."
-exec uv run app.py --no-dev
+# Try uv first, fallback to python
+if command -v uv > /dev/null 2>&1; then
+  exec uv run python app.py
+else
+  exec python app.py
+fi

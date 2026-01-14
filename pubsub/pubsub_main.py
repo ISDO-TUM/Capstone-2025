@@ -54,7 +54,7 @@ def update_newsletter_papers(project_id: str):
     # 1. Get queries for project
     logger.info("  ↳ fetching queries for project…")
     qs = get_queries_for_project(owner_id, project_id)
-    if not qs:
+    if not qs or qs[0] is None:
         logger.error(f"  ✖ no queries found for project {project_id}")
         return
     queries_str = qs[0]
@@ -122,16 +122,34 @@ def update_newsletter_papers(project_id: str):
     logger.info(f"    ✓ {len(current)} existing newsletter entries")
     potential = []
     for h in current:
-        potential.append(get_paper_by_hash(h[0]))
+        paper = get_paper_by_hash(h[0])
+        if paper:  # Only add if paper exists
+            potential.append(paper)
     for rid, _score in top_results:
-        potential.append(get_paper_by_hash(rid))
+        paper = get_paper_by_hash(rid)
+        if paper:  # Only add if paper exists
+            potential.append(paper)
     logger.info(f"    ✓ total candidates: {len(potential)}")
+
+    # If no valid candidates, return early
+    if not potential:
+        logger.info(
+            f"[update_newsletter_papers] No valid paper candidates for project {project_id}"
+        )
+        return
 
     # 8. Call agent
     logger.info("  ↳ calling LLM agent to pick+summarize…")
     agent_out = call_temp_agent(str(potential), project_prompt, str(k)).content
     logger.info(f"    ✓ raw agent output: {agent_out}")
-    agent_response = ast.literal_eval(agent_out)
+
+    # Parse agent response with error handling
+    try:
+        agent_response = ast.literal_eval(agent_out)
+    except (ValueError, SyntaxError) as e:
+        logger.error(f"Failed to parse agent response: {e}")
+        logger.error(f"Raw output was: {agent_out}")
+        return  # Exit with no error
 
     recommendation_hashes = []
     summaries = []

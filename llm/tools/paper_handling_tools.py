@@ -1043,6 +1043,7 @@ def replace_low_rated_paper(project_id: str, low_rated_paper_hash: str) -> str:
     cursor.close()
     connection.close()
 
+    # Include all paper metadata in the response
     return json.dumps(
         {
             "status": "success",
@@ -1052,5 +1053,16 @@ def replace_low_rated_paper(project_id: str, low_rated_paper_hash: str) -> str:
             "replacement_title": replacement_paper.get("title", "Unknown"),
             "replacement_summary": replacement_summary,
             "replacement_url": replacement_paper.get("landing_page_url", "N/A"),
+            "replacement_authors": replacement_paper.get("authors"),
+            "replacement_publication_date": replacement_paper.get("publication_date"),
+            "replacement_fwci": replacement_paper.get("fwci"),
+            "replacement_cited_by_count": replacement_paper.get("cited_by_count"),
+            "replacement_citation_normalized_percentile": replacement_paper.get(
+                "citation_normalized_percentile"
+            ),
+            "replacement_venue_name": replacement_paper.get("venue_name"),
+            "replacement_is_oa": replacement_paper.get("is_oa"),
+            "replacement_oa_status": replacement_paper.get("oa_status"),
+            "replacement_pdf_url": replacement_paper.get("pdf_url"),
         }
     )

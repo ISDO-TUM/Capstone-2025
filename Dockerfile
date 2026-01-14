@@ -12,7 +12,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Install PostgreSQL client tools, wget, jq, and pgroll
 RUN apt-get update && \
-    apt-get install -y postgresql-client wget jq && \
+    apt-get install -y postgresql-client wget jq dos2unix && \
     rm -rf '/var/lib/apt/lists/*'
 
 # Set environment variables for Python
@@ -40,6 +40,5 @@ ENV DB_PASSWORD="your_db_password"
 ENV OPENAI_API_KEY="your_openai_api_key"
 ENV CHROMA_HOST="chromadb"
 
-# Run app.py when the container launches
-RUN chmod +x /app/scripts/startup.sh
+RUN dos2unix /app/scripts/startup.sh && chmod +x /app/scripts/startup.sh
 ENTRYPOINT ["/app/scripts/startup.sh"]

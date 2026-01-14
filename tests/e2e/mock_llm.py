@@ -60,6 +60,19 @@ class MockLLM:
             ),
             # Paper summary
             "paper_summary": "This paper presents novel approaches to machine learning in healthcare, directly relevant to your research interests in automated diagnosis systems.",
+            # Newsletter paper recommendations
+            "newsletter_recommendations": json.dumps(
+                [
+                    {
+                        "paper_hash": "test_hash_1",
+                        "summary": "A relevant paper about machine learning in healthcare with novel diagnostic approaches.",
+                    },
+                    {
+                        "paper_hash": "test_hash_2",
+                        "summary": "Research on automated medical diagnosis systems using deep learning techniques.",
+                    },
+                ]
+            ),
             # Default response
             "default": json.dumps(
                 {"status": "success", "message": "Mock LLM response"}
@@ -89,6 +102,9 @@ class MockLLM:
             return MockLLMResponse(self.responses["filter_detection"])
         elif "qc_decision" in prompt_text or "quality control" in prompt_text:
             return MockLLMResponse(self.responses["qc_decision"])
+        elif "select the top" in prompt_text and "paper_hash" in prompt_text:
+            # Newsletter recommendation prompt
+            return MockLLMResponse(self.responses["newsletter_recommendations"])
         elif "summary" in prompt_text or "relevant" in prompt_text:
             return MockLLMResponse(self.responses["paper_summary"])
         else:

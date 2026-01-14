@@ -10,9 +10,20 @@ Responsibilities:
 
 import logging
 from openai import OpenAI
-from llm.LLMDefinition import OPENAI_API_KEY, LLM
+from llm.LLMDefinition import OPENAI_API_KEY, LLM, TEST_MODE
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+# Use mock client in TEST_MODE to avoid real API calls
+if TEST_MODE:
+    from unittest.mock import MagicMock
+
+    client = MagicMock()
+    # Mock embeddings.create to return standard 1536-dim vector
+    mock_response = MagicMock()
+    mock_response.data = [MagicMock(embedding=[0.1] * 1536)]
+    client.embeddings.create.return_value = mock_response
+else:
+    client = OpenAI(api_key=OPENAI_API_KEY)
+
 logger = logging.getLogger(__name__)
 
 

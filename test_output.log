@@ -1,0 +1,12 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.11.7, pytest-9.0.2, pluggy-1.6.0 -- /Users/mohamedazizbouziri/Documents/Capstone-2025/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/mohamedazizbouziri/Documents/Capstone-2025
+configfile: pytest.ini
+plugins: playwright-0.7.2, anyio-4.12.0, base-url-2.1.0
+collecting ... ERROR: not found: /Users/mohamedazizbouziri/Documents/Capstone-2025/tests/e2e/test_recommendations.py::TestRecommendations::test_project_creation
+(no match in any of [<Module test_recommendations.py>])
+
+collected 0 items
+
+============================ no tests ran in 0.01s =============================
