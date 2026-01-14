@@ -168,9 +168,6 @@ def authenticate_user():
         # Authenticate the request using Clerk
         hostname = HOSTNAME
         if hostname:
-            hostname = (
-                hostname.replace("http://", "").replace("https://", "").split(":")[0]
-            )
             auth_options = AuthenticateRequestOptions(authorized_parties=[hostname])
         else:
             auth_options = AuthenticateRequestOptions()
