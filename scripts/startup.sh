@@ -11,16 +11,22 @@ done
 
 echo "Database is ready!"
 
-# Run migrations with pgroll (if available)
-if command -v pgroll > /dev/null 2>&1; then
-  echo "Running database migrations with pgroll..."
-  export PGROLL_PG_URL="postgres://${DB_USER:-user}:${DB_PASSWORD:-password}@${DB_HOST:-db}:${DB_PORT:-5432}/${DB_NAME:-papers}?sslmode=disable"
-  pgroll init || true
-  pgroll migrate migrations/ --complete || true
-  echo "Migrations complete!"
+# Run migrations with pgroll
+echo "Running database migrations with pgroll..."
+export PGROLL_PG_URL="postgres://${DB_USER:-user}:${DB_PASSWORD:-password}@${DB_HOST:-db}:${DB_PORT:-5432}/${DB_NAME:-papers}?sslmode=disable"
+
+# Initialize pgroll (safe to run multiple times)
+pgroll init || true
+
+# Run database migrations
+if [ "$DEPLOYMENT_ENV" = "production" ]; then
+    echo "Running production migrations without --complete"
+    pgroll migrate migrations/
 else
-  echo "pgroll not found, skipping migrations..."
+    echo "Running preview migrations with --complete"
+    pgroll migrate migrations/ --complete
 fi
+echo "Migrations complete!"
 
 # Start the application
 echo "Starting Flask application..."

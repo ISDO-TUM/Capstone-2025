@@ -1,0 +1,16 @@
+# === This Dockerfile is used for pgroll service on Dokploy ===
+
+# Install pgroll
+FROM golang:1.24-bookworm
+ENV CGO_ENABLED=1
+RUN go install github.com/xataio/pgroll@v0.14.3
+ENV PATH="/go/bin:${PATH}"
+
+# Get DB_PASSWORD from Build-time Args set on Dokploy and convert to environment variables
+ARG DB_PASSWORD_ARG
+ENV DB_PASSWORD=${DB_PASSWORD_ARG}
+
+# Copy only necessary directories
+WORKDIR /app
+COPY migrations /app/migrations
+COPY scripts /app/scripts
