@@ -197,8 +197,17 @@ def page(flask_server, request):
             };
         """)
 
-        # Enable console logging for debugging
-        page_instance.on("console", lambda msg: print(f"Browser console: {msg.text}"))
+        # Filter console logs to suppress expected errors
+        def handle_console(msg):
+            # Suppress common expected errors during tests
+            suppressed_patterns = [
+                "Failed to load resource: the server responded with a status of 400",
+                "Failed to rate paper",
+            ]
+            if not any(pattern in msg.text for pattern in suppressed_patterns):
+                print(f"Browser console: {msg.text}")
+
+        page_instance.on("console", handle_console)
 
         # Enable error logging
         page_instance.on("pageerror", lambda err: print(f"Browser error: {err}"))
