@@ -87,7 +87,7 @@ class NoResultsHandler(BaseNode[AgentState, AgentDeps]):
         Be specific and use the actual numbers from the analysis data.
         """
         try:
-            llm_response = LLM.invoke(smart_explanation_prompt)
+            llm_response = await LLM(smart_explanation_prompt)
             explanation = (
                 llm_response.content
                 if hasattr(llm_response, "content")

@@ -8,36 +8,49 @@ Responsibilities:
 - Used throughout the agent and ingestion flows for vector search and ranking
 """
 
+from __future__ import annotations
+
+import asyncio
 import logging
-from openai import OpenAI
-from llm.LLMDefinition import OPENAI_API_KEY, LLM, TEST_MODE
+from typing import List
 
-# Use mock client in TEST_MODE to avoid real API calls
-if TEST_MODE:
-    from unittest.mock import MagicMock
+from pydantic import BaseModel
+from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIModel
 
-    client = MagicMock()
-    # Mock embeddings.create to return standard 1536-dim vector
-    mock_response = MagicMock()
-    mock_response.data = [MagicMock(embedding=[0.1] * 1536)]
-    client.embeddings.create.return_value = mock_response
-else:
-    client = OpenAI(api_key=OPENAI_API_KEY)
+from llm.LLMDefinition import OPENAI_API_KEY, LLM
 
 logger = logging.getLogger(__name__)
 
 
-def embed_string(text, model="text-embedding-3-small"):
+class EmbeddingResponse(BaseModel):
+    vector: List[float]
+
+
+EmbeddingAgent = Agent(
+    model=OpenAIModel(
+        model_name="text-embedding-3-small",
+        api_key=OPENAI_API_KEY,
+    ),
+    result_type=EmbeddingResponse,
+)
+
+
+def embed_string(text: str) -> list[float]:
     """
-    Embed a string using the specified OpenAI embedding model.
+    Embed a string using the specified EmbeddingAgent.
     Args:
         text (str): The text to embed.
-        model (str): The embedding model to use (default: 'text-embedding-3-small').
     Returns:
         list[float]: The embedding vector.
     """
     text = text.replace("\n", " ")
-    return client.embeddings.create(input=[text], model=model).data[0].embedding
+
+    async def _embed():
+        result = await EmbeddingAgent.run(text)
+        return result.data.vector
+
+    return asyncio.run(_embed())
 
 
 def embed_user_profile(text):
@@ -95,7 +108,7 @@ def embed_paper_text(paper_text: str) -> list[float]:
     Summary:
     """
 
-    response = LLM.invoke(prompt)
+    response = asyncio.run(LLM(prompt))
     summary = str(response.content).strip()
     logger.info("Generated summary: " + summary)
 

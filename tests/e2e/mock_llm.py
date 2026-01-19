@@ -25,7 +25,7 @@ class MockLLMResponse:
 class MockLLM:
     """
     Mock LLM that returns deterministic responses based on the prompt.
-    Mimics the OpenAIChatModel interface used in production.
+    Mimics the PydanticAIChatModel interface used in production.
     """
 
     def __init__(self, **kwargs):
