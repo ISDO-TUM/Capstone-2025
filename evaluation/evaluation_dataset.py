@@ -1,9 +1,13 @@
+import asyncio
+
 import pyalex
 import requests
 from pypdf import PdfReader
 import io
 import os
-import openai
+from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic import BaseModel
 import csv
 import random
 from abc import ABC, abstractmethod
@@ -169,63 +173,48 @@ class RelevantPapersFinder(ABC):
         pass
 
 
-class OpenAIPapersFinder(RelevantPapersFinder):
-    """Finds relevant papers using the OpenAI API."""
+class PapersResponse(BaseModel):
+    papers: list[str]
 
-    def find_papers(self, paper_text, paper=None):
+
+class PapersFinder(RelevantPapersFinder):
+    """Finds relevant papers using the OpenAI API through PydanticAI."""
+
+    async def find_papers(self, paper_text, paper=None):
         if not paper_text:
-            print("OpenAIPapersFinder requires the 'paper_text'.")
+            print("PapersFinder requires the 'paper_text'.")
             return []
         try:
-            client = openai.OpenAI()
-            prompt = """
+            # Aggressively clean the string
+            cleaned_paper_text = paper_text[:8000].replace("\\", "").replace("\n", " ")
+
+            prompt = f"""
             You are a research assistant. I will provide you with the full text of a research paper.
             Your task is to identify the "Related Work" section (or a similar section with a different name, like "Literature Review").
             From this section, please extract the titles of the most relevant cited papers.
             Return a JSON object with a single key "papers" containing a list of the paper titles as strings.
             For example: {"papers": ["Paper Title 1", "Paper Title 2", "Paper Title 3"]}
             If no papers are found, return an empty list: {"papers": []}
+            Text:
+            {cleaned_paper_text}
             """
 
-            # Aggressively clean the string
-            cleaned_paper_text = paper_text[:8000].replace("\\", "").replace("\n", " ")
-
-            response = client.chat.completions.create(
-                model="gpt-5.1",
-                response_format={"type": "json_object"},
-                messages=[
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": cleaned_paper_text},
-                ],
+            agent = Agent(
+                model=OpenAIModel(model_name="gpt-5.1"),
+                result_type=PapersResponse,
             )
-
-            response_content = response.choices[0].message.content
-            try:
-                import json
-
-                json_response = json.loads(response_content)
-                if "papers" in json_response and isinstance(
-                    json_response["papers"], list
-                ):
-                    return json_response["papers"]
-                else:
-                    print(
-                        f"OpenAI response did not contain a valid 'papers' list: {response_content}"
-                    )
-                    return []
-            except json.JSONDecodeError:
-                print(f"Failed to decode JSON from OpenAI response: {response_content}")
-                return []
+            response = await agent.run(prompt)
+            return response.data.papers
 
         except Exception as e:
             print(f"An error occurred while communicating with OpenAI: {e}")
-            return None
+            return []
 
 
 class MockPapersFinder(RelevantPapersFinder):
     """Finds relevant papers using mock data for testing."""
 
-    def find_papers(self, paper_text=None, paper=None, num_papers_to_return=3):
+    async def find_papers(self, paper_text=None, paper=None, num_papers_to_return=3):
         print("Using mock data for relevant cited papers.")
         if not paper:
             print("MockPapersFinder requires the 'paper' object.")
@@ -471,12 +460,8 @@ def generate_pairs_csv(citing_paper, papers_list, label, filename="paper_pairs.c
                 print(f"Skipping paper due to missing ID: {title}")
 
 
-if __name__ == "__main__":
-    # To use the OpenAI implementation, change the line below to:
-    from config import OPENAI_API_KEY
-
-    openai.api_key = OPENAI_API_KEY
-    finder = OpenAIPapersFinder()
+async def main():
+    finder = PapersFinder()
 
     # finder = MockPapersFinder()
 
@@ -512,7 +497,7 @@ if __name__ == "__main__":
             print("Citing paper has abstract and referenced works. Proceeding.")
 
             paper_text = None
-            if isinstance(finder, OpenAIPapersFinder):
+            if isinstance(finder, PapersFinder):
                 paper_text = get_paper_full_text(paper)
                 if not paper_text:
                     print(
@@ -520,7 +505,9 @@ if __name__ == "__main__":
                     )
                     continue
 
-            relevant_papers = finder.find_papers(paper_text=paper_text, paper=paper)
+            relevant_papers = await finder.find_papers(
+                paper_text=paper_text, paper=paper
+            )
 
             if relevant_papers:
                 print(
@@ -581,3 +568,7 @@ if __name__ == "__main__":
     print(
         f"\nFinished dataset generation. Total pairs generated: {total_pairs_generated}"
     )
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

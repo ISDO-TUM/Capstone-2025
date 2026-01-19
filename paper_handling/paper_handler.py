@@ -262,7 +262,7 @@ def search_and_filter_papers(
     return available_papers
 
 
-def generate_paper_summary(paper, project_description):
+async def generate_paper_summary(paper, project_description):
     """
     Generate a summary for a paper explaining its relevance to the project.
     Args:
@@ -283,7 +283,7 @@ def generate_paper_summary(paper, project_description):
     Example: "Explores machine learning applications in healthcare diagnostics, addressing your interest in medical AI systems."
     """
     try:
-        summary_response = LLM.invoke(summary_prompt)
+        summary_response = await LLM(summary_prompt)
         if hasattr(summary_response, "content"):
             content = summary_response.content
             summary = (

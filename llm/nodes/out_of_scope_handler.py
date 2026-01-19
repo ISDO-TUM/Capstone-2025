@@ -72,14 +72,14 @@ class OutOfScopeHandler(BaseNode[AgentState, AgentDeps]):
         """
 
         try:
-            explanation_response = LLM.invoke(explanation_prompt)
+            explanation_response = await LLM(explanation_prompt)
             explanation = (
                 explanation_response.content
                 if hasattr(explanation_response, "content")
                 else str(explanation_response)
             )
 
-            short_explanation_response = LLM.invoke(short_explanation_prompt)
+            short_explanation_response = await LLM(short_explanation_prompt)
             short_explanation = (
                 short_explanation_response.content
                 if hasattr(short_explanation_response, "content")

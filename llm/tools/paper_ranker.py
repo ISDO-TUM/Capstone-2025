@@ -10,10 +10,14 @@ All ranking and retrieval tools are designed to be used by the Stategraph agent 
 """
 
 import logging
+from typing import List
+
+from pydantic import BaseModel
+
+from llm.LLMDefinition import TextAgent
 from llm.Embeddings import embed_user_profile
-from llm.tools.plain_tool import tool
 from chroma_db.chroma_vector_db import chroma_db
-from database.papers_database_handler import get_papers_by_hash, get_all_papers
+from database.papers_database_handler import get_papers_by_hash
 from database.projects_database_handler import (
     get_user_profile_embedding,
     add_user_profile_embedding,
@@ -24,25 +28,35 @@ from database.projects_database_handler import (
 logger = logging.getLogger(__name__)
 
 
-@tool
-def get_best_papers(project_id: str, num_candidates: int = 10) -> list[dict]:
+class GetBestPapersInput(BaseModel):
+    project_id: str
+    num_candidates: int = 10
+
+
+class PaperMetadata(BaseModel):
+    paper_hash: str
+    title: str
+    abstract: str
+    authors: List[str] = []
+    publication_date: str = ""
+    landing_page_url: str = ""
+
+
+class GetBestPapersOutput(BaseModel):
+    papers: List[PaperMetadata]
+
+
+@TextAgent.tool_plain
+def get_best_papers(project_id: str, num_candidates: int = 10) -> GetBestPapersOutput:
     """
     Tool Name: get_best_papers
-    Returns a list of recommended papers based on the project ID. If the agent want to apply filtering, the agent will increase the
-    number of candidates to a higher number, e.g. 100 or 1000. To ensure that the agent can still return a reasonable number of papers, the default is set to 10.
-
-    Args:
-        project_id (str): The project ID to get papers for and to fetch the user profile embedding.
-        num_candidates (int): The number of candidate papers to return (default 10).
-    Returns:
-        list[dict]: List of paper metadata dictionaries, ordered by similarity.
-    Side effects:
-        May create and store a new user profile embedding if not present.
+    Returns a list of recommended papers based on the project ID. If the agent wants to apply filtering,
+    the agent can increase the number of candidates (e.g., 100 or 1000). Default is 10.
     """
     owner_id = get_project_owner_id(project_id)
     if not owner_id:
         logger.error(f"Unable to determine owner for project {project_id}")
-        return []
+        return GetBestPapersOutput(papers=[])
 
     try:
         embedded_profile = get_user_profile_embedding(owner_id, project_id)
@@ -56,12 +70,12 @@ def get_best_papers(project_id: str, num_candidates: int = 10) -> list[dict]:
 
             if not description:
                 logger.error(f"No project description found for project {project_id}")
-                return []
+                return GetBestPapersOutput(papers=[])
 
             embedded_profile = embed_user_profile(description)
             if not embedded_profile:
                 logger.error(f"Failed to create embedding for project {project_id}")
-                return []
+                return GetBestPapersOutput(papers=[])
 
             add_user_profile_embedding(owner_id, project_id, embedded_profile)
             logger.info(f"Created and saved embedding for project {project_id}")
@@ -70,16 +84,16 @@ def get_best_papers(project_id: str, num_candidates: int = 10) -> list[dict]:
         logger.error(
             f"Error getting or creating user profile embedding for project {project_id}: {e}"
         )
-        return []
+        return GetBestPapersOutput(papers=[])
 
     if not embedded_profile:
         logger.warning("Embedded profile is None, aborting process.")
-        return []
+        return GetBestPapersOutput(papers=[])
 
     try:
         if num_candidates != 10:
             logger.info(
-                f"Agent requested {num_candidates} candidates, which is different than the default of 10. This will allow for more filtering."
+                f"Agent requested {num_candidates} candidates, which is different from the default of 10."
             )
 
         paper_hashes = chroma_db.perform_similarity_search(
@@ -91,44 +105,31 @@ def get_best_papers(project_id: str, num_candidates: int = 10) -> list[dict]:
 
     except Exception as e:
         logger.error(f"Error performing similarity search: {e}")
-        return []
+        return GetBestPapersOutput(papers=[])
 
     if not paper_hashes:
         logger.info("No similar papers found.")
-        return []
+        return GetBestPapersOutput(papers=[])
 
     try:
         # Debug: Check what hashes we're looking for
         logger.info(f"Looking for hashes: {paper_hashes[:3]}...")  # Show first 3
 
-        paper_metadata = get_papers_by_hash(paper_hashes)
-        logger.info(f"Paper metadata: {paper_metadata}")
+        paper_metadata_list = get_papers_by_hash(paper_hashes)
         logger.info(
-            f"Number of papers found: {len(paper_metadata) if paper_metadata else 0}"
+            f"Number of papers found: {len(paper_metadata_list) if paper_metadata_list else 0}"
         )
-
-        # Debug: Check if any of the hashes exist in the database
-        if not paper_metadata and paper_hashes:
-            all_papers = get_all_papers()
-            all_hashes = [
-                p.get("paper_hash") for p in all_papers if p.get("paper_hash")
-            ]
-            logger.info(f"Sample hashes in database: {all_hashes[:3]}")
-            logger.info(
-                f"Any matching hashes: {any(h in all_hashes for h in paper_hashes[:3])}"
-            )
 
     except Exception as e:
         logger.error(f"Error linking hashes to metadata: {e}")
-        return []
+        return GetBestPapersOutput(papers=[])
 
-    # Debug: Check if there are any papers in the database
-    try:
-        all_papers = get_all_papers()
-        logger.info(f"Total papers in database: {len(all_papers)}")
-        if all_papers:
-            logger.info(f"Sample paper hash: {all_papers[0].get('paper_hash', 'N/A')}")
-    except Exception as e:
-        logger.error(f"Error checking database state: {e}")
+    # Transform raw dicts into Pydantic models
+    papers = []
+    for paper in paper_metadata_list or []:
+        try:
+            papers.append(PaperMetadata(**paper))
+        except Exception as e:
+            logger.warning(f"Skipping paper due to invalid format: {e}")
 
-    return paper_metadata if paper_metadata else []
+    return GetBestPapersOutput(papers=papers)
