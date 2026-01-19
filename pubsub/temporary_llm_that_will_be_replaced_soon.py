@@ -22,6 +22,6 @@ Respond with a dict list of the paper hashes of the most relevant papers. With t
 """
 
 
-def call_temp_agent(papers: str, project_prompt: str, k: str):
+async def call_temp_agent(papers: str, project_prompt: str, k: str):
     prompt_text = PROMPT_TEMPLATE.format(topic=project_prompt, papers=papers, k=k)
-    return llm.invoke(prompt_text)
+    return await LLM(prompt_text)

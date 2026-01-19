@@ -100,7 +100,7 @@ class QualityControl(BaseNode[AgentState, AgentDeps]):
             """
 
             try:
-                filter_response = LLM.invoke(filter_detection_prompt)
+                filter_response = await LLM(filter_detection_prompt)
                 filter_response_content = (
                     filter_response.content
                     if hasattr(filter_response, "content")
@@ -150,7 +150,7 @@ class QualityControl(BaseNode[AgentState, AgentDeps]):
             "reason": "..."
             }}
             """
-            qc_response = LLM.invoke(qc_prompt)
+            qc_response = await LLM(qc_prompt)
             qc_response_content = (
                 qc_response.content
                 if hasattr(qc_response, "content")
