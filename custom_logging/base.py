@@ -92,20 +92,6 @@ class StructuredLogger:
             message (str): Description of what happened.
             metadata (Optional[dict]): Additional structured data relevant to this specific event.
         """
-        return LogContext(
-            project_id=project_id_ctx.get() or "unknown",
-            user_id=user_id_ctx.get() or "unknown",
-            component=self.component,
-        )
-
-    def info(self, message: str, metadata: Optional[dict] = None):
-        """
-        Log an informational message.
-
-        Args:
-            message (str): Description of what happened.
-            metadata (Optional[dict]): Additional structured data relevant to this specific event.
-        """
         context = self._get_current_context()
         log_data = LogData(
             context=context,
