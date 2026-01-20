@@ -183,7 +183,7 @@ else:
         "gpt-5-nano": OpenAIChatModel(_client, model="gpt-5-nano", temperature=0.3),
     }
 
-LLM = _models["gpt-5.1"]
+LLM = _models["gpt-5"]
 
 
 def get_llm(model_name: str):
