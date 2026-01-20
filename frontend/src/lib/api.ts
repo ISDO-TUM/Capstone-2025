@@ -81,7 +81,7 @@ export const projectsApi = {
   /**
    * Create a new project
    */
-  async create(data: { title: string; description: string }): Promise<{ projectId: string }> {
+  async create(data: { title: string; description: string; logHistory: string; }): Promise<{ projectId: string }> {
     const fetchOptions = await getFetchOptions({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

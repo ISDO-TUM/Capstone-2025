@@ -11,7 +11,6 @@ from llm.state import AgentOutput, AgentState
 from llm.tools.paper_handling_tools import find_closest_paper_metrics
 from llm.tools.tooling_mock import AgentDeps
 from custom_logging import agent_logger
-from custom_logging.utils import calculate_openai_cost
 
 # --- Smart No-Results Handler Node ---
 

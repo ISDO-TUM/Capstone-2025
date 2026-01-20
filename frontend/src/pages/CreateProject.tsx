@@ -15,6 +15,7 @@ export default function CreateProject() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [extractedText, setExtractedText] = useState<string>("");
+  const [logHistory, setLogHistory] = useState<boolean>(false);
   const [errors, setErrors] = useState<{ title?: string; description?: string }>({});
 
   const handlePDFExtracted = (extractedText: string) => {
@@ -61,6 +62,7 @@ export default function CreateProject() {
       const result = await createProject.mutateAsync({
         title: title.trim(),
         description: combinedDescription,
+        logHistory: logHistory.toString(),
       });
       
       // Redirect to project overview with updateRecommendations flag
@@ -149,6 +151,32 @@ export default function CreateProject() {
               Upload a PDF to enhance your project recommendations. The content will be analyzed automatically.
             </p>
             <PDFUpload onExtracted={handlePDFExtracted} onRemoved={handlePDFRemoved} />
+          </div>
+
+          {/* Log History Checkbox */}
+          <div className="form-group">
+            <Label htmlFor="logHistory" className="text-[1.08rem] font-semibold text-[#1a237e] mb-2">
+              Allow Chat History Logging?
+            </Label>
+            <div className="checkbox-consent flex items-start gap-3 p-4 rounded-xl bg-white/70 shadow-sm border border-gray-200">
+              <input
+                type="checkbox"
+                id="logHistory"
+                name="logHistory"
+                checked={logHistory}
+                onChange={(e) => setLogHistory(e.target.checked)}
+                className="h-5 w-5 mt-0.5 rounded border-gray-300 text-[#1a237e] focus:ring-[#1a237e] focus:ring-2 focus:ring-offset-2"
+              />
+              <label 
+                htmlFor="logHistory" 
+                className="text-[1rem] font-medium text-[#1a237e] cursor-pointer"
+              >
+                I agree to enable chat history logging for this project.
+              </label>
+            </div>
+            <p className="text-sm text-text-light mt-2">
+              Leave unchecked to keep chat history logging disabled. This helps improve recommendations based on your interactions.
+            </p>
           </div>
 
           {/* Submit Button */}

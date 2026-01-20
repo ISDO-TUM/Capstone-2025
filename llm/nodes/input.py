@@ -29,19 +29,21 @@ class Input(BaseNode[AgentState, AgentDeps]):
     """
 
     user_message: str
+    project_id: str
 
     async def run(self, ctx: GraphRunContext[AgentState, AgentDeps]) -> OutOfScopeCheck:
         state = ctx.state
         user_query = self.user_message
+        project_id = self.project_id
 
         node_logger.log_begin(state.__dict__)
 
         # Extract project_id if appended to the user_query (e.g., '... project ID: <id>')
-        project_id = None
-        if "project ID:" in user_query:
-            parts = user_query.rsplit("project ID:", 1)
-            user_query = parts[0].strip()
-            project_id = parts[1].strip()
+        # project_id = None
+        # if "project ID:" in user_query:
+        #     parts = user_query.rsplit("project ID:", 1)
+        #     user_query = parts[0].strip()
+        #     project_id = parts[1].strip()
         # If the query is a single word or phrase, use it as the initial keyword
         keywords = []
         if user_query and len(user_query.split()) == 1:

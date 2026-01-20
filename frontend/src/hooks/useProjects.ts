@@ -40,7 +40,7 @@ export function useCreateProject() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { title: string; description: string }) =>
+    mutationFn: (data: { title: string; description: string; logHistory: string }) =>
       projectsApi.create(data),
     onSuccess: () => {
       // Invalidate projects list to refetch
