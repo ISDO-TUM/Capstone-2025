@@ -9,6 +9,7 @@ from llm.node_logger import NodeLogger
 from llm.state import AgentState
 from llm.tools.paper_ranker import get_best_papers
 from llm.tools.tooling_mock import AgentDeps
+from custom_logging import agent_logger
 
 logger = logging.getLogger("get_best_papers_node")
 logger.setLevel(logging.INFO)
@@ -67,12 +68,21 @@ class GetBestPapers(BaseNode[AgentState, AgentDeps]):
             elif isinstance(result, list):
                 papers_raw = result
 
+            agent_logger.add_metadata(
+                {
+                    "papers_retrieved_count": len(papers_raw),
+                    "has_filter_instructions": has_filter_instructions,
+                    "requested_retrieval_count": retrieval_count,
+                }
+            )
+
             logger.info(
                 f"Retrieved {len(papers_raw)} papers (filter instructions: {has_filter_instructions}, requested: {retrieval_count})"
             )
 
             state.papers_raw = papers_raw
         except Exception as e:
+            agent_logger.node_error(e)
             state.error = f"Get best papers node error: {e}"
 
         node_logger.log_end(state.__dict__)

@@ -10,6 +10,8 @@ from llm.node_logger import NodeLogger
 from llm.state import AgentOutput, AgentState
 from llm.tools.paper_handling_tools import find_closest_paper_metrics
 from llm.tools.tooling_mock import AgentDeps
+from custom_logging import agent_logger
+from custom_logging.utils import calculate_openai_cost
 
 # --- Smart No-Results Handler Node ---
 
@@ -84,6 +86,19 @@ class NoResultsHandler(BaseNode[AgentState, AgentDeps]):
         """
         try:
             llm_response = await LLM(smart_explanation_prompt)
+            llm_response = LLM.invoke(smart_explanation_prompt)
+            metadata = {
+                "prompt": smart_explanation_prompt,
+                # "model_name": llm_response.response_metadata["model_name"],
+                # "input_tokens": llm_response.usage_metadata["input_tokens"],
+                # "output_tokens": llm_response.usage_metadata["output_tokens"],
+                # "total_tokens": llm_response.usage_metadata["total_tokens"],
+                # "total_cost_in_usd": calculate_openai_cost(
+                #     llm_response.usage_metadata["input_tokens"],
+                #     llm_response.usage_metadata["output_tokens"],
+                # ),
+            }
+            agent_logger.add_metadata(metadata=metadata)
             explanation = (
                 llm_response.content
                 if hasattr(llm_response, "content")
@@ -95,7 +110,8 @@ class NoResultsHandler(BaseNode[AgentState, AgentDeps]):
                 "closest_values": closest_values,
                 "filter_criteria": filter_criteria_json,
             }
-        except Exception:
+        except Exception as e:
+            agent_logger.node_error(e, operation="generate_explanation")
             state.no_results_message = {
                 "type": "no_results",
                 "explanation": "No papers matched your filter. Please try broadening your search.",

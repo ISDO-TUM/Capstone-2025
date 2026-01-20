@@ -247,9 +247,7 @@ def authenticate_user():
                 )
 
             request.auth["profile_image_url"] = user_info.profile_image_url
-            api_logger.request_success(
-                method="GET", path=request.path, status_code=200
-            )
+            api_logger.request_success(method="GET", path=request.path, status_code=200)
         except Exception as e:
             status_code = 500  # default
             if hasattr(e, "status_code"):
@@ -302,7 +300,7 @@ def clerk_config():
             "publishableKey": CLERK_PUBLISHABLE_KEY,
             "frontendApiUrl": CLERK_FRONTEND_API_URL,
         }
-   )
+    )
 
 
 @app.route("/api/projects", methods=["POST"])
@@ -744,9 +742,7 @@ def api_update_newsletter():
     Returns:
         Response: JSON status message.
     """
-    api_logger.request_start(
-        method="POST", path="/api/pubsub/update_newsletter_papers"
-    )
+    api_logger.request_start(method="POST", path="/api/pubsub/update_newsletter_papers")
     if not request.auth:
         api_logger.request_error(
             method="POST",
@@ -1088,7 +1084,6 @@ def api_get_project(project_id):
     user_id = request.auth["user_id"]
     project_id_ctx.set(project_id)
     proj = get_project_by_id(user_id, project_id)
-    project_id_ctx.set(project_id)
     if not proj:
         api_logger.request_error(
             method="GET",
