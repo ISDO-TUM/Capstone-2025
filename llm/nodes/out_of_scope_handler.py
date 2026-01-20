@@ -10,7 +10,6 @@ from llm.node_logger import NodeLogger
 from llm.state import AgentOutput, AgentState
 from llm.tools.tooling_mock import AgentDeps
 from custom_logging import agent_logger
-from custom_logging.utils import calculate_openai_cost
 
 logger = logging.getLogger("out_of_scope_handler_node")
 logger.setLevel(logging.INFO)

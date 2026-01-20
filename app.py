@@ -153,6 +153,7 @@ def setup_logging(path: str = "custom_logging/config.json"):
     Args:
         path (str): Path to the JSON configuration file. Defaults to "custom_logging/config.json".
     """
+    os.makedirs("logs", exist_ok=True)
     config_file = pathlib.Path(path)
     with open(config_file) as f_in:
         config = json.load(f_in)
@@ -327,6 +328,7 @@ def api_create_project():
     title = data.get("title")
     desc = data.get("description")
     log_history_string = data.get("logHistory")
+    logger.info(f"Log consent: {log_history_string}")
     log_history = log_history_string.lower() == "true"
     if not title or not desc or not log_history_string:
         api_logger.request_error(
@@ -519,7 +521,7 @@ def get_recommendations():
                 print(f"Deleted {removed} row(s).")
 
                 for response_part in trigger_stategraph_agent_show_thoughts(
-                    user_description + "project ID: " + project_id
+                    user_description, project_id
                 ):
                     logger.info(f"Getting agent response: {response_part}")
                     if response_part["is_final"]:

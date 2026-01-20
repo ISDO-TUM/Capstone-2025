@@ -41,7 +41,6 @@ from paper_handling.paper_handler import (
     search_and_filter_papers,
 )
 from custom_logging import agent_logger
-from custom_logging.utils import calculate_openai_cost
 from utils.status import Status
 
 logger = logging.getLogger(__name__)
