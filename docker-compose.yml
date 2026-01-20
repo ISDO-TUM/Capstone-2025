@@ -71,6 +71,8 @@ services:
       - "80:80"
     depends_on:
       - web
+    networks:
+      - capstone_network
       
   grafana:
     image: grafana/grafana:12.2.1
