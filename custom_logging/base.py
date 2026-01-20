@@ -18,6 +18,7 @@ class LogContext(BaseModel):
         user_id (str): Identifier for the current user.
         component (str): Name of the logging component.
     """
+
     project_id: str = Field(..., description="Project identifier")
     user_id: str = Field(..., description="User identifier")
     component: str = Field(..., description="Logger component name")
@@ -32,6 +33,7 @@ class LogData(BaseModel):
         level (Literal): The severity level of the log entry.
         extra_fields (Optional[dict[str, Any]]): Additional structured metadata specific to this log entry.
     """
+
     context: LogContext
     level: Literal["INFO", "ERROR", "WARNING", "DEBUG", "CRITICAL"]
     extra_fields: Optional[dict[str, Any]] = None

@@ -11,6 +11,7 @@ from llm.tools.paper_handling_tools import (
     store_papers_for_project,
 )
 from llm.tools.tooling_mock import AgentDeps
+from custom_logging import agent_logger
 
 node_logger = NodeLogger(
     "store_papers_for_project",
@@ -61,8 +62,21 @@ class StorePapersForProject(BaseNode[AgentState, AgentDeps]):
             result = store_papers_for_project(
                 project_id=project_id, papers=papers_to_store
             )
+            agent_logger.add_metadata(
+                {
+                    "papers_stored_count": len(papers_to_store),
+                    "storage_operation": "success",
+                }
+            )
         else:
             result = "No papers to store or missing project_id."
+            agent_logger.add_metadata(
+                {
+                    "storage_operation": "skipped",
+                    "reason": "no_papers" if not papers_to_store else "tool_not_found",
+                }
+            )
+
         state.store_papers_for_project_result = result
 
         node_logger.log_end(state.__dict__)

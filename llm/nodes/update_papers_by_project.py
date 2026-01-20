@@ -10,6 +10,7 @@ from llm.node_logger import NodeLogger
 from llm.state import AgentState
 from llm.tools.paper_handling_tools import update_papers_for_project
 from llm.tools.tooling_mock import AgentDeps
+from custom_logging import agent_logger
 
 logger = logging.getLogger("update_papers_by_project_node")
 logger.setLevel(logging.INFO)
@@ -62,6 +63,12 @@ class UpdatePapersByProject(BaseNode[AgentState, AgentDeps]):
                         )
                         update_results.append(result)
                 update_papers_by_project_result = update_results
+                agent_logger.add_metadata(
+                    {
+                        "subqueries_processed": len(subqueries),
+                        "update_results_count": len(update_results),
+                    }
+                )
             else:
                 # Fallback: single query as before
                 queries = []
@@ -100,6 +107,7 @@ class UpdatePapersByProject(BaseNode[AgentState, AgentDeps]):
             state.update_papers_by_project_result = update_papers_by_project_result
             state.all_papers = all_papers
         except Exception as e:
+            agent_logger.node_error(e)
             state.error = f"Update papers by project node error: {e}"
 
         node_logger.log_end(state.__dict__)

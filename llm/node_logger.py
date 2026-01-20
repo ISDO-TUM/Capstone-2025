@@ -1,5 +1,6 @@
 import json
 import logging
+from custom_logging import agent_logger
 
 # --- Error handling and logging decorator ---
 
@@ -47,6 +48,7 @@ class NodeLogger:
         input_payload = (
             {k: state.get(k) for k in self.input_keys} if self.input_keys else state
         )
+        agent_logger.node_start(node_name=self.node_name, **input_payload)
         truncated_input = _truncate_payload(input_payload, self.truncate_limit)
         print(
             f"[{self.node_name}] Input: {json.dumps(truncated_input, default=str)}"
@@ -59,6 +61,7 @@ class NodeLogger:
         output_payload = (
             {k: state.get(k) for k in self.output_keys} if self.output_keys else state
         )
+        agent_logger.node_complete(node_name=self.node_name, metadata=output_payload)
         truncated_output = _truncate_payload(output_payload, self.truncate_limit)
         print(
             f"[{self.node_name}] Output: {json.dumps(truncated_output, default=str)}"

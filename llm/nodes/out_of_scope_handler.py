@@ -9,6 +9,8 @@ from llm.LLMDefinition import LLM
 from llm.node_logger import NodeLogger
 from llm.state import AgentOutput, AgentState
 from llm.tools.tooling_mock import AgentDeps
+from custom_logging import agent_logger
+from custom_logging.utils import calculate_openai_cost
 
 logger = logging.getLogger("out_of_scope_handler_node")
 logger.setLevel(logging.INFO)
@@ -73,6 +75,18 @@ class OutOfScopeHandler(BaseNode[AgentState, AgentDeps]):
 
         try:
             explanation_response = await LLM(explanation_prompt)
+            metadata = {
+                "prompt": explanation_prompt,
+                # "model_name": explanation_response.response_metadata["model_name"],
+                # "input_tokens": explanation_response.usage_metadata["input_tokens"],
+                # "output_tokens": explanation_response.usage_metadata["output_tokens"],
+                # "total_tokens": explanation_response.usage_metadata["total_tokens"],
+                # "total_cost_in_usd": calculate_openai_cost(
+                #     explanation_response.usage_metadata["input_tokens"],
+                #     explanation_response.usage_metadata["output_tokens"],
+                # ),
+            }
+            agent_logger.add_metadata(metadata=metadata)
             explanation = (
                 explanation_response.content
                 if hasattr(explanation_response, "content")
@@ -80,6 +94,26 @@ class OutOfScopeHandler(BaseNode[AgentState, AgentDeps]):
             )
 
             short_explanation_response = await LLM(short_explanation_prompt)
+            metadata = {
+                "short_prompt": short_explanation_prompt,
+                # "short_model_name": short_explanation_response.response_metadata[
+                #     "model_name"
+                # ],
+                # "short_input_tokens": short_explanation_response.usage_metadata[
+                #     "input_tokens"
+                # ],
+                # "short_output_tokens": short_explanation_response.usage_metadata[
+                #     "output_tokens"
+                # ],
+                # "short_total_tokens": short_explanation_response.usage_metadata[
+                #     "total_tokens"
+                # ],
+                # "short_total_cost_in_usd": calculate_openai_cost(
+                #     short_explanation_response.usage_metadata["input_tokens"],
+                #     short_explanation_response.usage_metadata["output_tokens"],
+                # ),
+            }
+            agent_logger.add_metadata(metadata=metadata)
             short_explanation = (
                 short_explanation_response.content
                 if hasattr(short_explanation_response, "content")

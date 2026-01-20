@@ -10,6 +10,7 @@ from llm.node_logger import NodeLogger
 from llm.state import AgentState
 from llm.tools.paper_handling_tools import filter_papers_by_nl_criteria
 from llm.tools.tooling_mock import AgentDeps
+from custom_logging import agent_logger
 
 logger = logging.getLogger("filter_papers_node")
 logger.setLevel(logging.INFO)
@@ -53,6 +54,15 @@ class FilterPapers(BaseNode[AgentState, AgentDeps]):
                     f"No filtering applied. Papers count: {len(papers_filtered)}"
                 )
                 state.applied_filter_criteria = {}
+                agent_logger.add_metadata(
+                    {
+                        "filtering_applied": False,
+                        "papers_count": len(papers_filtered),
+                        "reason": "no_filter_instructions"
+                        if not has_filter_instructions
+                        else "no_papers_to_filter",
+                    }
+                )
             else:
                 # Use the filter_papers_by_nl_criteria tool to get both filtered papers and the filter spec
                 filter_extraction_nl = user_query
@@ -73,14 +83,33 @@ class FilterPapers(BaseNode[AgentState, AgentDeps]):
                             state.applied_filter_criteria = filter_result_parsed.get(
                                 "filters", {}
                             )
+                            agent_logger.add_metadata(
+                                {
+                                    "filtering_applied": True,
+                                    "original_papers_count": len(papers_raw),
+                                    "filtered_papers_count": len(papers_filtered),
+                                    "filter_criteria": state["applied_filter_criteria"],
+                                    "filter_status": "success",
+                                }
+                            )
                         else:
                             logger.warning(
                                 f"Filter failed: {filter_result_parsed.get('message', 'Unknown error')}"
                             )
                             papers_filtered = papers_raw
                             state.applied_filter_criteria = {}
+                            agent_logger.add_metadata(
+                                {
+                                    "filtering_applied": False,
+                                    "filter_status": "failed",
+                                    "filter_message": filter_result_parsed.get(
+                                        "message", "Unknown error"
+                                    ),
+                                }
+                            )
                     except Exception as e:
                         logger.error(f"Error parsing filter result: {e}")
+                        agent_logger.node_error(e, operation="parse_filter_result")
                         papers_filtered = papers_raw
                         state.applied_filter_criteria = {}
 
@@ -88,11 +117,19 @@ class FilterPapers(BaseNode[AgentState, AgentDeps]):
             original_count = len(papers_filtered)
             papers_filtered = papers_filtered[:10]
             state.papers_filtered = papers_filtered
+            agent_logger.add_metadata(
+                {
+                    "final_papers_count": len(papers_filtered),
+                    "original_filtered_count": original_count,
+                    "limited_to_top": 10,
+                }
+            )
             logger.info(
                 f"Limited filtered papers from {original_count} to {len(papers_filtered)} (top 10)"
             )
 
         except Exception as e:
+            agent_logger.node_error(e)
             state.error = f"Filter papers node error: {e}"
             state.papers_filtered = state.papers_raw
             state.applied_filter_criteria = {}
