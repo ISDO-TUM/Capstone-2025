@@ -36,9 +36,7 @@ class TextResponse(BaseModel):
 @dataclass
 class LLMResponse:
     content: str
-    raw: Any | None = (
-        None
-    )
+    raw: Any | None = None
 
 
 TextAgent = Agent(
@@ -139,5 +137,4 @@ if TEST_MODE:
     }
     LLM = _models["gpt-5.1"]
 else:
-
     LLM = run_llm
