@@ -137,4 +137,5 @@ if TEST_MODE:
     }
     LLM = _models["gpt-5.1"]
 else:
+    # Use the real LLM
     LLM = run_llm
