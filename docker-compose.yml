@@ -36,6 +36,8 @@ services:
     ports:
       - "8080:80"
     working_dir: /app
+    volumes:
+      - ./logs:/app/logs
     depends_on:
       - db
       - chromadb
@@ -93,7 +95,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./promtail-config.yaml:/mnt/config/promtail-config.yaml:ro
-      - ./logs:/app/logs:ro
+      - ./logs:/app/logs
     command: -config.file=/mnt/config/promtail-config.yaml -config.expand-env=true
     env_file:
       - .env

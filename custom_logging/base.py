@@ -53,6 +53,8 @@ class StructuredLogger:
         """
         self.logger = logging.getLogger(name)
         self.component = name
+        self.project_id = "unknown"
+        self.user_id = "unknown"
 
     def _log_with_context(self, message: str, metadata: LogData):
         """
@@ -73,20 +75,25 @@ class StructuredLogger:
         log_method = getattr(self.logger, metadata.level.lower())
         log_method(message, extra=extra)
 
-    def _get_current_context(self) -> LogContext:
+    def _get_current_context(self, state: Optional[Any] = None) -> LogContext:
         """
-        Retrieve the current logging context from context variables. Automatically gathers project_id and user_id from context variables, falling back to "unknown" if not set.
+        Retrieve the current logging context. Prioritizes values from `state` if provided, then falls back to ContextVar.
 
         Returns:
             LogContext: The current context with project, user, and component name
         """
+        self.project_id = state.get("project_id") if state else project_id_ctx.get()
+        self.user_id = state.get("user_id") if state else user_id_ctx.get()
+
         return LogContext(
-            project_id=project_id_ctx.get() or "unknown",
-            user_id=user_id_ctx.get() or "unknown",
+            project_id=self.project_id,
+            user_id=self.user_id,
             component=self.component,
         )
 
-    def info(self, message: str, metadata: Optional[dict] = None):
+    def info(
+        self, message: str, metadata: Optional[dict] = None, state: Optional[Any] = None
+    ):
         """
         Log an informational message.
 
@@ -94,7 +101,7 @@ class StructuredLogger:
             message (str): Description of what happened.
             metadata (Optional[dict]): Additional structured data relevant to this specific event.
         """
-        context = self._get_current_context()
+        context = self._get_current_context(state=state)
         log_data = LogData(
             context=context,
             level="INFO",

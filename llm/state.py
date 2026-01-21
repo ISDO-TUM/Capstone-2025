@@ -29,6 +29,7 @@ class AgentState:
     store_papers_for_project_result: Any = None
     subqueries: Any = None
     update_papers_by_project_result: Any = None
+    user_id: str = ""
     user_query: str = ""
 
 

@@ -1,5 +1,6 @@
-from custom_logging.base import StructuredLogger, project_id_ctx, user_id_ctx
+from custom_logging.base import StructuredLogger
 from contextvars import ContextVar
+from typing import Optional, Any
 from database.projects_database_handler import get_log_history_flag
 
 user_query_ctx: ContextVar[str] = ContextVar("user_query", default="")
@@ -19,7 +20,7 @@ class AgentLogger(StructuredLogger):
         self.node_name = "unknown node"
 
     def _user_consent_flag(self) -> bool:
-        return get_log_history_flag(user_id_ctx.get(), project_id_ctx.get())
+        return get_log_history_flag(self.user_id, self.project_id)
 
     def set_user_query(self, user_query: str):
         """
@@ -39,7 +40,7 @@ class AgentLogger(StructuredLogger):
         """
         return user_query_ctx.get()
 
-    def node_start(self, node_name: str, **metadata):
+    def node_start(self, node_name: str, state: Optional[Any] = None, **metadata):
         """
         Log the start of a node execution. This should be called when a node begins processing.
 
@@ -52,11 +53,14 @@ class AgentLogger(StructuredLogger):
 
         self.node_name = node_name
         self.info(
-            f"Node {node_name} started - project_id={project_id_ctx.get()}",
+            f"Node {node_name} started - project_id={self.project_id}",
             metadata={"node_name": node_name, **metadata},
+            state=state,
         )
 
-    def node_complete(self, node_name: str, metadata: dict):
+    def node_complete(
+        self, node_name: str, state: Optional[Any] = None, metadata: dict = None
+    ):
         """
         Log the successful completion of a node execution. This should be called when a node finishes processing successfully. Automatically includes any accumulated metadata from `add_metadata()` and clears the pending metaadata store.
 
@@ -68,8 +72,9 @@ class AgentLogger(StructuredLogger):
             metadata = dict()
 
         self.info(
-            f"Node {node_name} completed - project_id={project_id_ctx.get()}",
+            f"Node {node_name} completed - project_id={self.project_id}",
             metadata={"node_name": node_name, **self._pending_metadata, **metadata},
+            state=state,
         )
         self.node_name = "unknown node"
         self.clear_metadata()
@@ -88,7 +93,7 @@ class AgentLogger(StructuredLogger):
 
         error_message = str(error) if isinstance(error, Exception) else error
         self.error(
-            f"Node {self.node_name} error - project_id={project_id_ctx.get()}",
+            f"Node {self.node_name} error - project_id={self.project_id}",
             metadata={
                 "node_name": self.node_name,
                 "error": error_message,
