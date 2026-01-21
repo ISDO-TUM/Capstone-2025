@@ -91,7 +91,7 @@ def run_agent_sync(
 
 
 async def trigger_stategraph_agent_show_thoughts_async(
-    user_message: str, project_id: str
+    user_message: str, project_id: str, user_id: str
 ):
     """
     Async generator that yields each step of the Pydantic agent's thought process for frontend streaming.
@@ -99,6 +99,7 @@ async def trigger_stategraph_agent_show_thoughts_async(
     Args:
         user_message (str): The user's research query or message.
         project_id (str): Project identifier.
+        user_id (str): User identifier.
 
     Yields:
         dict: Thought and state at each step, including final output.
@@ -125,7 +126,7 @@ async def trigger_stategraph_agent_show_thoughts_async(
 
         # Run the graph with streaming events using iter context manager
         async with graph.iter(
-            Input(user_message=user_message, project_id=project_id),
+            Input(user_message=user_message, project_id=project_id, user_id=user_id),
             state=state,
             deps=deps,
         ) as graph_run:
@@ -133,6 +134,7 @@ async def trigger_stategraph_agent_show_thoughts_async(
             async for node in graph_run:
                 # Each event is a node instance (BaseNode or End)
                 node_name = node.__class__.__name__
+                logger.info(f"Node: {node_name}")
 
                 # Check for special conditions based on state
                 if previous_node_name == "OutOfScopeCheck" and state.keywords:
@@ -201,13 +203,16 @@ async def trigger_stategraph_agent_show_thoughts_async(
         }
 
 
-def trigger_stategraph_agent_show_thoughts(user_message: str, project_id: str):
+def trigger_stategraph_agent_show_thoughts(
+    user_message: str, project_id: str, user_id: str
+):
     """
     Synchronous generator wrapper for trigger_stategraph_agent_show_thoughts_async.
 
     Args:
         user_message (str): The user's research query or message.
         project_id (str): Project identifier.
+        user_id (str): User identifier.
 
     Yields:
         dict: Thought and state at each step, including final output.
@@ -219,7 +224,7 @@ def trigger_stategraph_agent_show_thoughts(user_message: str, project_id: str):
     try:
         # Get the async generator
         async_gen = trigger_stategraph_agent_show_thoughts_async(
-            user_message, project_id
+            user_message, project_id, user_id
         )
 
         # Manually iterate through the async generator

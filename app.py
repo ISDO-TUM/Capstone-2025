@@ -432,6 +432,7 @@ def get_recommendations():
 
         # project_id validated above but currently unused in mock implementation
         project_id_ctx.set(data["projectId"])
+        user_id_ctx.set(user_id)
         update_recommendations = data.get("update_recommendations", False)
         project = get_project_by_id(user_id, data["projectId"])
         if not project:
@@ -521,7 +522,7 @@ def get_recommendations():
                 print(f"Deleted {removed} row(s).")
 
                 for response_part in trigger_stategraph_agent_show_thoughts(
-                    user_description, project_id
+                    user_description, project_id, user_id
                 ):
                     logger.info(f"Getting agent response: {response_part}")
                     if response_part["is_final"]:

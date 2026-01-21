@@ -40,8 +40,8 @@ from paper_handling.paper_handler import (
     generate_paper_summary_sync,
     search_and_filter_papers,
 )
-from custom_logging import agent_logger
 from utils.status import Status
+from custom_logging import agent_logger
 
 logger = logging.getLogger(__name__)
 
