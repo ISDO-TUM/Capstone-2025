@@ -7,7 +7,7 @@ from pydantic_graph import BaseNode, GraphRunContext
 
 from llm.node_logger import NodeLogger
 from llm.state import AgentState
-from llm.tools.Tools_aggregator import get_tools
+from llm.tools.paper_ranker import get_best_papers
 from llm.tools.tooling_mock import AgentDeps
 
 logger = logging.getLogger("get_best_papers_node")
@@ -38,9 +38,6 @@ class GetBestPapers(BaseNode[AgentState, AgentDeps]):
 
         node_logger.log_begin(state.__dict__)
 
-        tools = get_tools()
-        tool_map = {getattr(tool, "name", None): tool for tool in tools}
-        get_best_papers_tool = tool_map.get("get_best_papers")
         papers_raw = []
         try:
             # Prefer keywords if available, else use user_query
@@ -53,15 +50,26 @@ class GetBestPapers(BaseNode[AgentState, AgentDeps]):
                 50 if has_filter_instructions else 10
             )  # More papers if filtering will be applied
 
-            if get_best_papers_tool:
-                # Use num_candidates parameter based on filter instructions
-                papers_raw = get_best_papers_tool.invoke(
-                    {"project_id": project_id, "num_candidates": retrieval_count}
-                )
+            # Use num_candidates parameter based on filter instructions
+            result = await get_best_papers(
+                project_id=project_id, num_candidates=retrieval_count
+            )
+            if hasattr(result, "papers"):
+                papers = result.papers
+                papers_raw = [
+                    paper.model_dump()
+                    if hasattr(paper, "model_dump")
+                    else paper.dict()
+                    if hasattr(paper, "dict")
+                    else dict(paper)
+                    for paper in papers
+                ]
+            elif isinstance(result, list):
+                papers_raw = result
 
-                logger.info(
-                    f"Retrieved {len(papers_raw)} papers (filter instructions: {has_filter_instructions}, requested: {retrieval_count})"
-                )
+            logger.info(
+                f"Retrieved {len(papers_raw)} papers (filter instructions: {has_filter_instructions}, requested: {retrieval_count})"
+            )
 
             state.papers_raw = papers_raw
         except Exception as e:

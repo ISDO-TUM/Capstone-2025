@@ -33,11 +33,11 @@ from database.projects_database_handler import (
     get_project_owner_id,
 )
 from llm.Embeddings import embed_papers
-from llm.LLMDefinition import LLM, TextAgent
+from llm.LLMDefinition import LLM
 from llm.util.agent_custom_filter import _matches, _OPERATORS
 from paper_handling.paper_handler import (
     fetch_works_multiple_queries,
-    generate_paper_summary,
+    generate_paper_summary_sync,
     search_and_filter_papers,
 )
 from utils.status import Status
@@ -45,7 +45,6 @@ from utils.status import Status
 logger = logging.getLogger(__name__)
 
 
-@TextAgent.tool_plain
 def store_papers_for_project(project_id: str, papers: list[dict]):
     """
     Tool Name: store_papers_for_project
@@ -74,8 +73,7 @@ def store_papers_for_project(project_id: str, papers: list[dict]):
     return "Operation successful"
 
 
-@TextAgent.tool_plain
-def update_papers_for_project(queries: list[str], project_id: str) -> str:
+async def update_papers_for_project(queries: list[str], project_id: str) -> str:
     """
     Tool Name: update_papers
     Description:
@@ -173,7 +171,7 @@ def update_papers_for_project(queries: list[str], project_id: str) -> str:
         embedded_papers = []
         logger.info(f"Creating embeddings for {len(deduplicated_papers)} papers")
         for paper in deduplicated_papers:
-            embedding = embed_papers(paper["title"], paper["abstract"])
+            embedding = await embed_papers(paper["title"], paper["abstract"])
             embedded_paper = {
                 "embedding": embedding,
                 "hash": paper["hash"],
@@ -212,7 +210,6 @@ def update_papers_for_project(queries: list[str], project_id: str) -> str:
         )
 
 
-@TextAgent.tool_plain
 async def retry_broaden(keywords: list[str], query_description: str = "") -> str:
     """
     Agent tool to broaden the user's original keyword list using LLM.
@@ -275,7 +272,6 @@ async def retry_broaden(keywords: list[str], query_description: str = "") -> str
         )
 
 
-@TextAgent.tool_plain
 async def reformulate_query(keywords: list[str], query_description: str = "") -> str:
     """
     Reformulates the user's query to better capture academic search intent.
@@ -336,7 +332,6 @@ async def reformulate_query(keywords: list[str], query_description: str = "") ->
         )
 
 
-@TextAgent.tool_plain
 async def detect_out_of_scope_query(query_description: str) -> str:
     """
     Checks whether a user query is nonsensical or unrelated to scientific research,
@@ -432,7 +427,6 @@ async def detect_out_of_scope_query(query_description: str) -> str:
         )
 
 
-@TextAgent.tool_plain
 async def narrow_query(query_description: str, keywords: list[str]) -> str:
     """
     Agent tool that takes a broad set of keywords and returns a *narrower / more specific*
@@ -509,7 +503,6 @@ async def narrow_query(query_description: str, keywords: list[str]) -> str:
         )
 
 
-@TextAgent.tool_plain
 async def multi_step_reasoning(
     query_description: str, max_subqueries: int = 3, max_keywords: int = 5
 ) -> str:
@@ -689,7 +682,6 @@ def apply_filter_spec_to_papers(
     }
 
 
-@TextAgent.tool_plain
 async def filter_papers_by_nl_criteria(
     papers: List[Dict[str, Any]], criteria_nl: str
 ) -> str:
@@ -776,7 +768,6 @@ async def filter_papers_by_nl_criteria(
     return json.dumps(result)
 
 
-@TextAgent.tool_plain
 def find_closest_paper_metrics(
     papers: List[Dict[str, Any]], filter_spec: Dict[str, Dict[str, Any]]
 ) -> str:
@@ -880,7 +871,6 @@ def find_closest_paper_metrics(
     return json.dumps(result)
 
 
-@TextAgent.tool_plain
 async def generate_relevance_summary(user_query: str, title: str, abstract: str) -> str:
     """
     Generate a short, precise explanation of why the paper is relevant to the user's query.
@@ -918,7 +908,6 @@ async def generate_relevance_summary(user_query: str, title: str, abstract: str)
         return f"Relevant to project query: {user_query}"
 
 
-@TextAgent.tool_plain
 def replace_low_rated_paper(project_id: str, low_rated_paper_hash: str) -> str:
     """
     Tool Name: replace_low_rated_paper
@@ -1018,7 +1007,9 @@ def replace_low_rated_paper(project_id: str, low_rated_paper_hash: str) -> str:
     # Get data for the replacement paper
     project_data = get_project_data(owner_id, project_id)
     project_description = project_data.get("description", "") if project_data else ""
-    replacement_summary = generate_paper_summary(replacement_paper, project_description)
+    replacement_summary = generate_paper_summary_sync(
+        replacement_paper, project_description
+    )
 
     # Perform the replacement
     connection = connect_to_db()

@@ -1,4 +1,5 @@
 import numpy as np
+import asyncio
 from llm.Embeddings import embed_papers
 from llm.feedback import update_user_vector
 
@@ -35,7 +36,7 @@ def run_update_user_vector_test(user_vector, papers):
     for i, paper in enumerate(papers):
         title = paper.get("title", f"Paper {i + 1}")
         abstract = paper.get("abstract", "")
-        paper_vector = embed_papers(title, abstract)
+        paper_vector = asyncio.run(embed_papers(title, abstract))
         paper_vectors[title] = paper_vector
 
         assert isinstance(paper_vector, (list, np.ndarray))

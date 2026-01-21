@@ -8,7 +8,7 @@ from pydantic_graph import BaseNode, GraphRunContext
 
 from llm.node_logger import NodeLogger
 from llm.state import AgentState
-from llm.tools.Tools_aggregator import get_tools
+from llm.tools.paper_handling_tools import detect_out_of_scope_query
 from llm.tools.tooling_mock import AgentDeps
 
 logger = logging.getLogger("OutOfScopeCheck")
@@ -38,21 +38,9 @@ class OutOfScopeCheck(BaseNode[AgentState, AgentDeps]):
         state = ctx.state
 
         node_logger.log_begin(state.__dict__)
-        # Get the detect_out_of_scope_query tool
-        tools = get_tools()
-        detect_out_of_scope_query = None
-        for tool in tools:
-            if hasattr(tool, "name") and tool.name == "detect_out_of_scope_query":
-                detect_out_of_scope_query = tool
-                break
-        if detect_out_of_scope_query is None:
-            state.error = "detect_out_of_scope_query tool not found"
-            return QualityControl()
 
         # Call the tool
-        result = detect_out_of_scope_query.invoke(
-            {"query_description": state.user_query}
-        )
+        result = await detect_out_of_scope_query(query_description=state.user_query)
         state.out_of_scope_result = result
 
         node_logger.log_end(state.__dict__)

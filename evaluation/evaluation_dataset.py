@@ -6,7 +6,6 @@ from pypdf import PdfReader
 import io
 import os
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIModel
 from pydantic import BaseModel
 import csv
 import random
@@ -200,11 +199,11 @@ class PapersFinder(RelevantPapersFinder):
             """
 
             agent = Agent(
-                model=OpenAIModel(model_name="gpt-5.1"),
-                result_type=PapersResponse,
+                "openai:gpt-5.1",
+                output_type=PapersResponse,
             )
             response = await agent.run(prompt)
-            return response.data.papers
+            return response.output.papers
 
         except Exception as e:
             print(f"An error occurred while communicating with OpenAI: {e}")

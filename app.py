@@ -12,6 +12,7 @@ This is the main entrypoint for running the web application and serving the fron
 """
 
 import json
+import asyncio
 import logging
 import os
 import sys
@@ -595,7 +596,7 @@ def api_update_newsletter():
         return jsonify({"status": "no-queries"}), 200
 
     try:
-        update_newsletter_papers(project_id)
+        asyncio.run(update_newsletter_papers(project_id))
         return jsonify({"status": "ok"}), 200
     except ValueError as e:
         msg = str(e)
@@ -902,14 +903,14 @@ def load_more_papers():
                         continue
 
                     _, deduped = insert_papers(fetched)
-                    embeddings = [
-                        {
-                            "embedding": embed_papers(p["title"], p["abstract"]),
-                            "hash": p["hash"],
-                        }
-                        for p in deduped
-                        if embed_papers(p["title"], p["abstract"])
-                    ]
+                    # TODO: Parallelize
+                    embeddings = []
+                    for p in deduped:
+                        embedding = asyncio.run(embed_papers(p["title"], p["abstract"]))
+                        if embedding:
+                            embeddings.append(
+                                {"embedding": embedding, "hash": p["hash"]}
+                            )
 
                     if embeddings:
                         chroma_db.store_embeddings(embeddings)

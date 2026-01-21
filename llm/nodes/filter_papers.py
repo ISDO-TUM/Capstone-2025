@@ -8,7 +8,7 @@ from pydantic_graph import BaseNode, GraphRunContext
 
 from llm.node_logger import NodeLogger
 from llm.state import AgentState
-from llm.tools.Tools_aggregator import get_tools
+from llm.tools.paper_handling_tools import filter_papers_by_nl_criteria
 from llm.tools.tooling_mock import AgentDeps
 
 logger = logging.getLogger("filter_papers_node")
@@ -39,9 +39,6 @@ class FilterPapers(BaseNode[AgentState, AgentDeps]):
 
         node_logger.log_begin(state.__dict__)
 
-        tools = get_tools()
-        tool_map = {getattr(tool, "name", None): tool for tool in tools}
-        filter_tool = tool_map.get("filter_papers_by_nl_criteria")
         papers_filtered = []
 
         try:
@@ -59,10 +56,10 @@ class FilterPapers(BaseNode[AgentState, AgentDeps]):
             else:
                 # Use the filter_papers_by_nl_criteria tool to get both filtered papers and the filter spec
                 filter_extraction_nl = user_query
-                if filter_tool:
-                    filter_result = filter_tool.invoke(
-                        {"papers": papers_raw, "criteria_nl": filter_extraction_nl}
-                    )
+                filter_result = await filter_papers_by_nl_criteria(
+                    papers=papers_raw, criteria_nl=filter_extraction_nl
+                )
+                if filter_result:
                     try:
                         filter_result_parsed = json.loads(filter_result)
                         if filter_result_parsed.get("status") == "success":
@@ -86,10 +83,6 @@ class FilterPapers(BaseNode[AgentState, AgentDeps]):
                         logger.error(f"Error parsing filter result: {e}")
                         papers_filtered = papers_raw
                         state.applied_filter_criteria = {}
-                else:
-                    logger.warning("Filter tool not found")
-                    papers_filtered = papers_raw
-                    state.applied_filter_criteria = {}
 
             # Limit filtered papers to top 10 to maintain consistency with other recommendation flows
             original_count = len(papers_filtered)

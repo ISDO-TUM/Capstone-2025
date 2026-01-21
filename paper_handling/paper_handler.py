@@ -9,6 +9,7 @@ Responsibilities:
 """
 
 import re
+import asyncio
 
 from pyalex import Works
 
@@ -316,6 +317,14 @@ async def generate_paper_summary(paper, project_description):
     return summary
 
 
+def generate_paper_summary_sync(paper, project_description):
+    """
+    Synchronous wrapper for generate_paper_summary.
+    NOTE: This should only be used from non-async code paths.
+    """
+    return asyncio.run(generate_paper_summary(paper, project_description))
+
+
 def create_paper_dict(paper, summary, is_replacement=False):
     """
     Create a standardized paper dictionary for frontend consumption with all metadata.
@@ -369,7 +378,7 @@ def process_available_papers(
 
     new_recommendations = []
     for paper in available_papers[:max_papers]:
-        summary = generate_paper_summary(paper, project_description)
+        summary = generate_paper_summary_sync(paper, project_description)
         assign_paper_to_project(paper["paper_hash"], project_id, summary)
         paper_dict = create_paper_dict(paper, summary)
         new_recommendations.append(paper_dict)

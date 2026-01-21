@@ -40,7 +40,7 @@ def _one_week_ago_date():
     return one_week_ago.strftime("%Y-%m-%d")
 
 
-def update_newsletter_papers(project_id: str):
+async def update_newsletter_papers(project_id: str):
     k = 3
     logger.info(f"[update_newsletter_papers] START for project {project_id}")
 
@@ -102,7 +102,7 @@ def update_newsletter_papers(project_id: str):
 
     # 5. Embed & store in Chroma
     logger.info("  ↳ embedding & upserting into Chroma…")
-    _embed_and_store(papers_w_hash)
+    await _embed_and_store(papers_w_hash)
     logger.info("    ✓ chroma upsert complete")
 
     # 6. Similarity search
@@ -140,7 +140,7 @@ def update_newsletter_papers(project_id: str):
 
     # 8. Call agent
     logger.info("  ↳ calling LLM agent to pick+summarize…")
-    agent_out = call_temp_agent(str(potential), project_prompt, str(k)).content
+    agent_out = (await call_temp_agent(str(potential), project_prompt, str(k))).content
     logger.info(f"    ✓ raw agent output: {agent_out}")
 
     # Parse agent response with error handling
@@ -175,10 +175,11 @@ def update_newsletter_papers(project_id: str):
     logger.info(f"[update_newsletter_papers] DONE for project {project_id}")
 
 
-def _embed_and_store(papers):
+async def _embed_and_store(papers):
     embedded_papers = []
+    # TODO: Parallelize
     for paper in papers:
-        embedding = embed_papers(paper["title"], paper["abstract"])
+        embedding = await embed_papers(paper["title"], paper["abstract"])
         embedded_paper = {
             "embedding": embedding,
             "hash": paper["paper_hash"],

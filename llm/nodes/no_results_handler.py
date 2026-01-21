@@ -8,7 +8,7 @@ from pydantic_graph import BaseNode, End, GraphRunContext
 from llm.LLMDefinition import LLM
 from llm.node_logger import NodeLogger
 from llm.state import AgentOutput, AgentState
-from llm.tools.Tools_aggregator import get_tools
+from llm.tools.paper_handling_tools import find_closest_paper_metrics
 from llm.tools.tooling_mock import AgentDeps
 
 # --- Smart No-Results Handler Node ---
@@ -50,18 +50,14 @@ class NoResultsHandler(BaseNode[AgentState, AgentDeps]):
         filter_criteria_json = state.applied_filter_criteria
 
         # Use the tool to get closest values and directions
-        tools = get_tools()
-        tool_map = {getattr(tool, "name", None): tool for tool in tools}
-        closest_tool = tool_map.get("find_closest_paper_metrics")
         closest_values = {}
-        if closest_tool:
-            try:
-                closest_result = closest_tool.invoke(
-                    {"papers": papers_raw, "filter_spec": filter_criteria_json}
-                )
-                closest_values = json.loads(closest_result)
-            except Exception:
-                closest_values = {}
+        try:
+            closest_result = find_closest_paper_metrics(
+                papers=papers_raw, filter_spec=filter_criteria_json
+            )
+            closest_values = json.loads(closest_result)
+        except Exception:
+            closest_values = {}
 
         # Compose a prompt for the LLM
         smart_explanation_prompt = f"""

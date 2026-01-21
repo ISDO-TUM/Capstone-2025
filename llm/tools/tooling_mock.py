@@ -13,7 +13,7 @@ from typing import Any
 
 @dataclass
 class MockToolbelt:
-    """Very small façade that pretends to be our tool aggregator."""
+    """Very small facade that pretends to be our tool suite."""
 
     seed_papers: list[dict[str, Any]] = field(default_factory=list)
 

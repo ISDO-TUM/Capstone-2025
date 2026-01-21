@@ -16,7 +16,8 @@ from typing import Any
 
 from pydantic_ai import Agent
 from pydantic import BaseModel
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openai import OpenAIProvider
 
 from config import OPENAI_API_KEY
 
@@ -40,11 +41,11 @@ class LLMResponse:
 
 
 TextAgent = Agent(
-    model=OpenAIModel(
-        model_name="gpt-5.1",
-        api_key=OPENAI_API_KEY,
+    model=OpenAIChatModel(
+        "gpt-5.1",
+        provider=OpenAIProvider(api_key=OPENAI_API_KEY),
     ),
-    result_type=TextResponse,
+    output_type=TextResponse,
 )
 
 
@@ -55,7 +56,7 @@ async def run_llm(prompt: str) -> LLMResponse:
     """
     result = await TextAgent.run(prompt)
     return LLMResponse(
-        content=result.data.text,
+        content=result.output.text,
         raw=result,
     )
 
@@ -68,7 +69,7 @@ class MockLLM:
         self.model = kwargs.get("model", "mock-gpt")
         self.temperature = kwargs.get("temperature", 0)
 
-    def invoke(self, prompt: Any) -> LLMResponse:
+    async def invoke(self, prompt: Any) -> LLMResponse:
         """Return mock responses based on prompt content."""
         prompt_text = str(prompt).lower()
 
@@ -123,8 +124,8 @@ class MockLLM:
 
         return LLMResponse(content=content, raw=None)
 
-    def __call__(self, prompt: Any) -> LLMResponse:
-        return self.invoke(prompt)
+    async def __call__(self, prompt: Any) -> LLMResponse:
+        return await self.invoke(prompt)
 
 
 if TEST_MODE:

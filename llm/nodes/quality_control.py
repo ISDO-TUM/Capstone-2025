@@ -9,7 +9,12 @@ from pydantic_graph import BaseNode, GraphRunContext
 from llm.LLMDefinition import LLM
 from llm.node_logger import NodeLogger
 from llm.state import AgentState
-from llm.tools.Tools_aggregator import get_tools
+from llm.tools.paper_handling_tools import (
+    multi_step_reasoning,
+    narrow_query,
+    reformulate_query,
+    retry_broaden,
+)
 from llm.tools.tooling_mock import AgentDeps
 
 logger = logging.getLogger("quality_control_node")
@@ -48,8 +53,6 @@ class QualityControl(BaseNode[AgentState, AgentDeps]):
 
         node_logger.log_begin(state.__dict__)
 
-        tools = get_tools()
-        tool_map = {getattr(tool, "name", None): tool for tool in tools}
         qc_decision = "accept"  # Default
         qc_tool_result = None
         try:
@@ -171,64 +174,54 @@ class QualityControl(BaseNode[AgentState, AgentDeps]):
             state.qc_decision_reason = qc_result.get("reason", "")
             # Call the appropriate tool if needed
             if qc_decision == "reformulate":
-                tool = tool_map.get("reformulate_query")
-                if tool:
-                    qc_tool_result = tool.invoke(
-                        {"query_description": user_query, "keywords": keywords}
+                qc_tool_result = await reformulate_query(
+                    query_description=user_query, keywords=keywords
+                )
+                try:
+                    tool_result = (
+                        json.loads(qc_tool_result)
+                        if isinstance(qc_tool_result, str)
+                        else qc_tool_result
                     )
-                    try:
-                        tool_result = (
-                            json.loads(qc_tool_result)
-                            if isinstance(qc_tool_result, str)
-                            else qc_tool_result
-                        )
-                        if (
-                            "result" in tool_result
-                            and "refined_keywords" in tool_result["result"]
-                        ):
-                            state.keywords = tool_result["result"]["refined_keywords"]
-                    except Exception as e:
-                        logger.error(f"Error in ...: {e}")
+                    if (
+                        "result" in tool_result
+                        and "refined_keywords" in tool_result["result"]
+                    ):
+                        state.keywords = tool_result["result"]["refined_keywords"]
+                except Exception as e:
+                    logger.error(f"Error in reformulate_query: {e}")
             elif qc_decision == "split":
-                tool = tool_map.get("multi_step_reasoning")
-                if tool:
-                    qc_tool_result = tool.invoke({"query_description": user_query})
+                qc_tool_result = await multi_step_reasoning(
+                    query_description=user_query
+                )
             elif qc_decision == "broaden":
-                tool = tool_map.get("retry_broaden")
-                if tool:
-                    qc_tool_result = tool.invoke(
-                        {"query_description": user_query, "keywords": keywords}
+                qc_tool_result = await retry_broaden(
+                    query_description=user_query, keywords=keywords
+                )
+                try:
+                    tool_result = (
+                        json.loads(qc_tool_result)
+                        if isinstance(qc_tool_result, str)
+                        else qc_tool_result
                     )
-                    try:
-                        tool_result = (
-                            json.loads(qc_tool_result)
-                            if isinstance(qc_tool_result, str)
-                            else qc_tool_result
-                        )
-                        if "broadened_keywords" in tool_result:
-                            state.keywords = tool_result["broadened_keywords"]
-                    except Exception as e:
-                        logger.error(f"Error in ...: {e}")
+                    if "broadened_keywords" in tool_result:
+                        state.keywords = tool_result["broadened_keywords"]
+                except Exception as e:
+                    logger.error(f"Error in retry_broaden: {e}")
             elif qc_decision == "narrow":
-                tool = tool_map.get("narrow_query")
-                if tool:
-                    qc_tool_result = tool.invoke(
-                        {"query_description": user_query, "keywords": keywords}
+                qc_tool_result = await narrow_query(
+                    query_description=user_query, keywords=keywords
+                )
+                try:
+                    tool_result = (
+                        json.loads(qc_tool_result)
+                        if isinstance(qc_tool_result, str)
+                        else qc_tool_result
                     )
-                    try:
-                        tool_result = (
-                            json.loads(qc_tool_result)
-                            if isinstance(qc_tool_result, str)
-                            else qc_tool_result
-                        )
-                        if "narrowed_keywords" in tool_result:
-                            state.keywords = tool_result["narrowed_keywords"]
-                    except Exception as e:
-                        logger.error(f"Error in ...: {e}")
-            elif qc_decision == "accept":
-                tool = tool_map.get("accept")
-                if tool:
-                    qc_tool_result = tool.invoke({"confirmation": "yes"})
+                    if "narrowed_keywords" in tool_result:
+                        state.keywords = tool_result["narrowed_keywords"]
+                except Exception as e:
+                    logger.error(f"Error in narrow_query: {e}")
             state.qc_tool_result = qc_tool_result
         except Exception as e:
             state.error = f"QC node error: {e}"

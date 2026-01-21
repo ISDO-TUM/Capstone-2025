@@ -1,4 +1,5 @@
 from database.database_connection import connect_to_db
+import asyncio
 from llm.feedback import update_user_vector
 from llm.Embeddings import embed_user_profile, embed_papers
 from database.projectpaper_database_handler import assign_paper_to_project
@@ -65,8 +66,8 @@ def test_embedding_learning():
     )
 
     # Create initial user profile embedding
-    initial_embedding = embed_user_profile(
-        "Research on machine learning and artificial intelligence"
+    initial_embedding = asyncio.run(
+        embed_user_profile("Research on machine learning and artificial intelligence")
     )
     add_user_profile_embedding(TEST_USER_ID, project_id, initial_embedding)
 
@@ -95,7 +96,7 @@ def test_embedding_learning():
     # Create embeddings for test papers
     paper_embeddings = {}
     for i, paper in enumerate(test_papers):
-        embedding = embed_papers(paper["title"], paper["abstract"])
+        embedding = asyncio.run(embed_papers(paper["title"], paper["abstract"]))
         if embedding:
             paper_embeddings[i] = embedding
 
@@ -164,7 +165,7 @@ def test_embedding_persistence():
     )
 
     # Create initial embedding
-    initial_embedding = embed_user_profile("Testing embedding persistence")
+    initial_embedding = asyncio.run(embed_user_profile("Testing embedding persistence"))
     add_user_profile_embedding(TEST_USER_ID, project_id, initial_embedding)
 
     # Verify it's stored

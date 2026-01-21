@@ -8,7 +8,7 @@ from pydantic_graph import BaseNode, GraphRunContext
 
 from llm.node_logger import NodeLogger
 from llm.state import AgentState
-from llm.tools.Tools_aggregator import get_tools
+from llm.tools.paper_handling_tools import update_papers_for_project
 from llm.tools.tooling_mock import AgentDeps
 
 logger = logging.getLogger("update_papers_by_project_node")
@@ -46,13 +46,6 @@ class UpdatePapersByProject(BaseNode[AgentState, AgentDeps]):
 
         node_logger.log_begin(state.__dict__)
 
-        tools = get_tools()
-        tool_map = {getattr(tool, "name", None): tool for tool in tools}
-        update_papers_for_project_tool = tool_map.get("update_papers_for_project")
-        logger.info(f"Available tool names: {list(tool_map.keys())}")
-        logger.info(
-            f"Looking for tool: update_papers_for_project, found: {update_papers_for_project_tool is not None}"
-        )
         update_papers_by_project_result = None
         all_papers = []
         project_id = state.project_id
@@ -63,9 +56,9 @@ class UpdatePapersByProject(BaseNode[AgentState, AgentDeps]):
                 update_results = []
                 for sub in subqueries:
                     keywords = sub.get("keywords", [])
-                    if update_papers_for_project_tool and project_id:
-                        result = update_papers_for_project_tool.invoke(
-                            {"queries": keywords, "project_id": project_id}
+                    if project_id:
+                        result = await update_papers_for_project(
+                            queries=keywords, project_id=project_id
                         )
                         update_results.append(result)
                 update_papers_by_project_result = update_results
@@ -94,14 +87,12 @@ class UpdatePapersByProject(BaseNode[AgentState, AgentDeps]):
                         queries = state.keywords
                     else:
                         queries = [state.user_query]
-                if update_papers_for_project_tool and project_id:
+                if project_id:
                     logger.info(
                         f"Calling update_papers_for_project with queries: {queries} and project_id: {project_id}"
                     )
-                    update_papers_by_project_result = (
-                        update_papers_for_project_tool.invoke(
-                            {"queries": queries, "project_id": project_id}
-                        )
+                    update_papers_by_project_result = await update_papers_for_project(
+                        queries=queries, project_id=project_id
                     )
                     logger.info(
                         f"update_papers_for_project result: {update_papers_by_project_result}"

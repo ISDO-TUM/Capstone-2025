@@ -12,33 +12,31 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import List
+import os
 
-from pydantic import BaseModel
-from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai import Embedder
+from pydantic_ai.embeddings import TestEmbeddingModel
 
-from llm.LLMDefinition import OPENAI_API_KEY, LLM
+from llm.LLMDefinition import LLM
 
 logger = logging.getLogger(__name__)
 
 
-class EmbeddingResponse(BaseModel):
-    vector: List[float]
+TEST_MODE = os.environ.get("TEST_MODE", "false").lower() == "true"
+EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small")
+
+# Optional OpenAI-compatible client (used by tests and for backward compatibility)
+client = None
+
+if TEST_MODE:
+    embedder = Embedder(TestEmbeddingModel())
+else:
+    embedder = Embedder(f"openai:{EMBEDDING_MODEL}")
 
 
-EmbeddingAgent = Agent(
-    model=OpenAIModel(
-        model_name="text-embedding-3-small",
-        api_key=OPENAI_API_KEY,
-    ),
-    result_type=EmbeddingResponse,
-)
-
-
-def embed_string(text: str) -> list[float]:
+async def embed_string(text: str) -> list[float]:
     """
-    Embed a string using the specified EmbeddingAgent.
+    Embed a string using the configured embedder.
     Args:
         text (str): The text to embed.
     Returns:
@@ -46,14 +44,24 @@ def embed_string(text: str) -> list[float]:
     """
     text = text.replace("\n", " ")
 
-    async def _embed():
-        result = await EmbeddingAgent.run(text)
-        return result.data.vector
+    if client is not None and hasattr(client, "embeddings"):
+        response = client.embeddings.create(model=EMBEDDING_MODEL, input=[text])
+        if asyncio.iscoroutine(response):
+            response = await response
+        data = getattr(response, "data", None)
+        if data:
+            first = data[0]
+            embedding = getattr(first, "embedding", None)
+            if embedding is None and isinstance(first, dict):
+                embedding = first.get("embedding")
+            if embedding is not None:
+                return list(embedding)
 
-    return asyncio.run(_embed())
+    result = await embedder.embed_documents([text])
+    return result.embeddings[0]
 
 
-def embed_user_profile(text):
+async def embed_user_profile(text):
     """
     Embed user profile text, summarizing if too long.
     Args:
@@ -61,10 +69,10 @@ def embed_user_profile(text):
     Returns:
         list[float]: The embedding vector.
     """
-    return embed_paper_text(text)
+    return await embed_paper_text(text)
 
 
-def embed_papers(title, abstract):
+async def embed_papers(title, abstract):
     """
     Embed a paper by concatenating its title and abstract.
     Args:
@@ -73,10 +81,10 @@ def embed_papers(title, abstract):
     Returns:
         list[float]: The embedding vector.
     """
-    return embed_string(title + abstract)
+    return await embed_string(title + abstract)
 
 
-def embed_paper_text(paper_text: str) -> list[float]:
+async def embed_paper_text(paper_text: str) -> list[float]:
     """
     Embed paper text, summarizing if too long for the embedding model.
     Args:
@@ -93,7 +101,7 @@ def embed_paper_text(paper_text: str) -> list[float]:
 
     if word_count <= 1500:
         logger.info("Length within limit, embedding right away...")
-        return embed_string(paper_text)
+        return await embed_string(paper_text)
 
     # Summarize if too long
     logger.info("Length over limit, summarizing...")
@@ -108,8 +116,10 @@ def embed_paper_text(paper_text: str) -> list[float]:
     Summary:
     """
 
-    response = asyncio.run(LLM(prompt))
+    response = LLM(prompt)
+    if asyncio.iscoroutine(response):
+        response = await response
     summary = str(response.content).strip()
     logger.info("Generated summary: " + summary)
 
-    return embed_string(summary)
+    return await embed_string(summary)

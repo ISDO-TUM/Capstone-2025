@@ -12,9 +12,8 @@ All ranking and retrieval tools are designed to be used by the Stategraph agent 
 import logging
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
-from llm.LLMDefinition import TextAgent
 from llm.Embeddings import embed_user_profile
 from chroma_db.chroma_vector_db import chroma_db
 from database.papers_database_handler import get_papers_by_hash
@@ -41,13 +40,25 @@ class PaperMetadata(BaseModel):
     publication_date: str = ""
     landing_page_url: str = ""
 
+    @field_validator("authors", mode="before")
+    @classmethod
+    def normalize_authors(cls, value):
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(author).strip() for author in value if str(author).strip()]
+        if isinstance(value, str):
+            return [author.strip() for author in value.split(",") if author.strip()]
+        return [str(value).strip()] if str(value).strip() else []
+
 
 class GetBestPapersOutput(BaseModel):
     papers: List[PaperMetadata]
 
 
-@TextAgent.tool_plain
-def get_best_papers(project_id: str, num_candidates: int = 10) -> GetBestPapersOutput:
+async def get_best_papers(
+    project_id: str, num_candidates: int = 10
+) -> GetBestPapersOutput:
     """
     Tool Name: get_best_papers
     Returns a list of recommended papers based on the project ID. If the agent wants to apply filtering,
@@ -72,7 +83,7 @@ def get_best_papers(project_id: str, num_candidates: int = 10) -> GetBestPapersO
                 logger.error(f"No project description found for project {project_id}")
                 return GetBestPapersOutput(papers=[])
 
-            embedded_profile = embed_user_profile(description)
+            embedded_profile = await embed_user_profile(description)
             if not embedded_profile:
                 logger.error(f"Failed to create embedding for project {project_id}")
                 return GetBestPapersOutput(papers=[])

@@ -38,6 +38,10 @@ EVAL_SET_SIZE = 100
 MAX_WORKERS = 5
 
 
+async def _embed_texts(texts: list[str]) -> list[list[float]]:
+    return await asyncio.gather(*(embed_paper_text(text) for text in texts))
+
+
 def _run_node_sync(node, state: AgentState, deps: AgentDeps) -> AgentState:
     """Run a single async node synchronously for evaluation scripts."""
 
@@ -142,7 +146,7 @@ def run_full_pipeline_evaluation(row, model_name, search_results_count) -> tuple
             print("WARNING: No paper texts to embed. Aborting run.")
             return "ERROR", None, None
 
-        embeddings = [embed_paper_text(text) for text in paper_texts]
+        embeddings = asyncio.run(_embed_texts(paper_texts))
         paper_ids = [p.get("id") for p in candidate_papers]
 
         valid_indices = [
@@ -162,7 +166,7 @@ def run_full_pipeline_evaluation(row, model_name, search_results_count) -> tuple
             documents=[paper_texts[i] for i in valid_indices],
         )
 
-        query_embedding = embed_paper_text(query_text)
+        query_embedding = asyncio.run(embed_paper_text(query_text))
         if query_embedding is None:
             print("WARNING: Could not generate embedding for query. Aborting run.")
             return "ERROR", None, None

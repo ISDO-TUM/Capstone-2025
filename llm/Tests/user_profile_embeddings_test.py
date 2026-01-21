@@ -1,3 +1,4 @@
+import asyncio
 from llm.tools.paper_ranker import get_best_papers
 from llm.Embeddings import embed_user_profile
 from database.projects_database_handler import (
@@ -54,7 +55,7 @@ def test_embedding_storage_and_retrieval():
         "I am a researcher interested in machine learning, deep learning, "
         "and healthcare applications."
     )
-    embedding = embed_user_profile(user_profile_text)
+    embedding = asyncio.run(embed_user_profile(user_profile_text))
     add_user_profile_embedding(project_id, embedding)
 
     retrieved_embedding = get_user_profile_embedding(project_id)
@@ -68,11 +69,15 @@ def test_embedding_update():
         "Test Update Project", "Testing embedding updates"
     )
 
-    initial_embedding = embed_user_profile("I am interested in quantum computing")
+    initial_embedding = asyncio.run(
+        embed_user_profile("I am interested in quantum computing")
+    )
     add_user_profile_embedding(project_id, initial_embedding)
 
-    updated_embedding = embed_user_profile(
-        "I am interested in quantum computing and machine learning for drug discovery"
+    updated_embedding = asyncio.run(
+        embed_user_profile(
+            "I am interested in quantum computing and machine learning for drug discovery"
+        )
     )
     add_user_profile_embedding(project_id, updated_embedding)
 
@@ -83,7 +88,7 @@ def test_embedding_update():
 
 def test_get_best_papers_with_text():
     user_profile_text = "machine learning for healthcare applications"
-    papers = get_best_papers(user_profile_text)
+    papers = asyncio.run(get_best_papers(user_profile_text))
 
     assert papers  # checks not empty / not None
 
@@ -93,10 +98,12 @@ def test_get_best_papers_with_project_id():
         "Test Project for get_best_papers",
         "Testing get_best_papers with project ID",
     )
-    embedding = embed_user_profile("deep learning for medical image analysis")
+    embedding = asyncio.run(
+        embed_user_profile("deep learning for medical image analysis")
+    )
     add_user_profile_embedding(project_id, embedding)
 
-    papers = get_best_papers(project_id)
+    papers = asyncio.run(get_best_papers(project_id))
     assert papers
 
 
@@ -109,7 +116,7 @@ def test_get_best_papers_fallback():
     # Ensure no embedding exists
     assert get_user_profile_embedding(project_id) is None
 
-    papers = get_best_papers(project_id)
+    papers = asyncio.run(get_best_papers(project_id))
     assert papers
 
 
@@ -118,7 +125,7 @@ def test_database_integrity():
         "Database Integrity Test",
         "Testing database integrity",
     )
-    embedding = embed_user_profile("artificial intelligence for robotics")
+    embedding = asyncio.run(embed_user_profile("artificial intelligence for robotics"))
     add_user_profile_embedding(project_id, embedding)
 
     project_data = get_project_data(project_id)

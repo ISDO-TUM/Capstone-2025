@@ -295,7 +295,7 @@ for formatting, linting and security issues. They also update the needed modules
 
 ### Extension Points
 
-- **Adding New Tools**: Implement a new function in `llm/tools/`, register it in `Tools_aggregator.py`, and then create a new node in `llm/StategraphAgent.py` and add the node to the existing graph.
+- **Adding New Tools**: Implement a new function in `llm/tools/`, import it directly in the node that uses it, and then create a new node in `llm/StategraphAgent.py` and add the node to the existing graph.
 - **Custom Filters**: Extend `llm/util/agent_custom_filter.py` to add new operators or filtering logic.
 - **LLM/Embedding Models**: Update `llm/LLMDefinition.py` and `llm/Embeddings.py` to use new models or providers.
 - **Frontend Integration**: The API is designed to be frontend-agnostic and can be integrated with any modern web UI.

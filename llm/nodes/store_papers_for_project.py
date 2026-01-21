@@ -6,8 +6,10 @@ from pydantic_graph import BaseNode, End, GraphRunContext
 
 from llm.node_logger import NodeLogger
 from llm.state import AgentOutput, AgentState
-from llm.tools.paper_handling_tools import generate_relevance_summary
-from llm.tools.Tools_aggregator import get_tools
+from llm.tools.paper_handling_tools import (
+    generate_relevance_summary,
+    store_papers_for_project,
+)
 from llm.tools.tooling_mock import AgentDeps
 
 node_logger = NodeLogger(
@@ -34,9 +36,6 @@ class StorePapersForProject(BaseNode[AgentState, AgentDeps]):
 
         node_logger.log_begin(state.__dict__)
 
-        tools = get_tools()
-        tool_map = {getattr(tool, "name", None): tool for tool in tools}
-        store_papers_for_project_tool = tool_map.get("store_papers_for_project")
         # Use filtered papers if available, else raw
         project_id = state.project_id
         papers = state.papers_filtered or state.papers_raw or []
@@ -48,18 +47,19 @@ class StorePapersForProject(BaseNode[AgentState, AgentDeps]):
             title = paper.get("title", "")
             abstract = paper.get("abstract", "")
             # Use the tool version (invoke as a tool)
+            # TODO: parallelize
             try:
-                summary = generate_relevance_summary.invoke(
-                    {"user_query": user_query, "title": title, "abstract": abstract}
+                summary = await generate_relevance_summary(
+                    user_query=user_query, title=title, abstract=abstract
                 )
             except Exception:
                 summary = f"Relevant to project query: {user_query}"
             if paper_hash:
                 papers_to_store.append({"paper_hash": paper_hash, "summary": summary})
         result = None
-        if store_papers_for_project_tool and project_id and papers_to_store:
-            result = store_papers_for_project_tool.invoke(
-                {"project_id": project_id, "papers": papers_to_store}
+        if project_id and papers_to_store:
+            result = store_papers_for_project(
+                project_id=project_id, papers=papers_to_store
             )
         else:
             result = "No papers to store or missing project_id."
