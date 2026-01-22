@@ -75,6 +75,9 @@ jobs:
         run: uv sync --locked
 
       - name: Run unit tests
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} 
+          TEST_MODE: true
         run: uv run pytest tests/unit -v
 
   e2e-tests:
