@@ -219,7 +219,7 @@ jobs:
             "https://dokploy.capstone2025.de/api/application.deploy" \
             -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
             -H "Content-Type: application/json" \
-            -d "{\"applicationId\": \"Qz6AmfHxcrLPkXpB2kqUF\"}" \
+            -d "{\"applicationId\": \"nYmoBlNJvV0nSE2tbVyRo\"}" \
             -w "%{http_code}" \
             -o /tmp/dokploy_response.txt \
             -s)
