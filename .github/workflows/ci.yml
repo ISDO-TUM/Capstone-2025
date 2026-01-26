@@ -205,7 +205,7 @@ jobs:
         run: |
           echo "Latest SHA before the push: ${{ github.event.before }}"
           echo "Latest SHA after the push: ${{ github.event.after }}"
-          if [ -n "$(git diff --name-only --diff-filter=A ${{ github.event.before }} ${{ github.event.after }} migrations/*.json)" ]; then
+          if [ -n "$(git diff --name-only --diff-filter=AMR ${{ github.event.before }} ${{ github.event.after }} migrations/*.json)" ]; then
             echo "Detected new migration files"
             echo "has_migration=true" >> $GITHUB_OUTPUT
           else
@@ -219,7 +219,7 @@ jobs:
             "https://dokploy.capstone2025.de/api/application.deploy" \
             -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
             -H "Content-Type: application/json" \
-            -d "{\"applicationId\": \"Qz6AmfHxcrLPkXpB2kqUF\"}" \
+            -d "{\"applicationId\": \"nYmoBlNJvV0nSE2tbVyRo\"}" \
             -w "%{http_code}" \
             -o /tmp/dokploy_response.txt \
             -s)
