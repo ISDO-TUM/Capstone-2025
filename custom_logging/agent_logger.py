@@ -49,7 +49,7 @@ class AgentLogger(StructuredLogger):
             **metadata: Additional key-value pairs to include in the log metadata.
         """
         if not self._user_consent_flag():
-            metadata = dict()
+            return
 
         self.node_name = node_name
         self.info(
@@ -69,7 +69,7 @@ class AgentLogger(StructuredLogger):
             metadata (dict): Node-specific completion data.
         """
         if not self._user_consent_flag():
-            metadata = dict()
+            return
 
         self.info(
             f"Node {node_name} completed - project_id={self.project_id}",
@@ -89,7 +89,7 @@ class AgentLogger(StructuredLogger):
             **metadata: Additional key-value pairs to include in the error log metadata.
         """
         if not self._user_consent_flag():
-            metadata = dict()
+            return
 
         error_message = str(error) if isinstance(error, Exception) else error
         self.error(

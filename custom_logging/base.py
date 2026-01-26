@@ -82,8 +82,14 @@ class StructuredLogger:
         Returns:
             LogContext: The current context with project, user, and component name
         """
-        self.project_id = state.get("project_id") if state else project_id_ctx.get()
-        self.user_id = state.get("user_id") if state else user_id_ctx.get()
+        self.project_id = (
+            getattr(state, "project_id", project_id_ctx.get())
+            if state
+            else project_id_ctx.get()
+        )
+        self.user_id = (
+            getattr(state, "user_id", user_id_ctx.get()) if state else user_id_ctx.get()
+        )
 
         return LogContext(
             project_id=self.project_id,
