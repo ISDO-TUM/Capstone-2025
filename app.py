@@ -171,7 +171,23 @@ def authenticate_user():
     if request.path == "/api/clerk-config":
         request.auth = None
         return
-    api_logger.request_start(method="GET", path=request.path)
+
+    # Set initial context variables for logging
+    user_id_ctx.set("unknown")
+
+    if 'project_id' in request.view_args:
+        project_id_ctx.set(request.view_args['project_id'])
+    elif request.path == "/api/recommendations" and request.method == "POST":
+        try:
+            data = request.get_json(silent=True)
+            if data and "projectId" in data:
+                project_id_ctx.set(data["projectId"])
+        except:
+            pass
+    else:
+        project_id_ctx.set("unknown")
+
+    api_logger.request_start(method=request.method, path=request.path)
 
     # In test mode, bypass Clerk and set a test user
     if TEST_MODE:
@@ -518,6 +534,8 @@ def get_recommendations():
         def process_agent_in_background():
             """Run agent processing in background thread"""
             try:
+                project_id_ctx.set(project_id)
+                user_id_ctx.set(user_id)
                 removed = delete_project_rows(project_id)
                 print(f"Deleted {removed} row(s).")
 
