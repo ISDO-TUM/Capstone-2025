@@ -85,19 +85,6 @@ class NoResultsHandler(BaseNode[AgentState, AgentDeps]):
         """
         try:
             llm_response = await LLM(smart_explanation_prompt)
-            llm_response = LLM.invoke(smart_explanation_prompt)
-            metadata = {
-                "prompt": smart_explanation_prompt,
-                # "model_name": llm_response.response_metadata["model_name"],
-                # "input_tokens": llm_response.usage_metadata["input_tokens"],
-                # "output_tokens": llm_response.usage_metadata["output_tokens"],
-                # "total_tokens": llm_response.usage_metadata["total_tokens"],
-                # "total_cost_in_usd": calculate_openai_cost(
-                #     llm_response.usage_metadata["input_tokens"],
-                #     llm_response.usage_metadata["output_tokens"],
-                # ),
-            }
-            agent_logger.add_metadata(metadata=metadata)
             explanation = (
                 llm_response.content
                 if hasattr(llm_response, "content")

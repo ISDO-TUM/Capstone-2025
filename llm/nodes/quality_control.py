@@ -105,27 +105,6 @@ class QualityControl(BaseNode[AgentState, AgentDeps]):
 
             try:
                 filter_response = await LLM(filter_detection_prompt)
-                filter_response = LLM.invoke(filter_detection_prompt)
-                metadata = {
-                    "filter_detection_prompt": filter_detection_prompt,
-                    # "filter_model_name": filter_response.response_metadata[
-                    #     "model_name"
-                    # ],
-                    # "filter_input_tokens": filter_response.usage_metadata[
-                    #     "input_tokens"
-                    # ],
-                    # "filter_output_tokens": filter_response.usage_metadata[
-                    #     "output_tokens"
-                    # ],
-                    # "filter_total_tokens": filter_response.usage_metadata[
-                    #     "total_tokens"
-                    # ],
-                    # "filter_total_cost_in_usd": calculate_openai_cost(
-                    #     filter_response.usage_metadata["input_tokens"],
-                    #     filter_response.usage_metadata["output_tokens"],
-                    # ),
-                }
-                agent_logger.add_metadata(metadata=metadata)
                 filter_response_content = (
                     filter_response.content
                     if hasattr(filter_response, "content")
@@ -182,18 +161,6 @@ class QualityControl(BaseNode[AgentState, AgentDeps]):
             }}
             """
             qc_response = await LLM(qc_prompt)
-            metadata = {
-                "qc_prompt": qc_prompt,
-                # "qc_model_name": qc_response.response_metadata["model_name"],
-                # "qc_input_tokens": qc_response.usage_metadata["input_tokens"],
-                # "qc_output_tokens": qc_response.usage_metadata["output_tokens"],
-                # "qc_total_tokens": qc_response.usage_metadata["total_tokens"],
-                # "qc_total_cost_in_usd": calculate_openai_cost(
-                #     qc_response.usage_metadata["input_tokens"],
-                #     qc_response.usage_metadata["output_tokens"],
-                # ),
-            }
-            agent_logger.add_metadata(metadata=metadata)
             qc_response_content = (
                 qc_response.content
                 if hasattr(qc_response, "content")

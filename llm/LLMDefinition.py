@@ -20,6 +20,7 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from config import OPENAI_API_KEY
+from custom_logging import agent_logger
 
 # Check if we're in TEST_MODE
 TEST_MODE = os.environ.get("TEST_MODE", "false").lower() == "true"
@@ -28,6 +29,8 @@ if not TEST_MODE and not OPENAI_API_KEY:
     raise ValueError(
         "OpenAI API key not found. Please set the OPENAI_API_KEY environment variable."
     )
+
+MODEL_NAME = "gpt-5.1"
 
 
 class TextResponse(BaseModel):
@@ -42,11 +45,18 @@ class LLMResponse:
 
 TextAgent = Agent(
     model=OpenAIChatModel(
-        "gpt-5.1",
+        MODEL_NAME,
         provider=OpenAIProvider(api_key=OPENAI_API_KEY),
     ),
     output_type=TextResponse,
 )
+
+MODEL_PRICES = {
+    "gpt-5.1": {
+        "input": 1.25 / 1_000_000,  # $1.25 per 1M input tokens
+        "output": 10.00 / 1_000_000,  # $10.00 per 1M output tokens
+    },
+}
 
 
 async def run_llm(prompt: str) -> LLMResponse:
@@ -55,6 +65,26 @@ async def run_llm(prompt: str) -> LLMResponse:
     This is the function nodes should call for now.
     """
     result = await TextAgent.run(prompt)
+    usage = result.usage()
+
+    if MODEL_NAME in MODEL_PRICES:
+        cost = (
+            usage.input_tokens * MODEL_PRICES[MODEL_NAME]["input"]
+            + usage.output_tokens * MODEL_PRICES[MODEL_NAME]["output"]
+        )
+        cost = f"${cost:.6f}"
+    else:
+        cost = "unknown"
+
+    metadata = {
+        "prompt": prompt,
+        "model_name": MODEL_NAME,
+        "input_tokens": usage.input_tokens,
+        "output_tokens": usage.output_tokens,
+        "total_tokens": usage.total_tokens,
+        "total_cost": cost,
+    }
+    agent_logger.add_metadata(metadata=metadata)
     return LLMResponse(
         content=result.output.text,
         raw=result,
