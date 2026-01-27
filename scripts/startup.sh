@@ -28,6 +28,10 @@ else
 fi
 echo "Migrations complete!"
 
+# Start Promtail in the background
+echo "Starting Promtail..."
+promtail -config.file=/app/promtail-config.yaml -config.expand-env=true &
+
 # Start the application
 echo "Starting Flask application..."
 # Try uv first, fallback to python
