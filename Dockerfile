@@ -15,11 +15,13 @@ RUN apt-get update && \
     apt-get install -y postgresql-client wget jq dos2unix && \
     rm -rf '/var/lib/apt/lists/*'
 
-# Install Promtail
-RUN wget -q -O /tmp/promtail.tar.gz "https://github.com/grafana/loki/releases/download/v3.5.7/promtail-linux-amd64.zip" && \
+# Set to amd64 or arm or arm64 depending on architecture
+ARG TARGETARCH
+# Install promtail
+RUN wget -q -O /tmp/promtail.zip "https://github.com/grafana/loki/releases/download/v3.5.7/promtail-linux-${TARGETARCH}.zip" && \
     apt-get install -y unzip && \
-    unzip /tmp/promtail.tar.gz -d /tmp/ && \
-    mv /tmp/promtail-linux-amd64 /usr/local/bin/promtail && \
+    unzip /tmp/promtail.zip -d /tmp/ && \
+    mv /tmp/promtail-linux-${TARGETARCH} /usr/local/bin/promtail && \
     chmod +x /usr/local/bin/promtail && \
     rm -rf /tmp/promtail*
 

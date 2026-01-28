@@ -30,7 +30,10 @@ services:
       - capstone_network
 
   web:
-    build: .
+    build:
+      context: .
+      args:
+        - TARGETARCH=${DOCKER_ARCH:-amd64}
     container_name: capstone_web
     restart: always
     ports:
