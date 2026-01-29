@@ -47,12 +47,12 @@ def _abbreviate_title(text: str, max_length: int = 80) -> str:
     return text[: max_length - 3].rstrip() + "..."
 
 
-def run_agent_stream(user_query: str) -> None:
+def run_agent_stream(user_query: str, project_id: str, user_id: str) -> None:
     """Stream Stategraph agent updates to stdout for the given user query."""
 
     print("Streaming agent thoughts (matches web UI)")
     for idx, update in enumerate(
-        trigger_stategraph_agent_show_thoughts(user_query), start=1
+        trigger_stategraph_agent_show_thoughts(user_query, project_id, user_id), start=1
     ):
         thought = update.get("thought", "(no thought provided)")
         print(f"\nStep {idx}: {thought}")
@@ -72,7 +72,7 @@ def main() -> None:
     """
 
     user_id = "cli_test_user"
-    user_query = "Machine learning for healthcare after 2018"
+    user_query = "I am looking for papers in the field of machine learning in healthcare published after 2518."
 
     # Create a new project for this CLI session
     project_name = (
@@ -80,13 +80,13 @@ def main() -> None:
     )
     project_description = "Temporary project created via agent_cli session"
     logger.info("Creating project '%s' for user %s", project_name, user_id)
-    project_id = add_new_project_to_db(user_id, project_name, project_description)
+    project_id = add_new_project_to_db(user_id, project_name, project_description, True)
 
     # Assemble final query
     final_query = f"{user_query} project ID: {project_id}"
     print("Using project:", project_id)
     print("User query:", final_query)
-    run_agent_stream(final_query)
+    run_agent_stream(final_query, project_id, user_id)
 
     project_papers = get_papers_for_project(project_id)
 

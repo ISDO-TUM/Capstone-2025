@@ -88,7 +88,7 @@ class FilterPapers(BaseNode[AgentState, AgentDeps]):
                                     "filtering_applied": True,
                                     "original_papers_count": len(papers_raw),
                                     "filtered_papers_count": len(papers_filtered),
-                                    "filter_criteria": state["applied_filter_criteria"],
+                                    "filter_criteria": state.applied_filter_criteria,
                                     "filter_status": "success",
                                 }
                             )
