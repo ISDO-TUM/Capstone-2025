@@ -491,14 +491,48 @@ export default function ProjectOverview() {
           {outOfScope && (
             <div style={{ padding: '1.5rem', marginTop: '1rem', backgroundColor: '#fff3cd', borderLeft: '4px solid #ffc107', borderRadius: '8px' }}>
               <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#856404', marginBottom: '0.5rem' }}>Out of Scope</h3>
-              <p style={{ color: '#856404' }}>{JSON.stringify(outOfScope)}</p>
+              {outOfScope.message && (
+                <>
+                  <p style={{ color: '#856404', marginBottom: '1rem', fontWeight: '600' }}>
+                    {outOfScope.message.short_explanation}
+                  </p>
+                  <p style={{ color: '#856404', whiteSpace: 'pre-line', marginBottom: '1rem', lineHeight: '1.6' }}>
+                    {outOfScope.message.explanation}
+                  </p>
+                  <p style={{ color: '#856404', fontStyle: 'italic' }}>
+                    {outOfScope.message.suggestion}
+                  </p>
+                </>
+              )}
             </div>
           )}
 
           {noResults && (
             <div style={{ padding: '1.5rem', marginTop: '1rem', backgroundColor: '#f8d7da', borderLeft: '4px solid #dc3545', borderRadius: '8px' }}>
               <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#721c24', marginBottom: '0.5rem' }}>No Results Found</h3>
-              <p style={{ color: '#721c24' }}>{JSON.stringify(noResults)}</p>
+              {noResults.message && (
+                <>
+                  <p style={{ color: '#721c24', whiteSpace: 'pre-line', marginBottom: '1rem', lineHeight: '1.6' }}>
+                    {noResults.message.explanation}
+                  </p>
+                  {noResults.message.filter_criteria && (
+                    <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '4px' }}>
+                      <p style={{ color: '#721c24', fontWeight: '600', marginBottom: '0.5rem' }}>Filter criteria used:</p>
+                      <pre style={{ color: '#721c24', fontSize: '0.875rem', overflow: 'auto' }}>
+                        {JSON.stringify(noResults.message.filter_criteria, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                  {noResults.message.closest_values && (
+                    <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '4px' }}>
+                      <p style={{ color: '#721c24', fontWeight: '600', marginBottom: '0.5rem' }}>Closest values found:</p>
+                      <pre style={{ color: '#721c24', fontSize: '0.875rem', overflow: 'auto' }}>
+                        {JSON.stringify(noResults.message.closest_values, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
         </div>
